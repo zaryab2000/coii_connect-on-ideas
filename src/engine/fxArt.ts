@@ -70,22 +70,6 @@ export function drawBang(ctx: Ctx): void {
   ctx.fill();
 }
 
-export function drawYouTag(ctx: Ctx, font: string): void {
-  ctx.beginPath();
-  ctx.roundRect(-12, -6.5, 24, 11, 5.5);
-  ctx.moveTo(-3, 4.5);
-  ctx.lineTo(0, 8.5);
-  ctx.lineTo(3, 4.5);
-  ctx.fillStyle = "#ff2e88";
-  ctx.fill();
-  outline(ctx, 1.2);
-  ctx.fillStyle = "#ffffff";
-  ctx.font = `800 8px ${font}`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("YOU", 0, -0.6);
-}
-
 export function drawBubble(ctx: Ctx): void {
   ctx.beginPath();
   ctx.roundRect(-8.5, -9, 17, 13.5, 5);

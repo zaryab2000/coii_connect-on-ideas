@@ -32,6 +32,7 @@ export const LOD_ZOOM = 0.3;
 const WHITE_BGR = 0xffffff;
 const ALPHA_FULL = 255 << 24;
 const RANI_BGR = bgr(0xff2e88);
+const MARIGOLD_BGR = bgr(0xffb31a);
 
 interface Pose {
   lift: number;
@@ -203,9 +204,10 @@ export class CrowdRenderer {
       0,
       (((0.2 * dim * 255) | 0) << 24) + WHITE_BGR,
     );
-    if (index === this.selected) {
+    if (index === this.selected || a.isYou) {
       const pulse = 1 + Math.sin(this.world.time * 6) * 0.06;
-      this.emit(this.atlas.ring, x, y, pulse, pulse, 0, RANI_BGR + ALPHA_FULL);
+      const color = index === this.selected ? RANI_BGR : MARIGOLD_BGR;
+      this.emit(this.atlas.ring, x, y, pulse, pulse, 0, color + ALPHA_FULL);
     }
   }
 
@@ -323,17 +325,9 @@ export class CrowdRenderer {
     const al = (this.dimmed(a, index) ? 60 : 255) << 24;
     const squash = 1 - (this.squash[index] ?? 0) * 0.4;
     this.emit(look.lod, x, y - bob, a.facing, squash, 0, WHITE_BGR + al);
-    if (index === this.selected || a.isYou) {
+    if (index === this.selected) {
       const s = 2.6 + Math.sin(time * 5) * 0.2;
-      this.emit(
-        a.isYou ? this.atlas.you : this.atlas.bang,
-        x,
-        y - 70,
-        s,
-        s,
-        0,
-        WHITE_BGR + ALPHA_FULL,
-      );
+      this.emit(this.atlas.bang, x, y - 70, s, s, 0, WHITE_BGR + ALPHA_FULL);
     }
   }
 
@@ -358,10 +352,7 @@ export class CrowdRenderer {
           );
         }
       }
-      if (a.isYou) {
-        const bounce = Math.abs(Math.sin(time * 3.2)) * 3;
-        this.emit(this.atlas.you, x, head - 26 - bounce, 1, 1, 0, WHITE_BGR + ALPHA_FULL);
-      } else if (index === this.selected) {
+      if (index === this.selected) {
         const bounce = Math.abs(Math.sin(time * 4)) * 2.5;
         this.emit(this.atlas.bang, x, head - 22 - bounce, 1, 1, 0, WHITE_BGR + ALPHA_FULL);
       }

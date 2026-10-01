@@ -71,6 +71,7 @@ export class AddaEngine implements EngineApi {
   private reducedMotion = false;
   private accumulator = 0;
   private follow = -1;
+  private youIndex = -1;
   private readonly perf = { fps: 60, frameMs: 0, simMs: 0 };
   private debugEl: HTMLDivElement | null = null;
   private bubbleCount = 0;
@@ -136,6 +137,7 @@ export class AddaEngine implements EngineApi {
       scene.effects.clearFollowing(index);
       if (scene.crowd.selected === index) scene.crowd.selected = -1;
       if (this.follow === index) this.follow = -1;
+      if (this.youIndex === index) this.youIndex = -1;
       this.agentOf.delete(personId);
       this.personAt[index] = undefined;
       for (const topic of person?.topics ?? []) this.bumpInterest(scene, topicIndex(topic), -1);
@@ -277,7 +279,7 @@ export class AddaEngine implements EngineApi {
     this.root.prepend(app.canvas);
 
     const [atlas, icons] = await Promise.all([
-      buildCrowdAtlas(`"${DISPLAY_FONT}"`),
+      buildCrowdAtlas(),
       loadIconTextures([...TOPICS.map((t) => t.icon), "hot_beverage"], 96),
     ]);
     this.scene = this.buildScene(app, world, layout, atlas, icons, rect);
@@ -435,6 +437,7 @@ export class AddaEngine implements EngineApi {
   }
 
   private updateLabels(scene: Scene, alpha: number): void {
+    this.updateYouLabel(scene, alpha);
     const index = scene.crowd.selected;
     const a = index >= 0 ? scene.world.agents[index] : undefined;
     const person = index >= 0 ? this.personAt[index] : undefined;
@@ -445,6 +448,20 @@ export class AddaEngine implements EngineApi {
     const x = a.px + (a.x - a.px) * alpha;
     const y = a.py + (a.y - a.py) * alpha - a.z - 70;
     scene.labels.set("selected", person.name, scene.camera.worldToScreen(x, y), "selected");
+  }
+
+  private updateYouLabel(scene: Scene, alpha: number): void {
+    const a = this.youIndex >= 0 ? scene.world.agents[this.youIndex] : undefined;
+    const person = this.youIndex >= 0 ? this.personAt[this.youIndex] : undefined;
+    if (!a?.active || !person || scene.crowd.selected === this.youIndex) {
+      scene.labels.set("you", "", null, "you");
+      return;
+    }
+    const x = a.px + (a.x - a.px) * alpha;
+    const lift = scene.camera.zoom < LOD_ZOOM ? 40 : 66;
+    const y = a.py + (a.y - a.py) * alpha - a.z - lift;
+    const first = person.name.split(" ")[0] ?? person.name;
+    scene.labels.set("you", `You · ${first}`, scene.camera.worldToScreen(x, y), "you");
   }
 
   private consumeEvents(scene: Scene): void {
@@ -553,6 +570,7 @@ export class AddaEngine implements EngineApi {
     scene.crowd.setLook(index, this.lookFor(scene.atlas, person, topics[0] ?? 0));
     this.agentOf.set(person.id, index);
     this.personAt[index] = person;
+    if (person.isYou) this.youIndex = index;
     for (const topic of topics) this.bumpInterest(scene, topic, 1);
     return index;
   }
@@ -639,7 +657,7 @@ export class AddaEngine implements EngineApi {
     for (const zone of layout.zones) {
       if (zone.kind !== "booth") continue;
       const p = camera.worldToScreen(zone.x, zone.y + BOOTH_LABEL_DY);
-      boothLabels.position(zone.topic, p.x, p.y, scale);
+      boothLabels.position(zone.topic, p.x, p.y, scale, camera.viewW);
     }
   }
 

@@ -43,6 +43,7 @@ export class BoothLabels {
   private readonly buttons: HTMLButtonElement[] = [];
   private readonly counts: HTMLSpanElement[] = [];
   private readonly last: string[] = [];
+  private readonly halfWidths: number[] = [];
 
   constructor(
     topics: readonly Topic[],
@@ -82,6 +83,7 @@ export class BoothLabels {
     const button = this.buttons[index];
     if (!el || !button) return;
     el.textContent = count >= 1000 ? `${(count / 1000).toFixed(1)}k` : String(count);
+    this.halfWidths[index] = 0;
     button.setAttribute(
       "aria-label",
       `${topic.label} booth, ${count} people interested. Open booth.`,
@@ -92,9 +94,20 @@ export class BoothLabels {
     this.buttons[index]?.classList.toggle("is-dimmed", dimmed);
   }
 
-  position(index: number, x: number, y: number, scale: number): void {
+  /**
+   * Places a label above its booth. Labels of booths that are partly off-screen are pulled back
+   * inside the viewport so the name stays readable.
+   */
+  position(index: number, x: number, y: number, scale: number, viewW: number): void {
     const button = this.buttons[index];
     if (!button) return;
+    let half = this.halfWidths[index];
+    if (half === undefined || half === 0) {
+      half = button.offsetWidth / 2;
+      this.halfWidths[index] = half;
+    }
+    const margin = 8 + half * scale;
+    if (viewW > margin * 2) x = Math.min(viewW - margin, Math.max(margin, x));
     const transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, -100%) scale(${scale.toFixed(3)})`;
     if (this.last[index] === transform) return;
     this.last[index] = transform;

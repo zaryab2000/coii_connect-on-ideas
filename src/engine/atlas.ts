@@ -15,15 +15,7 @@ import {
   drawShadow,
 } from "@/engine/beanArt";
 import type { FaceKind, LegPose } from "@/engine/beanArt";
-import {
-  drawBang,
-  drawBubble,
-  drawConfetti,
-  drawDust,
-  drawRing,
-  drawStar,
-  drawYouTag,
-} from "@/engine/fxArt";
+import { drawBang, drawBubble, drawConfetti, drawDust, drawRing, drawStar } from "@/engine/fxArt";
 import { loadIconImages } from "@/engine/icons";
 import { css } from "@/engine/palette";
 
@@ -65,7 +57,6 @@ export interface CrowdAtlas {
   readonly confetti: Frame;
   readonly ring: Frame;
   readonly bang: Frame;
-  readonly you: Frame;
   readonly bubble: Frame;
   readonly icons: ReadonlyMap<IconId, Frame>;
 }
@@ -172,7 +163,7 @@ function record<K extends string>(
 }
 
 /** Draws every crowd and effect sprite into one mip-mapped canvas texture. */
-export async function buildCrowdAtlas(displayFont: string): Promise<CrowdAtlas> {
+export async function buildCrowdAtlas(): Promise<CrowdAtlas> {
   const icons = await loadIconImages([...BUBBLE_ICONS, "waving_hand", "dizzy", "party_popper"]);
   const b = new AtlasBuilder();
   const bean = (draw: Request["draw"]): Promise<Frame> => b.add(BEAN_BOX, BEAN_SCALE, draw);
@@ -220,7 +211,6 @@ export async function buildCrowdAtlas(displayFont: string): Promise<CrowdAtlas> 
     confetti: b.add(centered(6), FX_SCALE, drawConfetti),
     ring: b.add({ w: 34, h: 14, ox: 17, oy: 7 }, FX_SCALE, drawRing),
     bang: b.add(centered(14), FX_SCALE, drawBang),
-    you: b.add({ w: 28, h: 20, ox: 14, oy: 9 }, FX_SCALE, (c) => drawYouTag(c, displayFont)),
     bubble: b.add({ w: 20, h: 20, ox: 10, oy: 10 }, FX_SCALE, drawBubble),
   };
 
@@ -242,7 +232,6 @@ export async function buildCrowdAtlas(displayFont: string): Promise<CrowdAtlas> 
     confetti: await frames.confetti,
     ring: await frames.ring,
     bang: await frames.bang,
-    you: await frames.you,
     bubble: await frames.bubble,
   };
 }

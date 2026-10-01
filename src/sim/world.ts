@@ -77,6 +77,11 @@ const SEPARATION_R = 12;
 const GRAVITY = 1500;
 const MAX_THROW_SPEED = 2600;
 const CHAT_RADIUS = 46;
+const STROLL_RADIUS = 110;
+const TRAVEL_FACTOR: Partial<Record<State, number>> = {
+  [State.Arriving]: 1.25,
+  [State.Commuting]: 1.6,
+};
 const WORLD_EDGE = 40;
 export const BODY_CENTER_Y = 18;
 
@@ -304,8 +309,7 @@ export class World {
       case State.Wandering:
       case State.Commuting:
       case State.Arriving:
-        if (this.moveToward(index, a, dt, a.state === State.Arriving ? 1.25 : 1))
-          this.arrive(index, a);
+        if (this.moveToward(index, a, dt, TRAVEL_FACTOR[a.state] ?? 1)) this.arrive(index, a);
         break;
       case State.RunningHome:
         if (this.moveToward(index, a, dt, RUN_FACTOR)) this.arrive(index, a);
@@ -325,20 +329,28 @@ export class World {
 
   private decideNext(index: number, a: Agent): void {
     const roll = this.rng.next();
-    const commuteChance = this.reducedMotion ? 0.06 : 0.2;
+    const commuteChance = this.reducedMotion ? 0.015 : 0.035;
     const plaza = this.layout.plazaIndex;
     if (a.zone === plaza) {
       this.travel(index, a, this.pickZone(a, false), State.Commuting);
     } else if (a.topics.length > 1 && roll < commuteChance) {
       const others = a.topics.filter((t) => t !== a.zone);
       this.travel(index, a, this.rng.pick(others.length > 0 ? others : a.topics), State.Commuting);
-    } else if (roll < commuteChance + 0.035) {
+    } else if (roll < commuteChance + 0.015) {
       this.travel(index, a, plaza, State.Commuting);
-    } else if (roll < 0.68) {
-      this.travel(index, a, a.zone, State.Wandering);
+    } else if (roll < 0.55) {
+      this.stroll(index, a);
     } else {
       this.toIdle(a, this.idleDuration());
     }
+  }
+
+  /** A short walk to a free spot near where the person already stands. */
+  private stroll(index: number, a: Agent): void {
+    this.releaseSpot(index);
+    this.claimSpot(index, a.zone, a.x, a.y, STROLL_RADIUS);
+    a.hasWaypoint = false;
+    a.state = State.Wandering;
   }
 
   private travel(index: number, a: Agent, zone: number, state: State): void {
@@ -378,7 +390,7 @@ export class World {
   }
 
   private idleDuration(): number {
-    return this.reducedMotion ? this.rng.range(6, 14) : this.rng.range(1.8, 7);
+    return this.reducedMotion ? this.rng.range(6, 14) : this.rng.range(2.5, 9);
   }
 
   // ---- movement ----------------------------------------------------------------------------
@@ -557,7 +569,7 @@ export class World {
   // ---- chatting ----------------------------------------------------------------------------
 
   private pairChats(): void {
-    const chance = this.reducedMotion ? 0.04 : 0.14;
+    const chance = this.reducedMotion ? 0.03 : 0.08;
     for (let i = 0; i < this.agents.length; i++) {
       const a = this.agents[i];
       if (!this.canChat(a) || !a || !this.rng.chance(chance)) continue;
@@ -626,15 +638,26 @@ export class World {
     return a.topics[this.rng.weighted(weights)] ?? 0;
   }
 
-  private claimSpot(index: number, zoneIndex: number): void {
+  /** Claims a free spot in the zone, preferring one within `radius` of (nearX, nearY) if given. */
+  private claimSpot(
+    index: number,
+    zoneIndex: number,
+    nearX = 0,
+    nearY = 0,
+    radius = Infinity,
+  ): void {
     const a = this.agent(index);
     const zs = this.zoneSpots[zoneIndex];
     const zone = this.layout.zones[zoneIndex];
     if (!zs || !zone) throw new Error(`Zone ${zoneIndex} does not exist`);
     const count = zs.occupant.length;
-    for (let attempt = 0; attempt < 10; attempt++) {
+    const attempts = radius === Infinity ? 10 : 24;
+    for (let attempt = 0; attempt < attempts; attempt++) {
       const spot = this.rng.int(count);
-      if (zs.occupant[spot] === -1) {
+      const sx = zs.spots[spot * 2] ?? zone.x;
+      const sy = zs.spots[spot * 2 + 1] ?? zone.y;
+      const near = radius === Infinity || Math.hypot(sx - nearX, sy - nearY) <= radius;
+      if (zs.occupant[spot] === -1 && (near || attempt === attempts - 1)) {
         zs.occupant[spot] = index;
         a.spot = spot;
         a.tx = zs.spots[spot * 2] ?? zone.x;
