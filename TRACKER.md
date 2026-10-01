@@ -92,6 +92,8 @@ Then, once the backend exists: L2–L4, C3 handshake QR, M2 waves, M5 meetup fla
 
 ## 4. Who should I meet (matchmaking as a game)
 
+Full spec: [docs/prd/who-should-i-meet.md](docs/prd/who-should-i-meet.md)
+
 | ID  | Task                                                                                                                                            | Effort | Needs                            | Pri | Status |
 | --- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------ | -------------------------------- | --- | ------ |
 | M1  | "Today's Adda 3": three daily picks ranked by shared topics and complementary intent (hiring ↔ looking, founder ↔ investor). Swipe Wave or Skip | M      | — (client ranking); BE for waves | P1  | ☐      |
