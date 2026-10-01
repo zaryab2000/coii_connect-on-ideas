@@ -1,13 +1,135 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import { useActions, useApp } from "@/app/context";
 import { MapHost } from "@/app/MapHost";
 import type { EngineApi } from "@/engine/types";
+import { useHeightVar, useMediaQuery } from "@/ui/hooks";
+import { Hud } from "@/ui/Hud";
+import { PhoneSheets, SidePanel } from "@/ui/Panels";
+import type { QueryState } from "@/ui/Panels";
+import type { PeopleQuery } from "@/ui/people";
+import { DEFAULT_QUERY } from "@/ui/PeopleList";
+import { TabBar } from "@/ui/TabBar";
+import { Toasts } from "@/ui/Toasts";
 
-/** App shell: the live map fills the screen; UI layers sit on top (phone) or beside it (desktop). */
-export function App({ engine }: { readonly engine: EngineApi }) {
+const DESKTOP = "(min-width: 768px)";
+
+function popoverIsOpen(): boolean {
+  try {
+    return document.querySelector(":popover-open") !== null;
+  } catch {
+    return false;
+  }
+}
+
+/** Esc closes the open panel, unless a popover (which handles Esc itself) is open. */
+function useEscapeCloses(): void {
+  const actions = useActions();
+  const panel = useApp((s) => s.panel);
+  useEffect(() => {
+    if (panel === "none") return undefined;
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      if (popoverIsOpen()) return;
+      actions.closePanel();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [panel, actions]);
+}
+
+/** Pauses the venue while a phone sheet covers most of it, to save battery. */
+function usePauseWhileCovered(engine: EngineApi, covered: boolean): void {
+  useEffect(() => {
+    if (!covered) return undefined;
+    engine.pause();
+    return () => engine.resume();
+  }, [engine, covered]);
+}
+
+interface LayoutFlags {
+  readonly isDesktop: boolean;
+  readonly reducedMotion: boolean;
+  /** Phone: lift the map so the framed person or booth sits above the open sheet. */
+  readonly lift: boolean;
+  /** Phone: a sheet is open. */
+  readonly sheet: boolean;
+  /** Phone: a tall sheet covers most of the map. */
+  readonly covered: boolean;
+}
+
+function useLayoutFlags(): LayoutFlags {
+  const isDesktop = useMediaQuery(DESKTOP);
+  const prefersReduced = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const reducedState = useApp((s) => s.reducedMotion);
+  const panel = useApp((s) => s.panel);
+  const framed = useApp((s) => s.framed);
+  const phone = !isDesktop;
+  return {
+    isDesktop,
+    reducedMotion: reducedState || prefersReduced,
+    lift: phone && framed && (panel === "profile" || panel === "booth"),
+    sheet: phone && panel !== "none",
+    covered: phone && (panel === "people" || panel === "join"),
+  };
+}
+
+interface PanelAreaProps {
+  readonly flags: LayoutFlags;
+  readonly query: QueryState;
+  readonly onSheetHeight: (height: number) => void;
+}
+
+function PanelArea({ flags, query, onSheetHeight }: PanelAreaProps) {
+  if (flags.isDesktop) return <SidePanel query={query} />;
   return (
-    <div className="app">
-      <main className="app-map">
-        <MapHost engine={engine} />
+    <>
+      <PhoneSheets
+        query={query}
+        onSheetHeight={onSheetHeight}
+        reducedMotion={flags.reducedMotion}
+      />
+      <TabBar />
+    </>
+  );
+}
+
+/** App shell: the live map fills the screen; UI sits on top (phone) or beside it (desktop). */
+export function App({ engine }: { readonly engine: EngineApi }) {
+  const flags = useLayoutFlags();
+  const ready = useApp((s) => s.ready);
+  const [query, setQuery] = useState<PeopleQuery>(DEFAULT_QUERY);
+  const appRef = useRef<HTMLDivElement>(null);
+  const hudRef = useRef<HTMLDivElement>(null);
+  useHeightVar(hudRef, appRef, "--hud-h");
+  useEscapeCloses();
+  usePauseWhileCovered(engine, flags.covered);
+  const onSheetHeight = useCallback((height: number) => {
+    appRef.current?.style.setProperty("--sheet-h", `${Math.round(height)}px`);
+  }, []);
+
+  return (
+    <div
+      ref={appRef}
+      className="app"
+      data-layout={flags.isDesktop ? "desktop" : "phone"}
+      data-motion={flags.reducedMotion ? "reduced" : "full"}
+      data-lift={flags.lift || undefined}
+      data-sheet={flags.sheet || undefined}
+    >
+      <main className="stage">
+        <div className="map-layer">
+          <MapHost engine={engine} />
+        </div>
+        {ready ? null : (
+          <p className="map-loading" role="status">
+            Opening the adda…
+          </p>
+        )}
+        <Hud ref={hudRef} />
+        <Toasts />
       </main>
+      <PanelArea flags={flags} query={{ query, onQuery: setQuery }} onSheetHeight={onSheetHeight} />
     </div>
   );
 }

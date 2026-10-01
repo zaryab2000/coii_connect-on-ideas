@@ -20,6 +20,8 @@ export interface Actions {
   locate(id: string): void;
   openBooth(topic: TopicId): void;
   openPanel(panel: Panel): void;
+  /** Opens the join form, optionally with a topic preselected (or added, when editing). */
+  startJoin(topic: TopicId | null): void;
   closePanel(): void;
   toggleHighlight(topic: TopicId): void;
   clearHighlight(): void;
@@ -51,9 +53,7 @@ function newId(): string {
   return `you-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 }
 
-type ToastFn = Actions["pushToast"];
-
-function personFrom(input: JoinInput): Person {
+function personFromJoin(input: JoinInput): Person {
   return {
     id: newId(),
     name: input.name.trim(),
@@ -71,101 +71,33 @@ function personFrom(input: JoinInput): Person {
   };
 }
 
-type ViewActions = Pick<
-  Actions,
-  | "selectPerson"
-  | "locate"
-  | "openBooth"
-  | "openPanel"
-  | "closePanel"
-  | "toggleHighlight"
-  | "clearHighlight"
-  | "fit"
->;
+type AppStore = Store<AppState>;
 
-/** Selection, panels, highlighting and camera: state changes mirrored to the engine. */
-function viewActions(engine: EngineApi, store: Store<AppState>): ViewActions {
-  return {
-    selectPerson(id) {
-      store.set({ selectedId: id, panel: id ? "profile" : "none" });
-      engine.select(id);
-    },
-    locate(id) {
-      store.set({ selectedId: id, panel: "profile" });
-      engine.locate(id);
-    },
-    openBooth(topic) {
-      store.set({ boothTopic: topic, panel: "booth" });
-      engine.focusBooth(topic);
-    },
-    openPanel(panel) {
-      store.set({ panel });
-    },
-    closePanel() {
-      if (store.get().panel === "profile") {
-        engine.select(null);
-        store.set({ selectedId: null });
-      }
-      store.set({ panel: "none" });
-    },
-    toggleHighlight(topic) {
-      const current = store.get().highlight;
-      const highlight = current.includes(topic)
-        ? current.filter((t) => t !== topic)
-        : [...current, topic];
-      store.set({ highlight });
-      engine.highlightTopics(highlight);
-    },
-    clearHighlight() {
-      store.set({ highlight: [] });
-      engine.highlightTopics([]);
-    },
-    fit() {
-      engine.fit();
-    },
-  };
+/** Clears the map selection, e.g. when the profile gives way to another panel. */
+function deselect(engine: EngineApi, store: AppStore): void {
+  if (store.get().selectedId === null) return;
+  engine.select(null);
+  store.set({ selectedId: null });
 }
 
-/** Joining and leaving the venue as yourself; your profile is kept in this browser. */
-function membershipActions(
-  engine: EngineApi,
-  store: Store<AppState>,
-  pushToast: ToastFn,
-): Pick<Actions, "join" | "leave"> {
-  const leave = (): void => {
-    const you = store.get().you;
-    if (!you) return;
-    clearYou();
-    engine.remove(you.id);
-    store.set((s) => ({
-      you: null,
-      people: s.people.filter((p) => p.id !== you.id),
-      selectedId: s.selectedId === you.id ? null : s.selectedId,
-      panel: s.selectedId === you.id ? "none" : s.panel,
-    }));
-  };
-  const join = (input: JoinInput): Person => {
-    if (store.get().you) leave();
-    const person = personFrom(input);
-    const saved = saveYou(person);
-    store.set((s) => ({
-      you: person,
-      people: [...s.people, person],
-      panel: "none",
-      selectedId: null,
-    }));
-    engine.select(null);
-    engine.spawn(person, true);
-    const text = saved
-      ? "You're in! Watch yourself walk in."
-      : "You're in for this visit (this browser can't save it).";
-    pushToast(text, "party_popper", "success");
-    return person;
-  };
-  return { join, leave };
+/** Takes you off the map and out of storage; returns who was removed. */
+function removeYou(engine: EngineApi, store: AppStore): Person | null {
+  const you = store.get().you;
+  if (!you) return null;
+  clearYou();
+  engine.remove(you.id);
+  store.set((s) => ({
+    you: null,
+    people: s.people.filter((p) => p.id !== you.id),
+    selectedId: s.selectedId === you.id ? null : s.selectedId,
+    panel: s.selectedId === you.id ? "none" : s.panel,
+  }));
+  return you;
 }
 
-function toastActions(store: Store<AppState>): Pick<Actions, "pushToast" | "dismissToast"> {
+type ToastActions = Pick<Actions, "pushToast" | "dismissToast">;
+
+function toastActions(store: AppStore): ToastActions {
   let toastId = 0;
   return {
     pushToast(text, icon, tone) {
@@ -179,13 +111,113 @@ function toastActions(store: Store<AppState>): Pick<Actions, "pushToast" | "dism
   };
 }
 
-function listenToEngine(engine: EngineApi, store: Store<AppState>): void {
+type PanelActions = Pick<
+  Actions,
+  "selectPerson" | "locate" | "openBooth" | "openPanel" | "startJoin" | "closePanel"
+>;
+
+function panelActions(engine: EngineApi, store: AppStore): PanelActions {
+  const openPanel = (panel: Panel): void => {
+    if (panel !== "profile") deselect(engine, store);
+    store.set(panel === "join" ? { panel } : { panel, joinTopic: null });
+  };
+  return {
+    selectPerson(id) {
+      store.set({ selectedId: id, panel: id ? "profile" : "none", framed: false });
+      engine.select(id);
+    },
+    locate(id) {
+      store.set({ selectedId: id, panel: "profile", framed: true });
+      engine.locate(id);
+    },
+    openBooth(topic) {
+      deselect(engine, store);
+      store.set({ boothTopic: topic, panel: "booth", framed: true });
+      engine.focusBooth(topic);
+    },
+    openPanel,
+    startJoin(topic) {
+      openPanel("join");
+      store.set({ joinTopic: topic });
+    },
+    closePanel() {
+      deselect(engine, store);
+      store.set({ panel: "none", framed: false, joinTopic: null });
+    },
+  };
+}
+
+type MapActions = Pick<Actions, "toggleHighlight" | "clearHighlight" | "fit">;
+
+function mapActions(engine: EngineApi, store: AppStore): MapActions {
+  return {
+    toggleHighlight(topic) {
+      const current = store.get().highlight;
+      const highlight = current.includes(topic)
+        ? current.filter((t) => t !== topic)
+        : [...current, topic];
+      store.set({ highlight });
+      engine.highlightTopics(highlight);
+    },
+    clearHighlight() {
+      store.set({ highlight: [] });
+      engine.highlightTopics([]);
+    },
+    fit() {
+      store.set({ framed: false });
+      engine.fit();
+    },
+  };
+}
+
+function youActions(
+  engine: EngineApi,
+  store: AppStore,
+  toasts: ToastActions,
+): Pick<Actions, "join" | "leave"> {
+  return {
+    join(input) {
+      removeYou(engine, store);
+      const person = personFromJoin(input);
+      const saved = saveYou(person);
+      store.set((s) => ({
+        you: person,
+        people: [...s.people, person],
+        panel: "none",
+        selectedId: null,
+        framed: false,
+        joinTopic: null,
+      }));
+      engine.select(null);
+      engine.spawn(person, true);
+      toasts.pushToast(
+        saved
+          ? "You're in! Watch yourself walk in."
+          : "You're in for this visit (this browser can't save it).",
+        "party_popper",
+        "success",
+      );
+      return person;
+    },
+    leave() {
+      if (!removeYou(engine, store)) return;
+      toasts.pushToast("You left the adda. Come back anytime.", "waving_hand", "info");
+    },
+  };
+}
+
+/** Mirrors taps on the map (beans, empty floor, booth signs) into app state. */
+function followEngine(engine: EngineApi, store: AppStore): void {
   engine.on("ready", () => store.set({ ready: true }));
   engine.on("select", (id) => {
-    if (id) store.set({ selectedId: id, panel: "profile" });
-    else if (store.get().panel === "profile") store.set({ selectedId: null, panel: "none" });
+    if (id) store.set({ selectedId: id, panel: "profile", framed: false });
+    else if (store.get().panel === "profile")
+      store.set({ selectedId: null, panel: "none", framed: false });
   });
-  engine.on("boothTap", (topic) => store.set({ boothTopic: topic, panel: "booth" }));
+  engine.on("boothTap", (topic) => {
+    deselect(engine, store);
+    store.set({ boothTopic: topic, panel: "booth", framed: true });
+  });
 }
 
 /** Owns app state and keeps the engine in sync with it. UI components only call `actions`. */
@@ -196,6 +228,8 @@ export function createController(engine: EngineApi, options: ControllerOptions):
     boothTopic: null,
     panel: "none",
     highlight: [],
+    framed: false,
+    joinTopic: null,
     you: options.you,
     toasts: [],
     reducedMotion: options.reducedMotion,
@@ -203,11 +237,13 @@ export function createController(engine: EngineApi, options: ControllerOptions):
   });
   const toasts = toastActions(store);
   const actions: Actions = {
-    ...viewActions(engine, store),
-    ...membershipActions(engine, store, toasts.pushToast),
+    ...panelActions(engine, store),
+    ...mapActions(engine, store),
+    ...youActions(engine, store, toasts),
     ...toasts,
   };
-  listenToEngine(engine, store);
+  followEngine(engine, store);
+
   return {
     store,
     actions,
@@ -215,9 +251,8 @@ export function createController(engine: EngineApi, options: ControllerOptions):
       return source.start((person) => {
         store.set((s) => ({ people: [...s.people, person] }));
         engine.spawn(person, true);
-        const first = person.name.split(" ")[0] ?? person.name;
         actions.pushToast(
-          `${first} just walked in · ${topicNames(person)}`,
+          `${person.name.split(" ")[0] ?? person.name} just walked in · ${topicNames(person)}`,
           "waving_hand",
           "arrival",
         );

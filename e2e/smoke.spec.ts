@@ -5,6 +5,7 @@ interface DebugHook {
   engine: {
     stats(): { beans: number; fps: number };
     pause(): void;
+    focusBooth(topic: string): void;
     resume(): void;
     screenPositionOf(id: string): { x: number; y: number } | null;
   };
@@ -50,6 +51,8 @@ test("tapping a person on the map selects them", async ({ page }) => {
   await page.goto("/?still");
   await waitForCrowd(page);
   await page.waitForTimeout(3000); // let the phone intro camera settle
+  await page.evaluate(() => window.__adda?.engine.focusBooth("ai"));
+  await page.waitForTimeout(1200);
   const target = await page.evaluate(() => {
     const hook = window.__adda;
     if (!hook) return null;

@@ -1,0 +1,450 @@
+import { useId, useState } from "react";
+import type { CSSProperties, FormEvent, ReactNode } from "react";
+
+import { useActions } from "@/app/context";
+import { SKIN_TONES } from "@/data/avatar";
+import { TOPICS } from "@/data/topics";
+import type { Person, TopicId } from "@/data/types";
+import { css } from "@/engine/palette";
+import { randomAvatar } from "@/ui/avatar";
+import { BeanAvatar } from "@/ui/BeanAvatar";
+import { Glyph, Icon } from "@/ui/Icon";
+import {
+  draftFrom,
+  JOIN_FIELDS,
+  NAME_MAX,
+  ONE_LINER_MAX,
+  toggleTopic,
+  TOPICS_MAX,
+  validateJoin,
+} from "@/ui/joinDraft";
+import type { JoinDraft, JoinErrors, JoinField } from "@/ui/joinDraft";
+import { topicVars } from "@/ui/PanelChrome";
+
+interface QuestionProps {
+  readonly title: string;
+  readonly required?: boolean;
+  readonly hint?: string;
+  readonly counter?: string;
+  readonly error?: string | undefined;
+  readonly errorId?: string;
+  /** Render as a fieldset (groups of controls) instead of a labelled single field. */
+  readonly group?: boolean;
+  readonly htmlFor?: string;
+  readonly children: ReactNode;
+}
+
+function RequiredMark() {
+  return (
+    <>
+      <span className="q-card__required" aria-hidden="true">
+        *
+      </span>
+      <span className="visually-hidden"> (required)</span>
+    </>
+  );
+}
+
+function QuestionHeading({
+  title,
+  required,
+  counter,
+}: Pick<QuestionProps, "title" | "required" | "counter">) {
+  return (
+    <>
+      {title}
+      {required ? <RequiredMark /> : null}
+      {counter ? <span className="q-card__counter">{counter}</span> : null}
+    </>
+  );
+}
+
+function QuestionBody({
+  hint,
+  error,
+  errorId,
+  children,
+}: Pick<QuestionProps, "hint" | "error" | "errorId" | "children">) {
+  return (
+    <>
+      {hint ? <p className="q-card__hint">{hint}</p> : null}
+      {children}
+      {error ? (
+        <p className="q-card__error" id={errorId}>
+          {error}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+/** A Google-Forms-style question card: title, hint, the control, and an inline error. */
+function Question(props: QuestionProps) {
+  const { group, htmlFor, error, errorId } = props;
+  const invalid = error ? true : undefined;
+  const heading = <QuestionHeading {...props} />;
+  const body = <QuestionBody {...props} />;
+  if (group) {
+    return (
+      <fieldset className="q-card" data-invalid={invalid} aria-describedby={invalid && errorId}>
+        <legend className="q-card__title">{heading}</legend>
+        {body}
+      </fieldset>
+    );
+  }
+  return (
+    <div className="q-card" data-invalid={invalid}>
+      <label className="q-card__title" htmlFor={htmlFor}>
+        {heading}
+      </label>
+      {body}
+    </div>
+  );
+}
+
+function fieldProps(id: string, error: string | undefined) {
+  return {
+    id,
+    "aria-invalid": error ? true : undefined,
+    "aria-describedby": error ? `${id}-error` : undefined,
+  } as const;
+}
+
+interface FieldsProps {
+  readonly ids: Record<JoinField, string>;
+  readonly draft: JoinDraft;
+  readonly errors: JoinErrors;
+  readonly update: (patch: Partial<JoinDraft>) => void;
+  readonly touch: (field: JoinField) => void;
+}
+
+function HandleInput(props: {
+  readonly id: string;
+  readonly label: string;
+  readonly value: string;
+  readonly error: string | undefined;
+  readonly onChange: (value: string) => void;
+  readonly onBlur: () => void;
+}) {
+  return (
+    <div className="handle-field">
+      <label className="handle-field__label" htmlFor={props.id}>
+        {props.label}
+      </label>
+      <div className="affix">
+        <span className="affix__at" aria-hidden="true">
+          @
+        </span>
+        <input
+          {...fieldProps(props.id, props.error)}
+          className="input affix__input"
+          value={props.value}
+          onChange={(e) => props.onChange(e.target.value)}
+          onBlur={props.onBlur}
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          autoComplete="off"
+          maxLength={64}
+        />
+      </div>
+      {props.error ? (
+        <p className="q-card__error" id={`${props.id}-error`}>
+          {props.error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function HandlesQuestion({ ids, draft, errors, update, touch }: FieldsProps) {
+  return (
+    <Question
+      title="How can people reach you?"
+      required
+      hint="Add at least one."
+      error={errors.handles}
+      errorId={`${ids.handles}-error`}
+      group
+    >
+      <HandleInput
+        id={ids.telegram}
+        label="Telegram username"
+        value={draft.telegram}
+        error={errors.telegram}
+        onChange={(telegram) => update({ telegram })}
+        onBlur={() => touch("telegram")}
+      />
+      <HandleInput
+        id={ids.x}
+        label="X handle"
+        value={draft.x}
+        error={errors.x}
+        onChange={(x) => update({ x })}
+        onBlur={() => touch("x")}
+      />
+    </Question>
+  );
+}
+
+function TopicsQuestion({ ids, draft, errors, update }: Omit<FieldsProps, "touch">) {
+  const full = draft.topics.length >= TOPICS_MAX;
+  return (
+    <Question
+      title="What are you into?"
+      required
+      hint="Pick 1 to 3. Your first pick is your shirt colour."
+      counter={`${draft.topics.length}/${TOPICS_MAX}`}
+      error={errors.topics}
+      errorId={`${ids.topics}-error`}
+      group
+    >
+      <div className="topic-picker" id={ids.topics} tabIndex={-1}>
+        {TOPICS.map((topic) => {
+          const order = draft.topics.indexOf(topic.id);
+          const picked = order >= 0;
+          return (
+            <button
+              key={topic.id}
+              type="button"
+              className="chip chip--pick"
+              style={topicVars(topic.id)}
+              aria-pressed={picked}
+              aria-disabled={!picked && full ? true : undefined}
+              onClick={() => update({ topics: toggleTopic(draft.topics, topic.id) })}
+            >
+              <Icon id={topic.icon} size={20} />
+              {topic.short}
+              {picked ? (
+                <span className="chip__order" aria-hidden="true">
+                  {order + 1}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+    </Question>
+  );
+}
+
+function BeanQuestion({ draft, update }: Pick<FieldsProps, "draft" | "update">) {
+  const primary: TopicId = draft.topics[0] ?? "ai";
+  const skinName = useId();
+  return (
+    <Question title="Your bean" hint="This is you on the map." group>
+      <div className="bean-maker">
+        <div className="bean-maker__stage rangoli-disc" style={topicVars(primary)}>
+          <BeanAvatar avatar={draft.avatar} topic={primary} size={104} face="happy" />
+        </div>
+        <div className="bean-maker__controls">
+          <button
+            type="button"
+            className="btn btn--secondary"
+            onClick={() => update({ avatar: randomAvatar(draft.avatar.skin) })}
+          >
+            <Glyph name="dice" size={22} />
+            Reroll look
+          </button>
+          <div className="swatches" role="radiogroup" aria-label="Skin tone">
+            {SKIN_TONES.map((tone, index) => (
+              <label
+                key={tone}
+                className="swatch"
+                style={{ "--swatch": css(tone) } as CSSProperties}
+              >
+                <input
+                  type="radio"
+                  name={skinName}
+                  className="visually-hidden"
+                  checked={draft.avatar.skin === index}
+                  onChange={() => update({ avatar: { ...draft.avatar, skin: index } })}
+                />
+                <span className="visually-hidden">Skin tone {index + 1}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+    </Question>
+  );
+}
+
+function useJoinIds(): Record<JoinField, string> {
+  const base = useId();
+  return {
+    name: `${base}-name`,
+    handles: `${base}-handles`,
+    telegram: `${base}-telegram`,
+    x: `${base}-x`,
+    topics: `${base}-topics`,
+    oneLiner: `${base}-oneliner`,
+    consent: `${base}-consent`,
+  };
+}
+
+/** Shows an error once the field was left or the form was submitted (links: right away). */
+function visibleErrors(
+  errors: JoinErrors,
+  touched: ReadonlySet<JoinField>,
+  submitted: boolean,
+): JoinErrors {
+  if (submitted) return errors;
+  const shown: JoinErrors = {};
+  for (const field of JOIN_FIELDS) {
+    const message = errors[field];
+    if (message && (touched.has(field) || field === "oneLiner")) shown[field] = message;
+  }
+  return shown;
+}
+
+function TelegramSoon() {
+  return (
+    <div className="q-card q-card--tg">
+      <button type="button" className="btn btn--tg" disabled>
+        <Icon id="speech_balloon" size={22} />
+        Continue with Telegram
+        <span className="soon">coming soon</span>
+      </button>
+      <p className="q-or">
+        <span>or fill this in</span>
+      </p>
+    </div>
+  );
+}
+
+function NameQuestion({ ids, draft, errors, update, touch }: FieldsProps) {
+  const long = draft.name.length > NAME_MAX - 10;
+  return (
+    <Question
+      title="Your name"
+      required
+      htmlFor={ids.name}
+      counter={long ? `${draft.name.length}/${NAME_MAX}` : ""}
+      error={errors.name}
+      errorId={`${ids.name}-error`}
+    >
+      <input
+        {...fieldProps(ids.name, errors.name)}
+        className="input"
+        value={draft.name}
+        maxLength={NAME_MAX}
+        aria-required="true"
+        autoComplete="name"
+        placeholder="What people call you"
+        onChange={(e) => update({ name: e.target.value })}
+        onBlur={() => touch("name")}
+      />
+    </Question>
+  );
+}
+
+function OneLinerQuestion({ ids, draft, errors, update }: Omit<FieldsProps, "touch">) {
+  return (
+    <Question
+      title="Your one-liner"
+      hint="Optional. What you're building or want to talk about."
+      htmlFor={ids.oneLiner}
+      counter={`${draft.oneLiner.length}/${ONE_LINER_MAX}`}
+      error={errors.oneLiner}
+      errorId={`${ids.oneLiner}-error`}
+    >
+      <textarea
+        {...fieldProps(ids.oneLiner, errors.oneLiner)}
+        className="input input--area"
+        rows={2}
+        maxLength={ONE_LINER_MAX}
+        value={draft.oneLiner}
+        placeholder="Shipping agent wallets. Ask me about passkeys."
+        onChange={(e) => update({ oneLiner: e.target.value.replace(/\n/g, " ") })}
+      />
+    </Question>
+  );
+}
+
+function ConsentCard({ ids, draft, errors, update }: Omit<FieldsProps, "touch">) {
+  return (
+    <div className="q-card" data-invalid={errors.consent ? true : undefined}>
+      <label className="consent">
+        <input
+          {...fieldProps(ids.consent, errors.consent)}
+          type="checkbox"
+          className="consent__box"
+          aria-required="true"
+          checked={draft.consent}
+          onChange={(e) => update({ consent: e.target.checked })}
+        />
+        <span className="consent__tick">
+          <Glyph name="check" size={18} />
+        </span>
+        <span>
+          Show my name and handles publicly on this map
+          <RequiredMark />
+        </span>
+      </label>
+      {errors.consent ? (
+        <p className="q-card__error" id={`${ids.consent}-error`}>
+          {errors.consent}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+interface JoinFormProps {
+  readonly you: Person | null;
+  readonly presetTopic: TopicId | null;
+  readonly onDone: () => void;
+  readonly onCancel: (() => void) | null;
+}
+
+/** The join form. Submitting walks your bean in from the gate (or back in, when editing). */
+export function JoinForm({ you, presetTopic, onDone, onCancel }: JoinFormProps) {
+  const actions = useActions();
+  const ids = useJoinIds();
+  const [draft, setDraft] = useState<JoinDraft>(() => draftFrom(you, presetTopic, randomAvatar()));
+  const [touched, setTouched] = useState<ReadonlySet<JoinField>>(new Set());
+  const [submitted, setSubmitted] = useState(false);
+  const result = validateJoin(draft);
+  const errors = visibleErrors(result.ok ? {} : result.errors, touched, submitted);
+  const update = (patch: Partial<JoinDraft>): void => setDraft((d) => ({ ...d, ...patch }));
+  const touch = (field: JoinField): void => setTouched((t) => new Set(t).add(field));
+  const fields = { ids, draft, errors, update };
+
+  const onSubmit = (e: FormEvent): void => {
+    e.preventDefault();
+    setSubmitted(true);
+    if (!result.ok) {
+      const first = JOIN_FIELDS.find((field) => result.errors[field]);
+      if (first) document.getElementById(ids[first === "handles" ? "telegram" : first])?.focus();
+      return;
+    }
+    actions.join(result.input);
+    onDone();
+  };
+
+  return (
+    <form className="join-form" noValidate onSubmit={onSubmit}>
+      {you ? null : <TelegramSoon />}
+      <NameQuestion {...fields} touch={touch} />
+      <HandlesQuestion {...fields} touch={touch} />
+      <TopicsQuestion {...fields} />
+      <OneLinerQuestion {...fields} />
+      <BeanQuestion draft={draft} update={update} />
+      <ConsentCard {...fields} />
+      <div className="join-form__submit">
+        <button type="submit" className="btn btn--primary btn--big">
+          {you ? "Save and walk back in" : "Walk into the adda"}
+        </button>
+        {onCancel ? (
+          <button type="button" className="btn btn--quiet" onClick={onCancel}>
+            Cancel
+          </button>
+        ) : null}
+        <p className="join-form__note">
+          Saved in this browser only for now. You can leave anytime.
+        </p>
+      </div>
+    </form>
+  );
+}

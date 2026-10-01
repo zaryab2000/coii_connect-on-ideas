@@ -41,7 +41,7 @@ export interface View {
 }
 
 /** Below this zoom each bean is drawn as one pre-baked particle. */
-export const LOD_ZOOM = 0.3;
+export const LOD_ZOOM = 0.25;
 
 const WHITE = 0xffffff;
 const OPAQUE = 255 << 24;
