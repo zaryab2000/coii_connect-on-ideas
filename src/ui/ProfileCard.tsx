@@ -6,8 +6,16 @@ import { topicById } from "@/data/topics";
 import type { Person } from "@/data/types";
 import { BeanAvatar } from "@/ui/BeanAvatar";
 import { Glyph, Icon } from "@/ui/Icon";
-import { Awning, LeaveButton, PanelNav, TopicChips, topicVars } from "@/ui/PanelChrome";
+import {
+  Awning,
+  IntentChips,
+  LeaveButton,
+  PanelNav,
+  TopicChips,
+  topicVars,
+} from "@/ui/PanelChrome";
 import type { PanelChrome } from "@/ui/PanelChrome";
+import { WaveButton } from "@/ui/WaveButton";
 
 const DEMO_CONTACT = "Demo profile — real people coming soon";
 
@@ -72,6 +80,7 @@ function OthersActions({ person }: { readonly person: Person }) {
   const actions = useActions();
   return (
     <div className="profile__actions">
+      <WaveButton person={person} />
       <ContactLink person={person} kind="telegram" primary />
       <div className="profile__row">
         <ContactLink person={person} kind="x" primary={!person.telegram} />
@@ -148,6 +157,7 @@ export function ProfileCard({
           </div>
         </div>
         <TopicChips topics={person.topics} />
+        <IntentChips intents={person.intent} />
       </header>
       <div className="panel__scroll profile__body">
         {person.oneLiner ? <p className="bubble">{person.oneLiner}</p> : null}

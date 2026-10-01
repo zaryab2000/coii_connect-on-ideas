@@ -3,6 +3,7 @@ import type { CSSProperties, FormEvent, ReactNode } from "react";
 
 import { useActions } from "@/app/context";
 import { SKIN_TONES } from "@/data/avatar";
+import { INTENTS, INTENTS_MAX } from "@/data/intents";
 import { TOPICS } from "@/data/topics";
 import type { Person, TopicId } from "@/data/types";
 import { css } from "@/engine/palette";
@@ -14,6 +15,7 @@ import {
   JOIN_FIELDS,
   NAME_MAX,
   ONE_LINER_MAX,
+  toggleIntent,
   toggleTopic,
   TOPICS_MAX,
   validateJoin,
@@ -228,6 +230,40 @@ function TopicsQuestion({ ids, draft, errors, update }: Omit<FieldsProps, "touch
   );
 }
 
+const INTENT_VARS = { "--topic": "var(--marigold)", "--on-topic": "var(--ink)" } as CSSProperties;
+
+function IntentQuestion({ draft, update }: Pick<FieldsProps, "draft" | "update">) {
+  const full = draft.intent.length >= INTENTS_MAX;
+  return (
+    <Question
+      title="What are you here for?"
+      hint={`Optional. Pick up to ${INTENTS_MAX}. Shown publicly on your profile and the map.`}
+      counter={`${draft.intent.length}/${INTENTS_MAX}`}
+      group
+    >
+      <div className="topic-picker intent-picker">
+        {INTENTS.map((intent) => {
+          const picked = draft.intent.includes(intent.id);
+          return (
+            <button
+              key={intent.id}
+              type="button"
+              className="chip chip--pick"
+              style={INTENT_VARS}
+              aria-pressed={picked}
+              aria-disabled={!picked && full ? true : undefined}
+              onClick={() => update({ intent: toggleIntent(draft.intent, intent.id) })}
+            >
+              <Icon id={intent.icon} size={20} />
+              {intent.label}
+            </button>
+          );
+        })}
+      </div>
+    </Question>
+  );
+}
+
 function BeanQuestion({ draft, update }: Pick<FieldsProps, "draft" | "update">) {
   const primary: TopicId = draft.topics[0] ?? "ai";
   const skinName = useId();
@@ -429,6 +465,7 @@ export function JoinForm({ you, presetTopic, onDone, onCancel }: JoinFormProps) 
       <NameQuestion {...fields} touch={touch} />
       <HandlesQuestion {...fields} touch={touch} />
       <TopicsQuestion {...fields} />
+      <IntentQuestion draft={draft} update={update} />
       <OneLinerQuestion {...fields} />
       <BeanQuestion draft={draft} update={update} />
       <ConsentCard {...fields} />

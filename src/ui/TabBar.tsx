@@ -5,12 +5,13 @@ import { useActions, useApp } from "@/app/context";
 import type { Panel } from "@/app/store";
 import { BeanAvatar } from "@/ui/BeanAvatar";
 import { Icon } from "@/ui/Icon";
+import { meetTabLabel } from "@/ui/meet";
+import { BadgeMark, useMeetBadge } from "@/ui/MeetBadge";
 
-type Tab = "map" | "people" | "join";
+type Tab = "map" | "meet" | "people" | "join";
 
 function activeTab(panel: Panel): Tab {
-  if (panel === "people") return "people";
-  if (panel === "join") return "join";
+  if (panel === "people" || panel === "join" || panel === "meet") return panel;
   return "map";
 }
 
@@ -18,6 +19,7 @@ function TabButton(props: {
   readonly active: boolean;
   readonly label: string;
   readonly icon: ReactNode;
+  readonly ariaLabel?: string;
   readonly onClick: () => void;
 }) {
   return (
@@ -25,6 +27,7 @@ function TabButton(props: {
       type="button"
       className="tab"
       aria-current={props.active ? "page" : undefined}
+      aria-label={props.ariaLabel}
       onClick={props.onClick}
     >
       <span className="tab__icon">{props.icon}</span>
@@ -33,11 +36,12 @@ function TabButton(props: {
   );
 }
 
-/** Phone navigation: Map, People, and Join (which becomes You once you've joined). */
+/** Phone navigation: Map, Meet, People, and Join (which becomes You once you've joined). */
 export function TabBar() {
   const actions = useActions();
   const panel = useApp((s) => s.panel);
   const you = useApp((s) => s.you);
+  const badge = useMeetBadge();
   const tab = activeTab(panel);
   return (
     <nav className="tabbar" aria-label="Main">
@@ -46,6 +50,18 @@ export function TabBar() {
         label="Map"
         icon={<Icon id="hot_beverage" size={26} />}
         onClick={() => actions.closePanel()}
+      />
+      <TabButton
+        active={tab === "meet"}
+        label="Meet"
+        ariaLabel={meetTabLabel(badge)}
+        icon={
+          <>
+            <Icon id="sparkles" size={26} />
+            <BadgeMark badge={badge} />
+          </>
+        }
+        onClick={() => actions.openPanel("meet")}
       />
       <TabButton
         active={tab === "people"}

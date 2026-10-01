@@ -1,4 +1,4 @@
-import type { Person, TopicId } from "@/data/types";
+import type { IntentId, Person, TopicId } from "@/data/types";
 
 export type TopicMatch = "any" | "all";
 export type SortKey = "newest" | "name" | "match";
@@ -7,6 +7,8 @@ export interface PeopleQuery {
   readonly search: string;
   readonly topics: readonly TopicId[];
   readonly match: TopicMatch;
+  /** People here for any of these (empty: everyone). */
+  readonly intents: readonly IntentId[];
   readonly sort: SortKey;
 }
 
@@ -46,6 +48,10 @@ export function sharedTopicCount(a: Person, b: Person): number {
   return count;
 }
 
+function matchesIntents(person: Person, intents: readonly IntentId[]): boolean {
+  return intents.length === 0 || intents.some((i) => person.intent.includes(i));
+}
+
 function newest(a: Person, b: Person): number {
   return b.joinedAt - a.joinedAt;
 }
@@ -60,7 +66,7 @@ function compareFor(sort: SortKey, you: Person | null): (a: Person, b: Person) =
 
 /**
  * Filters and sorts people for the list. Search matches every term against name, handles and
- * one-liner. "Best match" ranks by topics shared with `you` and falls back to newest when you
+ * one-liner; the intent filter keeps people here for any picked intent. "Best match" ranks by topics shared with `you` and falls back to newest when you
  * have not joined. You are never listed as your own best match.
  */
 export function queryPeople(
@@ -72,6 +78,7 @@ export function queryPeople(
   const result = people.filter((person) => {
     if (query.sort === "match" && person.isYou) return false;
     if (!matchesTopics(person, query.topics, query.match)) return false;
+    if (!matchesIntents(person, query.intents)) return false;
     if (terms.length === 0) return true;
     const text = searchText(person);
     return terms.every((term) => text.includes(term));

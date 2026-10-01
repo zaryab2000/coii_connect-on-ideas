@@ -102,6 +102,21 @@
   transform: translate(3px, 3px);
 }
 
+/* Meet actions (wave, chai) in marigold, so they never compete with a rani primary. */
+.btn--wave {
+  background: var(--marigold);
+  box-shadow: var(--pop);
+}
+
+.btn--wave:active {
+  transform: translate(3px, 3px);
+}
+
+.btn--wave:disabled {
+  background: var(--cream);
+  color: var(--ink-soft);
+}
+
 .btn--toggle[aria-pressed="true"] {
   background: var(--marigold);
 }
@@ -169,7 +184,8 @@
     box-shadow: 3px 3px 0 var(--ink);
   }
 
-  .btn--primary:not(:disabled):hover {
+  .btn--primary:not(:disabled):hover,
+  .btn--wave:not(:disabled):hover {
     box-shadow: 5px 5px 0 var(--ink);
   }
 
@@ -272,6 +288,31 @@
 .tag--you {
   background: var(--rani);
   color: var(--paper);
+}
+
+/* Count or dot pinned to a tab: cards still face down, or a chai you haven't seen. */
+.badge-mark {
+  display: grid;
+  place-items: center;
+  min-width: 21px;
+  height: 21px;
+  padding: 2px 5px 0;
+  border: var(--line-thin);
+  border-radius: var(--radius-pill);
+  background: var(--rani);
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1;
+  text-shadow: 0 1px 0 var(--ink);
+}
+
+.badge-mark[data-kind="dot"] {
+  min-width: 15px;
+  width: 15px;
+  height: 15px;
+  padding: 0;
 }
 
 /* ---- segmented control ---------------------------------------------------------------------- */

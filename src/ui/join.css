@@ -414,8 +414,13 @@ fieldset.q-card > .q-card__title + * {
   font-weight: 600;
 }
 
-.you-card .topic-chips {
+.you-card .topic-chips,
+.you-card .intent-chips {
   justify-content: center;
+}
+
+.you-card .intent-chips {
+  margin-top: 10px;
 }
 
 .you-card .bubble {

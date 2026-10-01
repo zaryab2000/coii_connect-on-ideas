@@ -188,6 +188,36 @@
   }
 }
 
+/* What someone is here for: quieter than topic chips, and not buttons. */
+.intent-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.intent-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 3px 11px 1px 6px;
+  border: var(--line-thin);
+  border-radius: var(--radius-pill);
+  background: var(--cream);
+  font-family: var(--font-display);
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.intent-chip img {
+  flex: none;
+  margin-top: -3px;
+}
+
 /* One-liner as a speech bubble, tail pointing up at its owner. */
 .bubble {
   position: relative;
@@ -413,7 +443,11 @@
 }
 
 .side__tab {
+  display: inline-flex;
   flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   min-height: 44px;
   padding: 6px 12px 2px;
   border: var(--line-thin);
@@ -431,6 +465,10 @@
 .side__tab[aria-current] {
   background: var(--ink);
   color: var(--paper);
+}
+
+.side__tab .badge-mark {
+  margin-top: -3px;
 }
 
 @media (hover: hover) and (pointer: fine) {

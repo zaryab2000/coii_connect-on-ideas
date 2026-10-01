@@ -204,6 +204,28 @@
   display: none;
 }
 
+.tribe-chip {
+  margin-left: 8px;
+  padding-right: 6px;
+  pointer-events: auto;
+}
+
+.tribe-chip__count {
+  min-width: 1.6em;
+  padding: 3px 7px 1px;
+  border-radius: var(--radius-pill);
+  background: var(--floor);
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.tribe-chip[aria-pressed="true"] .tribe-chip__count {
+  background: var(--paper);
+}
+
 .chip--clear {
   padding-left: 9px;
   background: var(--ink);
