@@ -12,6 +12,39 @@ about. Tap a bean to see how to reach them, then DM them. A sortable list view s
 
 ---
 
+## Status: demo v0 built (1 Oct 2026)
+
+The localhost demo is complete on branch `demo-v0` (not yet pushed or deployed). See `README.md`
+for how to run it.
+
+**Built**
+
+- Live venue: 1,500 seeded people (70% Indian / 30% international names) wandering, chatting,
+  commuting between booths, live arrivals, ten booths with live counts
+- Interactions: grab and throw (dizzy, run home), tap to select, pinch, pan and zoom
+- Joke booths: DeFi liquidity pool, Privacy shades, Prediction ticker, AI robots
+- UI: HUD, phone tab bar and bottom sheets, desktop side panel, People list (search, filter,
+  sort), booth panel, profile card, Google-Form-style join form, toasts
+- Joining persists in this browser; reduced-motion mode
+- Quality: 89 unit/property tests, 8 Playwright smoke tests (desktop + phone); prek hooks
+  enforce format, lint (complexity ≤ 8, ≤ 100 lines/function, ≤ 5 params), types and tests
+
+**Next**
+
+1. Owner phone test on the LAN URL (`pnpm dev`, then `http://<mac-ip>:5173/?debug`): FPS +
+   gestures
+2. Weekend launch, static: `pnpm build`, then `npx wrangler pages deploy dist --project-name gmadda`
+   after `npx wrangler login`. Needs the owner's free Cloudflare account and an explicit OK. The
+   link-preview image and headers are already in `public/`
+3. Real sign-ups (Stage B): Supabase + Telegram Login behind the `PeopleSource` seam in
+   `src/data/source.ts`
+
+**Known gaps**
+
+- Not yet tested on a real phone
+- Sheets don't trap focus (the tab bar stays usable on purpose)
+- Live relayout on device rotation is not done (layout is chosen at load)
+
 ## 1. Facts & constraints
 
 |               |                                                                                                                                       |
