@@ -1,0 +1,28 @@
+# Run with `prek run` (or automatically on commit after `prek install`).
+repos:
+  - repo: local
+    hooks:
+      - id: oxfmt
+        name: oxfmt --check
+        entry: pnpm exec oxfmt --check
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: oxlint
+        name: oxlint --deny-warnings
+        entry: pnpm exec oxlint --deny-warnings
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: typecheck
+        name: tsc --noEmit
+        entry: pnpm exec tsc --noEmit
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: vitest
+        name: vitest run
+        entry: pnpm exec vitest run
+        language: system
+        pass_filenames: false
+        always_run: true

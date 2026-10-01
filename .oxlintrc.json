@@ -10,6 +10,8 @@
     "import/no-cycle": "error",
     // Side-effect imports are how CSS and fonts are loaded.
     "import/no-unassigned-import": ["warn", { "allow": ["**/*.css"] }],
+    // `window.__adda` is the deliberate debug/test hook.
+    "no-underscore-dangle": ["warn", { "allow": ["__adda"] }],
     "react/react-in-jsx-scope": "off",
     "unicorn/no-null": "off",
     // False positive: PixiJS Graphics has a chainable `.fill({ color })` that is not Array#fill.
