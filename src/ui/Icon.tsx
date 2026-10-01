@@ -35,7 +35,8 @@ export type GlyphName =
   | "check"
   | "pin"
   | "info"
-  | "chevron";
+  | "chevron"
+  | "clock";
 
 const PATHS: Record<GlyphName, string> = {
   close: "M6 6l12 12M18 6L6 18",
@@ -49,6 +50,7 @@ const PATHS: Record<GlyphName, string> = {
     "M12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z",
   info: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v5.5M12 7.5v.5",
   chevron: "M6 9l6 6 6-6",
+  clock: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7.5V12l3 2",
 };
 
 const DICE_PIPS: readonly (readonly [number, number])[] = [

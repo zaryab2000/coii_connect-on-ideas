@@ -3,9 +3,12 @@ import type { RefObject } from "react";
 
 import { useActions, useApp } from "@/app/context";
 import { MapHost } from "@/app/MapHost";
+import type { Panel } from "@/app/store";
 import type { EngineApi } from "@/engine/types";
+import { ChaiOverlay } from "@/ui/ChaiCard";
 import { useHeightVar, useMediaQuery } from "@/ui/hooks";
 import { Hud } from "@/ui/Hud";
+import { OpenChaiContext } from "@/ui/meetHooks";
 import { PhoneSheets, SidePanel } from "@/ui/Panels";
 import type { QueryState } from "@/ui/Panels";
 import type { PeopleQuery } from "@/ui/people";
@@ -15,7 +18,9 @@ import { Toasts } from "@/ui/Toasts";
 
 const DESKTOP = "(min-width: 768px)";
 
-function popoverIsOpen(): boolean {
+/** A popover or modal dialog is open; it handles Esc itself. */
+function overlayIsOpen(): boolean {
+  if (document.querySelector("dialog[open]") !== null) return true;
   try {
     return document.querySelector(":popover-open") !== null;
   } catch {
@@ -23,7 +28,7 @@ function popoverIsOpen(): boolean {
   }
 }
 
-/** Esc closes the open panel, unless a popover (which handles Esc itself) is open. */
+/** Esc closes the open panel, unless a popover or dialog (which handle Esc) is open. */
 function useEscapeCloses(): void {
   const actions = useActions();
   const panel = useApp((s) => s.panel);
@@ -31,7 +36,7 @@ function useEscapeCloses(): void {
     if (panel === "none") return undefined;
     const onKey = (e: KeyboardEvent): void => {
       if (e.key !== "Escape" || e.defaultPrevented) return;
-      if (popoverIsOpen()) return;
+      if (overlayIsOpen()) return;
       actions.closePanel();
     };
     document.addEventListener("keydown", onKey);
@@ -70,6 +75,11 @@ interface LayoutFlags {
   readonly covered: boolean;
 }
 
+/** Panels that open as a tall phone sheet over most of the map. */
+function isTall(panel: Panel): boolean {
+  return panel === "people" || panel === "join" || panel === "meet";
+}
+
 function useLayoutFlags(): LayoutFlags {
   const isDesktop = useMediaQuery(DESKTOP);
   const prefersReduced = useMediaQuery("(prefers-reduced-motion: reduce)");
@@ -82,7 +92,7 @@ function useLayoutFlags(): LayoutFlags {
     reducedMotion: reducedState || prefersReduced,
     lift: phone && framed && (panel === "profile" || panel === "booth"),
     sheet: phone && panel !== "none",
-    covered: phone && (panel === "people" || panel === "join"),
+    covered: phone && isTall(panel),
   };
 }
 
@@ -120,29 +130,38 @@ export function App({ engine }: { readonly engine: EngineApi }) {
   const onSheetHeight = useCallback((height: number) => {
     appRef.current?.style.setProperty("--sheet-h", `${Math.round(height)}px`);
   }, []);
+  const [viewingChai, setViewingChai] = useState<string | null>(null);
+  const closeChai = useCallback(() => setViewingChai(null), []);
 
   return (
-    <div
-      ref={appRef}
-      className="app"
-      data-layout={flags.isDesktop ? "desktop" : "phone"}
-      data-motion={flags.reducedMotion ? "reduced" : "full"}
-      data-lift={flags.lift || undefined}
-      data-sheet={flags.sheet || undefined}
-    >
-      <main className="stage">
-        <div className="map-layer">
-          <MapHost engine={engine} />
-        </div>
-        {ready ? null : (
-          <p className="map-loading" role="status">
-            Opening the adda…
-          </p>
-        )}
-        <Hud ref={hudRef} />
-        <Toasts />
-      </main>
-      <PanelArea flags={flags} query={{ query, onQuery: setQuery }} onSheetHeight={onSheetHeight} />
-    </div>
+    <OpenChaiContext.Provider value={setViewingChai}>
+      <div
+        ref={appRef}
+        className="app"
+        data-layout={flags.isDesktop ? "desktop" : "phone"}
+        data-motion={flags.reducedMotion ? "reduced" : "full"}
+        data-lift={flags.lift || undefined}
+        data-sheet={flags.sheet || undefined}
+      >
+        <main className="stage">
+          <div className="map-layer">
+            <MapHost engine={engine} />
+          </div>
+          {ready ? null : (
+            <p className="map-loading" role="status">
+              Opening the adda…
+            </p>
+          )}
+          <Hud ref={hudRef} />
+          <Toasts />
+        </main>
+        <PanelArea
+          flags={flags}
+          query={{ query, onQuery: setQuery }}
+          onSheetHeight={onSheetHeight}
+        />
+        <ChaiOverlay viewing={viewingChai} onClose={closeChai} />
+      </div>
+    </OpenChaiContext.Provider>
   );
 }

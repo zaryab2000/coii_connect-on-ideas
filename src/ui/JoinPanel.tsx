@@ -7,7 +7,14 @@ import type { Person, TopicId } from "@/data/types";
 import { BeanAvatar } from "@/ui/BeanAvatar";
 import { Glyph } from "@/ui/Icon";
 import { JoinForm } from "@/ui/JoinForm";
-import { Awning, LeaveButton, PanelNav, TopicChips, topicVars } from "@/ui/PanelChrome";
+import {
+  Awning,
+  IntentChips,
+  LeaveButton,
+  PanelNav,
+  TopicChips,
+  topicVars,
+} from "@/ui/PanelChrome";
 import type { PanelChrome } from "@/ui/PanelChrome";
 
 function YouSummary({ you, onEdit }: { readonly you: Person; readonly onEdit: () => void }) {
@@ -24,6 +31,7 @@ function YouSummary({ you, onEdit }: { readonly you: Person; readonly onEdit: ()
         <p className="you-card__name">{you.name}</p>
         {handles ? <p className="you-card__handles">{handles}</p> : null}
         <TopicChips topics={you.topics} />
+        <IntentChips intents={you.intent} />
         {you.oneLiner ? <p className="bubble">{you.oneLiner}</p> : null}
       </div>
       <div className="you-summary__actions">

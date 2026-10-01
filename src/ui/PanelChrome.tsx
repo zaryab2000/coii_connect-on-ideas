@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
 import { useActions } from "@/app/context";
+import { intentById } from "@/data/intents";
 import { topicById } from "@/data/topics";
-import type { TopicId } from "@/data/types";
+import type { IntentId, TopicId } from "@/data/types";
 import { textOn } from "@/ui/color";
 import { Glyph, Icon } from "@/ui/Icon";
+import { capitalize } from "@/ui/meet";
 
 /** Navigation a panel shows in its header; differs between the phone sheet and the side panel. */
 export interface PanelChrome {
@@ -70,6 +72,24 @@ export function TopicChips({ topics }: { readonly topics: readonly TopicId[] }) 
               <Icon id={topic.icon} size={18} />
               <span>{topic.short}</span>
             </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** What someone is here for ("Hiring", "Looking for a role"); shown publicly. */
+export function IntentChips({ intents }: { readonly intents: readonly IntentId[] }) {
+  if (intents.length === 0) return null;
+  return (
+    <ul className="intent-chips" aria-label="Here for">
+      {intents.map((id) => {
+        const intent = intentById(id);
+        return (
+          <li key={id} className="intent-chip">
+            <Icon id={intent.icon} size={18} />
+            {capitalize(intent.phrase)}
           </li>
         );
       })}

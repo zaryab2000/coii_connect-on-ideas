@@ -8,6 +8,8 @@ import type { TopicId } from "@/data/types";
 import { BoothPanel } from "@/ui/BoothPanel";
 import { usePresence } from "@/ui/hooks";
 import { JoinPanel } from "@/ui/JoinPanel";
+import { meetTabLabel } from "@/ui/meet";
+import { BadgeMark, useMeetBadge } from "@/ui/MeetBadge";
 import { MeetPanel } from "@/ui/MeetPanel";
 import type { PanelChrome } from "@/ui/PanelChrome";
 import type { PeopleQuery } from "@/ui/people";
@@ -28,17 +30,19 @@ export interface QueryState {
   readonly onQuery: (query: PeopleQuery) => void;
 }
 
+type ReturnTo = "booth" | "people" | "meet" | null;
+
 /** The list panel a profile was opened from, so it can offer a way back. */
-export function useReturnTo(panel: Panel): "booth" | "people" | null {
-  const [state, setState] = useState<{ panel: Panel; returnTo: "booth" | "people" | null }>({
+export function useReturnTo(panel: Panel): ReturnTo {
+  const [state, setState] = useState<{ panel: Panel; returnTo: ReturnTo }>({
     panel,
     returnTo: null,
   });
   if (state.panel !== panel) {
     const from = state.panel;
-    let returnTo: "booth" | "people" | null = null;
+    let returnTo: ReturnTo = null;
     if (panel === "profile") {
-      returnTo = from === "booth" || from === "people" ? from : null;
+      returnTo = from === "booth" || from === "people" || from === "meet" ? from : null;
     }
     setState({ panel, returnTo });
   }
@@ -94,11 +98,12 @@ const SHEET: Record<PanelView["panel"], { size: SheetSize; modal: boolean; label
 };
 
 function backTo(
-  returnTo: "booth" | "people" | null,
+  returnTo: ReturnTo,
   topic: TopicId | null,
   open: (panel: Panel) => void,
 ): PanelChrome["back"] {
   if (returnTo === "people") return { label: "People", onBack: () => open("people") };
+  if (returnTo === "meet") return { label: "Meet", onBack: () => open("meet") };
   if (returnTo === "booth" && topic) {
     return { label: topicById(topic).short, onBack: () => open("booth") };
   }
@@ -146,13 +151,15 @@ export function PhoneSheets({
   ));
 }
 
-type DeskTab = "people" | "join";
+type DeskTab = "people" | "meet" | "join";
+
+const DESK_TABS: readonly DeskTab[] = ["people", "meet", "join"];
 
 function isDeskTab(panel: Panel): panel is DeskTab {
-  return panel === "people" || panel === "join";
+  return panel === "people" || panel === "meet" || panel === "join";
 }
 
-/** The People/Join tab to show; remembers the last one while a profile or booth is open. */
+/** The People/Meet/Join tab to show; remembers the last one while a profile or booth is open. */
 function useDeskTab(panel: Panel): DeskTab {
   const [lastTab, setLastTab] = useState<DeskTab>("people");
   if (isDeskTab(panel) && panel !== lastTab) setLastTab(panel);
@@ -165,6 +172,7 @@ function detailOf(view: PanelView | null): PanelView | null {
 
 function tabName(tab: DeskTab, joined: boolean): string {
   if (tab === "people") return "People";
+  if (tab === "meet") return "Meet";
   return joined ? "You" : "Join";
 }
 
@@ -185,24 +193,27 @@ function useDeskChrome(detail: PanelView | null, tab: DeskTab, joined: boolean):
 
 function SideTabs({ tab, detail, joined }: { tab: DeskTab; detail: boolean; joined: boolean }) {
   const actions = useActions();
+  const badge = useMeetBadge();
   return (
     <nav className="side__tabs" aria-label="Panels">
-      {(["people", "join"] as const).map((id) => (
+      {DESK_TABS.map((id) => (
         <button
           key={id}
           type="button"
           className="side__tab"
           aria-current={!detail && tab === id ? "page" : undefined}
+          aria-label={id === "meet" ? meetTabLabel(badge) : undefined}
           onClick={() => actions.openPanel(id)}
         >
           {tabName(id, joined)}
+          {id === "meet" ? <BadgeMark badge={badge} /> : null}
         </button>
       ))}
     </nav>
   );
 }
 
-/** Desktop: a side panel with People / Join tabs that also hosts profile and booth details. */
+/** Desktop: a side panel with People / Meet / Join tabs that also hosts profile and booth details. */
 export function SidePanel({ query }: { readonly query: QueryState }) {
   const view = usePanelView();
   const joined = useApp((s) => s.you !== null);

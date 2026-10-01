@@ -1,0 +1,46 @@
+/* A small celebratory burst: paper pieces fly out, then drop and fade. */
+
+.confetti {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 5;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.confetti__piece {
+  position: absolute;
+  top: -6px;
+  left: -4px;
+  width: 8px;
+  height: 12px;
+  border: 1.5px solid var(--ink);
+  border-radius: 2px;
+  background: var(--color);
+  opacity: 0;
+  animation: confetti-burst 950ms var(--ease-out) forwards;
+}
+
+.confetti__piece[data-round] {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+@keyframes confetti-burst {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg) scale(0.6);
+  }
+  55% {
+    opacity: 1;
+    transform: translate(var(--x), var(--y)) rotate(var(--spin)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--x) * 1.15), calc(var(--y) + 70px))
+      rotate(calc(var(--spin) * 1.6)) scale(0.9);
+  }
+}

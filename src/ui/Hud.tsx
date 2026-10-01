@@ -1,9 +1,10 @@
 import "@/ui/hud.css";
-import { useId } from "react";
-import type { MouseEvent, Ref } from "react";
+import { useId, useMemo } from "react";
+import type { CSSProperties, MouseEvent, Ref } from "react";
 
 import { useActions, useApp } from "@/app/context";
 import { TOPICS } from "@/data/topics";
+import { tribeOf } from "@/match/tribe";
 import { Glyph, Icon } from "@/ui/Icon";
 import { topicVars } from "@/ui/PanelChrome";
 
@@ -62,6 +63,31 @@ function DemoChip() {
   );
 }
 
+const TRIBE_VARS = { "--topic": "var(--rani)", "--on-topic": "var(--paper)" } as CSSProperties;
+
+/** "My tribe" map mode: everyone who shares your topics glows. Shown once you've joined. */
+function TribeToggle() {
+  const actions = useActions();
+  const you = useApp((s) => s.you);
+  const people = useApp((s) => s.people);
+  const on = useApp((s) => s.tribe);
+  const size = useMemo(() => (you ? tribeOf(you, people).length : 0), [you, people]);
+  if (!you) return null;
+  return (
+    <button
+      type="button"
+      className="chip tribe-chip"
+      style={TRIBE_VARS}
+      aria-pressed={on}
+      onClick={() => actions.toggleTribe()}
+    >
+      <Icon id="light_bulb" size={20} />
+      My tribe
+      <span className="tribe-chip__count">{numberFormat.format(size)}</span>
+    </button>
+  );
+}
+
 function TopicHighlights() {
   const actions = useActions();
   const highlight = useApp((s) => s.highlight);
@@ -110,6 +136,7 @@ export function Hud({ ref }: { readonly ref: Ref<HTMLDivElement> }) {
       </div>
       <div className="hud__chips-row">
         <DemoChip />
+        <TribeToggle />
         <TopicHighlights />
       </div>
     </div>

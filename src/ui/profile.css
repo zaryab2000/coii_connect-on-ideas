@@ -6,6 +6,10 @@
   margin-top: 12px;
 }
 
+.profile__head > .intent-chips {
+  margin-top: 10px;
+}
+
 .profile__id {
   display: flex;
   align-items: center;
@@ -111,6 +115,41 @@
 
 .profile__row .btn {
   padding-inline: 10px;
+}
+
+/* After a wave: a quiet confirmation with a way to take it back. */
+.wave-done {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 0;
+  padding: 8px 6px 4px 12px;
+  border: 2px dashed var(--ink);
+  border-radius: var(--radius-md);
+  background: var(--cream);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.wave-done img {
+  flex: none;
+  margin-top: -3px;
+}
+
+.wave-done__text {
+  flex: 1 1 180px;
+}
+
+.wave-done .btn--quiet {
+  min-height: 40px;
+  margin-left: auto;
+  padding-inline: 8px;
+}
+
+.wave-done--quota {
+  padding: 10px 14px 8px;
+  color: var(--ink-soft);
 }
 
 /* Garland rule: a string of marigold dots, like the garlands strung between booths. */
