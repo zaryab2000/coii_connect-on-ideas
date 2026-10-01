@@ -1,0 +1,133 @@
+.profile__head {
+  padding-bottom: 0;
+}
+
+.profile__head > .topic-chips {
+  margin-top: 12px;
+}
+
+.profile__id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 14px;
+}
+
+.profile__bean {
+  width: 80px;
+  height: 80px;
+}
+
+.profile__who {
+  min-width: 0;
+}
+
+.profile__name {
+  margin: 0;
+  font-size: 1.4rem;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.profile__handles {
+  margin: 3px 0 0;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 7px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px 1px;
+  border: var(--line-thin);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.badge img,
+.badge .glyph {
+  margin-top: -2px;
+}
+
+.badge--tg .glyph {
+  color: var(--peacock);
+}
+
+.badge--ticket {
+  background: var(--cream);
+}
+
+.badge--demo {
+  border-style: dashed;
+  color: var(--ink-soft);
+}
+
+.badge--you {
+  background: var(--rani);
+  color: var(--paper);
+  text-shadow: 0 1px 0 var(--ink);
+}
+
+.profile__body {
+  padding-top: 2px;
+  padding-bottom: 14px;
+}
+
+.profile__body > .bubble {
+  margin: 16px 0 14px;
+}
+
+.profile__body > .profile__actions:first-child {
+  margin-top: 14px;
+}
+
+.profile__actions {
+  display: grid;
+  gap: 10px;
+}
+
+.profile__row {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: 10px;
+}
+
+.profile__row .btn {
+  padding-inline: 10px;
+}
+
+/* Garland rule: a string of marigold dots, like the garlands strung between booths. */
+.safety {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding-top: 12px;
+  background: radial-gradient(circle, var(--marigold) 2.6px, transparent 3.1px) 0 0 / 11px 8px
+    repeat-x;
+  color: var(--ink-soft);
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.safety img {
+  flex: none;
+  margin-top: 1px;
+}

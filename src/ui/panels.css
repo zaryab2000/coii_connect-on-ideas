@@ -1,0 +1,449 @@
+/* Panel scaffolding shared by the phone sheet and the desktop side panel. */
+
+.panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--paper);
+}
+
+.panel__head {
+  position: relative;
+  flex: none;
+  padding: 0 16px 12px;
+}
+
+.panel__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 4px 16px 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.panel h2,
+.panel h3 {
+  font-family: var(--font-display);
+  font-weight: 800;
+}
+
+/* Striped stall awning with a scalloped edge, matching the booths on the map. */
+.awning {
+  --scallop: 11px;
+  position: relative;
+  height: calc(var(--scallop) * 2);
+  margin: 0 -16px;
+  filter: drop-shadow(0 2px 0 var(--ink));
+}
+
+.awning::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--stripe) 0 calc(var(--scallop) * 2),
+    var(--paper) calc(var(--scallop) * 2) calc(var(--scallop) * 4)
+  );
+  mask:
+    linear-gradient(#000 0 0) top / 100% var(--scallop) no-repeat,
+    radial-gradient(circle var(--scallop) at var(--scallop) var(--scallop), #000 97%, #0000) 0 0 /
+      calc(var(--scallop) * 2) calc(var(--scallop) * 2) repeat-x;
+}
+
+.panel-nav {
+  display: flex;
+  align-items: center;
+  min-height: 0;
+}
+
+.nav-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  border: var(--line-thin);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--pop-sm);
+  font-family: var(--font-display);
+  font-size: 0.88rem;
+  font-weight: 700;
+  transition:
+    transform 120ms var(--ease-out),
+    box-shadow 120ms var(--ease-out);
+}
+
+.nav-btn::after {
+  content: "";
+  position: absolute;
+  inset: -6px -4px;
+}
+
+.nav-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: var(--pop-pressed);
+}
+
+.nav-btn--back {
+  position: relative;
+  padding: 4px 12px 1px 6px;
+}
+
+.nav-btn .glyph {
+  margin-top: -3px;
+}
+
+.nav-btn--close {
+  justify-content: center;
+  width: 36px;
+  margin-left: auto;
+  padding: 0;
+}
+
+/* In a sheet the back and close buttons ride on the awning, either side of the handle. */
+.sheet .panel-nav {
+  position: absolute;
+  top: 7px;
+  left: 14px;
+  right: 14px;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.sheet .nav-btn {
+  min-height: 32px;
+  pointer-events: auto;
+}
+
+.sheet .nav-btn--close {
+  width: 32px;
+}
+
+.side .panel-nav {
+  padding-top: 12px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nav-btn:hover {
+    background: var(--cream);
+  }
+}
+
+.topic-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.topic-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 4px 12px 1px 5px;
+  border: var(--line-thin);
+  border-radius: var(--radius-pill);
+  background: var(--topic);
+  color: var(--on-topic);
+  box-shadow: var(--pop-sm);
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
+  transition:
+    transform 120ms var(--ease-out),
+    box-shadow 120ms var(--ease-out);
+}
+
+.topic-chip::after {
+  content: "";
+  position: absolute;
+  inset: -4px -2px;
+}
+
+.topic-chip img {
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--paper);
+  box-shadow: 0 0 0 2px var(--paper);
+}
+
+.topic-chip:active {
+  transform: translate(1px, 1px);
+  box-shadow: var(--pop-pressed);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .topic-chip:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+}
+
+/* One-liner as a speech bubble, tail pointing up at its owner. */
+.bubble {
+  position: relative;
+  margin: 18px 0 16px;
+  padding: 10px 14px 8px;
+  border: var(--line);
+  border-radius: 18px;
+  background: var(--cream);
+  box-shadow: var(--pop-sm);
+  font-size: 1.02rem;
+  line-height: 1.4;
+}
+
+.bubble::before,
+.bubble::after {
+  content: "";
+  position: absolute;
+  left: 26px;
+  width: 20px;
+  height: 12px;
+  clip-path: polygon(0 100%, 35% 0, 100% 100%);
+}
+
+.bubble::before {
+  top: -12px;
+  background: var(--ink);
+}
+
+.bubble::after {
+  top: -8px;
+  left: 29px;
+  width: 15px;
+  height: 9px;
+  background: var(--cream);
+}
+
+/* Cream disc with topic-coloured polka dots, like the rangoli plaza on the map. */
+.rangoli-disc {
+  display: grid;
+  flex: none;
+  place-items: center;
+  border: var(--line);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, var(--topic, var(--rani)) 2px, transparent 2.6px) 0 0 / 13px 13px,
+    var(--cream);
+  box-shadow:
+    inset 0 0 0 5px var(--paper),
+    inset 0 0 0 8px var(--marigold),
+    var(--pop-sm);
+}
+
+.list-heading {
+  margin: 18px 0 2px;
+  font-size: 1.05rem;
+}
+
+.empty-note {
+  margin: 8px 0;
+  color: var(--ink-soft);
+}
+
+.confirm {
+  padding: 12px;
+  border: var(--line);
+  border-radius: var(--radius-md);
+  background: var(--cream);
+}
+
+.confirm__text {
+  margin: 0 0 10px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.confirm__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* ---- phone sheet ---------------------------------------------------------------------------- */
+
+.sheet-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(30 21 56 / 0.34);
+  pointer-events: auto;
+  transition: opacity 240ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+.sheet-layer[data-leaving] .sheet-backdrop {
+  opacity: 0;
+}
+
+.sheet {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  /* Tucks the bottom edge just under the tab bar's top border. */
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom) - 8px);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(88dvh - var(--tabbar-h) - var(--safe-bottom));
+  padding-bottom: 8px;
+  overflow: hidden;
+  border: var(--line);
+  border-bottom: 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--paper);
+  box-shadow: 4px 0 0 var(--ink);
+  outline: none;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0);
+  transition:
+    transform 340ms var(--ease-drawer),
+    opacity 200ms var(--ease-out);
+
+  @starting-style {
+    transform: translate3d(0, 100%, 0);
+  }
+}
+
+.sheet[data-size="tall"],
+.sheet[data-size="peek"] {
+  height: calc(88dvh - var(--tabbar-h) - var(--safe-bottom));
+}
+
+.sheet[data-size="peek"]:not([data-expanded]) {
+  transform: translate3d(0, var(--peek-offset, 0px), 0);
+}
+
+/* Lets the last rows scroll up into the visible half of a peeking sheet. */
+.sheet[data-size="peek"]:not([data-expanded]) .panel__scroll {
+  padding-bottom: calc(var(--peek-offset, 0px) + 24px);
+}
+
+.app[data-motion="full"] .sheet-layer[data-leaving] .sheet {
+  transform: translate3d(0, 100%, 0);
+  transition-duration: 240ms;
+}
+
+.app[data-motion="reduced"] .sheet {
+  transition: opacity 200ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+.app[data-motion="reduced"] .sheet-layer[data-leaving] .sheet {
+  opacity: 0;
+}
+
+.sheet__handle {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 3;
+  width: 72px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  translate: -50% 0;
+  touch-action: none;
+  cursor: grab;
+}
+
+.sheet__handle::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  width: 46px;
+  height: 12px;
+  border: var(--line-thin);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  translate: -50% 0;
+}
+
+.sheet [data-sheet-grab] {
+  touch-action: none;
+}
+
+/* ---- desktop side panel --------------------------------------------------------------------- */
+
+.side {
+  position: relative;
+  min-height: 0;
+  padding: 12px 14px 14px 0;
+}
+
+.side__card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  border: var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  box-shadow: var(--pop);
+}
+
+.side__tabs {
+  display: flex;
+  flex: none;
+  gap: 6px;
+  padding: 10px 10px 8px;
+  background: var(--paper);
+}
+
+.side__tab {
+  flex: 1;
+  min-height: 44px;
+  padding: 6px 12px 2px;
+  border: var(--line-thin);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  color: var(--ink-soft);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 800;
+  transition:
+    background-color 160ms var(--ease-out),
+    color 160ms var(--ease-out);
+}
+
+.side__tab[aria-current] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .side__tab:not([aria-current]):hover {
+    background: var(--cream);
+    color: var(--ink);
+  }
+}
+
+.side__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  outline: none;
+}
