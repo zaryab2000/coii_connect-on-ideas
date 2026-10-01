@@ -57,6 +57,15 @@ export class SpatialGrid {
     this.heads[cell] = index;
   }
 
+  private cellRange(x: number, y: number, radius: number): [number, number, number, number] {
+    return [
+      Math.max(0, Math.floor((x - radius) / this.cellSize)),
+      Math.min(this.cols - 1, Math.floor((x + radius) / this.cellSize)),
+      Math.max(0, Math.floor((y - radius) / this.cellSize)),
+      Math.min(this.rows - 1, Math.floor((y + radius) / this.cellSize)),
+    ];
+  }
+
   /** Calls `visit` for every inserted index within `radius` of (x, y). */
   forEachNear(
     x: number,
@@ -64,22 +73,29 @@ export class SpatialGrid {
     radius: number,
     visit: (index: number, distSq: number) => void,
   ): void {
-    const minCx = Math.max(0, Math.floor((x - radius) / this.cellSize));
-    const maxCx = Math.min(this.cols - 1, Math.floor((x + radius) / this.cellSize));
-    const minCy = Math.max(0, Math.floor((y - radius) / this.cellSize));
-    const maxCy = Math.min(this.rows - 1, Math.floor((y + radius) / this.cellSize));
+    const [minCx, maxCx, minCy, maxCy] = this.cellRange(x, y, radius);
     const radiusSq = radius * radius;
     for (let cy = minCy; cy <= maxCy; cy++) {
       for (let cx = minCx; cx <= maxCx; cx++) {
-        let index = this.heads[cy * this.cols + cx] ?? -1;
-        while (index !== -1) {
-          const dx = (this.xs[index] ?? 0) - x;
-          const dy = (this.ys[index] ?? 0) - y;
-          const distSq = dx * dx + dy * dy;
-          if (distSq <= radiusSq) visit(index, distSq);
-          index = this.next[index] ?? -1;
-        }
+        this.visitCell(cy * this.cols + cx, x, y, radiusSq, visit);
       }
+    }
+  }
+
+  private visitCell(
+    cell: number,
+    x: number,
+    y: number,
+    radiusSq: number,
+    visit: (index: number, distSq: number) => void,
+  ): void {
+    let index = this.heads[cell] ?? -1;
+    while (index !== -1) {
+      const dx = (this.xs[index] ?? 0) - x;
+      const dy = (this.ys[index] ?? 0) - y;
+      const distSq = dx * dx + dy * dy;
+      if (distSq <= radiusSq) visit(index, distSq);
+      index = this.next[index] ?? -1;
     }
   }
 }

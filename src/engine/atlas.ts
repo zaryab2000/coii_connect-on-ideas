@@ -95,33 +95,12 @@ class AtlasBuilder {
     });
   }
 
+  /** Packs frames on shelves, draws them into one canvas and resolves every frame promise. */
   build(width: number): HTMLCanvasElement {
     const sorted = this.requests.toSorted((a, b) => b.h * b.scale - a.h * a.scale);
-    let x = GAP;
-    let y = GAP;
-    let shelf = 0;
-    for (const req of sorted) {
-      const pw = Math.ceil(req.w * req.scale);
-      const ph = Math.ceil(req.h * req.scale);
-      if (x + pw + GAP > width) {
-        x = GAP;
-        y += shelf + GAP;
-        shelf = 0;
-      }
-      req.x = x;
-      req.y = y;
-      x += pw + GAP;
-      shelf = Math.max(shelf, ph);
-    }
-    const height = 2 ** Math.ceil(Math.log2(y + shelf + GAP));
-    if (height > 4096) {
-      throw new Error(
-        `Crowd atlas needs ${height}px of height; keep it at or below 4096 for phones`,
-      );
-    }
     const canvas = document.createElement("canvas");
     canvas.width = width;
-    canvas.height = height;
+    canvas.height = this.pack(sorted, width);
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Canvas 2D is unavailable, so the crowd art cannot be drawn");
     for (const req of sorted) {
@@ -137,18 +116,46 @@ class AtlasBuilder {
       scaleMode: "linear",
       resolution: 1,
     });
-    for (const req of sorted) {
-      const pw = Math.ceil(req.w * req.scale);
-      const ph = Math.ceil(req.h * req.scale);
-      req.resolve({
-        texture: new Texture({ source, frame: new Rectangle(req.x ?? 0, req.y ?? 0, pw, ph) }),
-        anchorX: (req.ox * req.scale) / pw,
-        anchorY: (req.oy * req.scale) / ph,
-        scale: 1 / req.scale,
-      });
-    }
+    for (const req of sorted) req.resolve(frameFor(source, req));
     return canvas;
   }
+
+  /** Assigns shelf positions and returns the power-of-two canvas height needed. */
+  private pack(sorted: readonly Request[], width: number): number {
+    let x = GAP;
+    let y = GAP;
+    let shelf = 0;
+    for (const req of sorted) {
+      const pw = Math.ceil(req.w * req.scale);
+      if (x + pw + GAP > width) {
+        x = GAP;
+        y += shelf + GAP;
+        shelf = 0;
+      }
+      req.x = x;
+      req.y = y;
+      x += pw + GAP;
+      shelf = Math.max(shelf, Math.ceil(req.h * req.scale));
+    }
+    const height = 2 ** Math.ceil(Math.log2(y + shelf + GAP));
+    if (height > 4096) {
+      throw new Error(
+        `Crowd atlas needs ${height}px of height; keep it at or below 4096 for phones`,
+      );
+    }
+    return height;
+  }
+}
+
+function frameFor(source: CanvasSource, req: Request): Frame {
+  const pw = Math.ceil(req.w * req.scale);
+  const ph = Math.ceil(req.h * req.scale);
+  return {
+    texture: new Texture({ source, frame: new Rectangle(req.x ?? 0, req.y ?? 0, pw, ph) }),
+    anchorX: (req.ox * req.scale) / pw,
+    anchorY: (req.oy * req.scale) / ph,
+    scale: 1 / req.scale,
+  };
 }
 
 function centered(size: number): { w: number; h: number; ox: number; oy: number } {

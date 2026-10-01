@@ -94,27 +94,32 @@ function thetaAtArc(table: Float64Array, arc: number): number {
   return ((lo + frac) / (table.length - 1)) * Math.PI * 2;
 }
 
+function num(values: readonly number[], index: number): number {
+  return values[index] ?? 0;
+}
+
+/** Arc distance between neighbouring booth centres, plus the wider gap left for the gate. */
+function ringSpacing(radii: readonly number[]): { spacings: number[]; gap: number } {
+  const count = radii.length;
+  const spacings: number[] = [];
+  for (let i = 0; i < count - 1; i++) spacings.push(num(radii, i) + num(radii, i + 1) + MARGIN);
+  return { spacings, gap: num(radii, count - 1) + num(radii, 0) + GATE_GAP };
+}
+
 function placeRing(radii: readonly number[], a: number, b: number): Placed[] | null {
   const table = ellipseArcTable(a, b, 2048);
   const perimeter = table[table.length - 1] ?? 0;
-  const count = radii.length;
-  const spacings: number[] = [];
-  for (let i = 0; i < count - 1; i++) {
-    spacings.push((radii[i] ?? 0) + (radii[i + 1] ?? 0) + MARGIN);
-  }
-  const gap = (radii[count - 1] ?? 0) + (radii[0] ?? 0) + GATE_GAP;
+  const { spacings, gap } = ringSpacing(radii);
   const required = spacings.reduce((sum, s) => sum + s, 0) + gap;
   if (perimeter < required) return null;
-  const extra = (perimeter - required) / count;
-  const bottomArc = table[512] ?? 0;
-  let arc = bottomArc + (gap + extra) / 2;
-  const placed: Placed[] = [];
-  for (let i = 0; i < count; i++) {
+  const extra = (perimeter - required) / radii.length;
+  // Index 512 of 2048 samples is theta = PI/2: the bottom of the ellipse, where the gate goes.
+  let arc = (table[512] ?? 0) + (gap + extra) / 2;
+  return radii.map((r, i) => {
     const theta = thetaAtArc(table, arc);
-    placed.push({ x: a * Math.cos(theta), y: b * Math.sin(theta), r: radii[i] ?? 0 });
-    arc += (spacings[i] ?? 0) + extra;
-  }
-  return placed;
+    arc += num(spacings, i) + extra;
+    return { x: a * Math.cos(theta), y: b * Math.sin(theta), r };
+  });
 }
 
 function landscapeBooths(radii: readonly number[], plaza: Placed): Placed[] {
@@ -128,39 +133,49 @@ function landscapeBooths(radii: readonly number[], plaza: Placed): Placed[] {
   throw new Error("Could not fit booths on the landscape ring after 120 attempts");
 }
 
+const LEFT_COLUMN = [0, 2, 4, 6, 8];
+const RIGHT_COLUMN = [1, 3, 5, 7, 9];
+
+/** Vertical position of each street row, leaving room for the plaza between rows 1 and 2. */
+function streetRows(
+  radii: readonly number[],
+  d: number,
+  plazaR: number,
+): { rowY: number[]; plazaY: number } {
+  const r = (column: readonly number[], row: number): number => num(radii, num(column, row));
+  const reach = (rr: number): number => Math.sqrt(Math.max(0, (rr + plazaR + MARGIN) ** 2 - d * d));
+  const rowY: number[] = [0];
+  let plazaY = 0;
+  for (let row = 1; row < 5; row++) {
+    const prevY = num(rowY, row - 1);
+    const sameSide = Math.max(
+      r(LEFT_COLUMN, row - 1) + r(LEFT_COLUMN, row),
+      r(RIGHT_COLUMN, row - 1) + r(RIGHT_COLUMN, row),
+    );
+    let y = prevY + sameSide + MARGIN;
+    if (row === 2) {
+      const above = Math.max(reach(r(LEFT_COLUMN, 1)), reach(r(RIGHT_COLUMN, 1)), plazaR + MARGIN);
+      const below = Math.max(reach(r(LEFT_COLUMN, 2)), reach(r(RIGHT_COLUMN, 2)), plazaR + MARGIN);
+      plazaY = prevY + above;
+      y = Math.max(y, plazaY + below);
+    }
+    rowY.push(y);
+  }
+  return { rowY, plazaY };
+}
+
 function portraitBooths(
   radii: readonly number[],
   plazaR: number,
 ): { booths: Placed[]; plaza: Placed } {
   const d = Math.max(...radii) + STREET_HALF;
-  const left = [0, 2, 4, 6, 8];
-  const right = [1, 3, 5, 7, 9];
-  const r = (i: number): number => radii[i] ?? 0;
-  const rowY: number[] = [0];
-  let plazaY = 0;
-  for (let row = 1; row < 5; row++) {
-    const prevY = rowY[row - 1] ?? 0;
-    const sameSide = Math.max(
-      r(left[row - 1] ?? 0) + r(left[row] ?? 0),
-      r(right[row - 1] ?? 0) + r(right[row] ?? 0),
-    );
-    let y = prevY + sameSide + MARGIN;
-    if (row === 2) {
-      const reach = (rr: number): number =>
-        Math.sqrt(Math.max(0, (rr + plazaR + MARGIN) ** 2 - d * d));
-      const above = Math.max(reach(r(left[1] ?? 0)), reach(r(right[1] ?? 0)));
-      const below = Math.max(reach(r(left[2] ?? 0)), reach(r(right[2] ?? 0)));
-      plazaY = prevY + Math.max(above, plazaR + MARGIN);
-      y = Math.max(y, plazaY + Math.max(below, plazaR + MARGIN));
-    }
-    rowY.push(y);
-  }
+  const { rowY, plazaY } = streetRows(radii, d, plazaR);
   const booths: Placed[] = Array.from({ length: radii.length });
   for (let row = 0; row < 5; row++) {
-    const li = left[row] ?? 0;
-    const ri = right[row] ?? 0;
-    booths[li] = { x: -d, y: rowY[row] ?? 0, r: r(li) };
-    booths[ri] = { x: d, y: rowY[row] ?? 0, r: r(ri) };
+    const li = num(LEFT_COLUMN, row);
+    const ri = num(RIGHT_COLUMN, row);
+    booths[li] = { x: -d, y: num(rowY, row), r: num(radii, li) };
+    booths[ri] = { x: d, y: num(rowY, row), r: num(radii, ri) };
   }
   return { booths, plaza: { x: 0, y: plazaY, r: plazaR } };
 }

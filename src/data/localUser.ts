@@ -3,17 +3,20 @@ import type { Person } from "@/data/types";
 
 const KEY = "adda:you:v1";
 
+function hasValidTopics(topics: unknown): boolean {
+  return (
+    Array.isArray(topics) &&
+    topics.length > 0 &&
+    topics.every((t) => typeof t === "string" && isTopicId(t))
+  );
+}
+
 function isPerson(value: unknown): value is Person {
   if (!value || typeof value !== "object") return false;
   const p = value as Record<string, unknown>;
+  const named = typeof p["id"] === "string" && typeof p["name"] === "string";
   return (
-    typeof p["id"] === "string" &&
-    typeof p["name"] === "string" &&
-    Array.isArray(p["topics"]) &&
-    p["topics"].length > 0 &&
-    p["topics"].every((t) => typeof t === "string" && isTopicId(t)) &&
-    typeof p["avatar"] === "object" &&
-    p["isYou"] === true
+    named && hasValidTopics(p["topics"]) && typeof p["avatar"] === "object" && p["isYou"] === true
   );
 }
 

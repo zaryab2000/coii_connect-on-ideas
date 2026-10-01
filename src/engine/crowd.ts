@@ -1,12 +1,14 @@
 import { Particle, ParticleContainer, Rectangle } from "pixi.js";
 
 import type { CrowdAtlas, Frame } from "@/engine/atlas";
-import type { FaceKind, LegPose } from "@/engine/beanArt";
+import type { FaceKind } from "@/engine/beanArt";
 import type { Effect, EffectPool } from "@/engine/fx";
 import { inRect } from "@/engine/gags";
 import type { Rect, RobotCrew } from "@/engine/gags";
 import { bgr } from "@/engine/palette";
-import { IdleKind, State } from "@/sim/world";
+import { computePose, createPose } from "@/engine/pose";
+import type { Pose } from "@/engine/pose";
+import { State } from "@/sim/world";
 import type { Agent, World } from "@/sim/world";
 
 /** Per-agent colours and frames, fixed for the person's lifetime. */
@@ -41,21 +43,20 @@ export interface View {
 /** Below this zoom each bean is drawn as one pre-baked particle. */
 export const LOD_ZOOM = 0.3;
 
-const WHITE_BGR = 0xffffff;
-const ALPHA_FULL = 255 << 24;
-const RANI_BGR = bgr(0xff2e88);
-const MARIGOLD_BGR = bgr(0xffb31a);
+const WHITE = 0xffffff;
+const OPAQUE = 255 << 24;
+const DIMMED = 70 << 24;
+const SHADOW = ((0.2 * 255) | 0) << 24;
+const RANI = bgr(0xff2e88);
+const MARIGOLD = bgr(0xffb31a);
 
-interface Pose {
-  lift: number;
-  bob: number;
-  tilt: number;
-  sx: number;
-  sy: number;
-  legs: LegPose;
-  face: FaceKind;
-  facing: number;
-  phone: boolean;
+/** Interpolated agent position for this frame. */
+function lerpX(a: Agent, alpha: number): number {
+  return a.px + (a.x - a.px) * alpha;
+}
+
+function lerpY(a: Agent, alpha: number): number {
+  return a.py + (a.y - a.py) * alpha;
 }
 
 /**
@@ -69,22 +70,16 @@ export class CrowdRenderer {
   selected = -1;
   /** Topics to highlight; empty means everyone is shown normally. */
   highlight: ReadonlySet<number> = new Set();
-  private readonly pool: Particle[] = [];
+  private readonly particles: Particle[] = [];
   private count = 0;
   private order: number[] = [];
   private readonly overlays: number[] = [];
   private readonly robotOrder: number[] = [];
-  private readonly pose: Pose = {
-    lift: 0,
-    bob: 0,
-    tilt: 0,
-    sx: 1,
-    sy: 1,
-    legs: "stand",
-    face: "open",
-    facing: 1,
-    phone: false,
-  };
+  private robotQueue: number[] = [];
+  private nextRobot = 0;
+  private readonly pose: Pose = createPose();
+  /** Current transform that `stamp` draws with; set once per bean by `place`. */
+  private readonly pen = { x: 0, y: 0, sx: 1, sy: 1, rotation: 0 };
 
   constructor(
     private readonly atlas: CrowdAtlas,
@@ -135,212 +130,147 @@ export class CrowdRenderer {
     this.count = 0;
     this.overlays.length = 0;
     const lod = view.zoom < LOD_ZOOM;
-    const agents = this.world.agents;
     const decay = Math.exp(-9 * dt);
-    for (const index of this.order) {
-      const a = agents[index];
-      const look = this.looks[index];
-      if (!a?.active || !look) continue;
-      this.squash[index] = (this.squash[index] ?? 0) * decay;
-      if (!this.visible(a, alpha, view)) continue;
-      if (!lod) this.writeShadow(index, a, alpha);
-    }
-    const robots = lod ? [] : this.sortedRobots();
-    let nextRobot = 0;
-    for (const index of this.order) {
-      const a = agents[index];
-      const look = this.looks[index];
-      if (!a?.active || !look || !this.visible(a, alpha, view)) continue;
-      while (nextRobot < robots.length && this.robotY(robots[nextRobot] ?? 0) <= a.y) {
-        this.writeRobot(robots[nextRobot] ?? 0, view);
-        nextRobot++;
-      }
-      if (lod) this.writeLod(index, a, look, alpha, time);
-      else this.writeBean(index, a, look, alpha, time);
-    }
-    while (nextRobot < robots.length) this.writeRobot(robots[nextRobot++] ?? 0, view);
+    for (const index of this.order) this.squash[index] = (this.squash[index] ?? 0) * decay;
+    if (!lod) this.writeShadows(alpha, view);
+    this.writeCrowd(alpha, view, time, lod);
     if (!lod) this.writeOverlays(alpha, time);
     this.writeEffects(effects, alpha);
-    const children = this.container.particleChildren;
-    if (children.length !== this.count) {
-      children.length = this.count;
-      for (let i = 0; i < this.count; i++) children[i] = this.pool[i] as Particle;
-      this.container.update();
-    } else {
-      for (let i = 0; i < this.count; i++) {
-        if (children[i] !== this.pool[i]) children[i] = this.pool[i] as Particle;
-      }
-    }
+    this.commit();
   }
 
+  // ---- particle output ------------------------------------------------------------------------
+
+  private place(x: number, y: number, sx: number, sy: number, rotation: number): void {
+    const pen = this.pen;
+    pen.x = x;
+    pen.y = y;
+    pen.sx = sx;
+    pen.sy = sy;
+    pen.rotation = rotation;
+  }
+
+  /** Emits one particle at the pen, optionally offset in world units. */
+  private stamp(frame: Frame, color: number, dy = 0, dx = 0): void {
+    let p = this.particles[this.count];
+    if (!p) {
+      p = new Particle({ texture: frame.texture });
+      this.particles.push(p);
+    }
+    const pen = this.pen;
+    p.texture = frame.texture;
+    p.anchorX = frame.anchorX;
+    p.anchorY = frame.anchorY;
+    p.x = pen.x + dx;
+    p.y = pen.y + dy;
+    p.scaleX = pen.sx * frame.scale;
+    p.scaleY = pen.sy * frame.scale;
+    p.rotation = pen.rotation;
+    p.color = color;
+    this.count++;
+  }
+
+  /** Hands this frame's particles to the container, only rebuilding when the count changed. */
+  private commit(): void {
+    const children = this.container.particleChildren;
+    const resized = children.length !== this.count;
+    if (resized) children.length = this.count;
+    for (let i = 0; i < this.count; i++) {
+      const p = this.particles[i] as Particle;
+      if (children[i] !== p) children[i] = p;
+    }
+    if (resized) this.container.update();
+  }
+
+  // ---- passes ---------------------------------------------------------------------------------
+
   private visible(a: Agent, alpha: number, view: View): boolean {
-    const x = a.px + (a.x - a.px) * alpha;
-    const y = a.py + (a.y - a.py) * alpha;
+    const x = lerpX(a, alpha);
+    const y = lerpY(a, alpha);
     return x > view.x0 - 40 && x < view.x1 + 40 && y > view.y0 - 10 && y < view.y1 + 80 + a.z;
   }
 
   private dimmed(a: Agent, index: number): boolean {
     if (this.highlight.size === 0 || index === this.selected || a.isYou) return false;
-    for (const topic of a.topics) if (this.highlight.has(topic)) return false;
-    return true;
+    return !a.topics.some((topic) => this.highlight.has(topic));
   }
 
-  private emit(
-    frame: Frame,
-    x: number,
-    y: number,
-    sx: number,
-    sy: number,
-    rotation: number,
-    color: number,
-  ): void {
-    let p = this.pool[this.count];
-    if (!p) {
-      p = new Particle({ texture: frame.texture });
-      this.pool.push(p);
-    }
-    p.texture = frame.texture;
-    p.anchorX = frame.anchorX;
-    p.anchorY = frame.anchorY;
-    p.x = x;
-    p.y = y;
-    p.scaleX = sx * frame.scale;
-    p.scaleY = sy * frame.scale;
-    p.rotation = rotation;
-    p.color = color;
-    this.count++;
+  /** The agent at `index` if it is active, has a look and is on screen; otherwise null. */
+  private onScreen(index: number, alpha: number, view: View): Agent | null {
+    const a = this.world.agents[index];
+    if (!a?.active || !this.looks[index]) return null;
+    return this.visible(a, alpha, view) ? a : null;
   }
 
-  private writeShadow(index: number, a: Agent, alpha: number): void {
-    const x = a.px + (a.x - a.px) * alpha;
-    const y = a.py + (a.y - a.py) * alpha;
-    const shrink = 1 - Math.min(a.z, 70) / 110;
-    const dim = this.dimmed(a, index) ? 0.35 : 1;
-    this.emit(
-      this.atlas.shadow,
-      x,
-      y,
-      shrink,
-      shrink,
-      0,
-      (((0.2 * dim * 255) | 0) << 24) + WHITE_BGR,
-    );
-    if (index === this.selected || a.isYou) {
-      const pulse = 1 + Math.sin(this.world.time * 6) * 0.06;
-      const color = index === this.selected ? RANI_BGR : MARIGOLD_BGR;
-      this.emit(this.atlas.ring, x, y, pulse, pulse, 0, color + ALPHA_FULL);
+  private writeShadows(alpha: number, view: View): void {
+    for (const index of this.order) {
+      const a = this.onScreen(index, alpha, view);
+      if (!a) continue;
+      const shrink = 1 - Math.min(a.z, 70) / 110;
+      const shade = this.dimmed(a, index) ? ((0.07 * 255) | 0) << 24 : SHADOW;
+      this.place(lerpX(a, alpha), lerpY(a, alpha), shrink, shrink, 0);
+      this.stamp(this.atlas.shadow, shade + WHITE);
+      if (index === this.selected || a.isYou) this.writeRing(index, a, alpha);
     }
   }
 
-  private computePose(index: number, a: Agent, look: BeanLook, time: number): Pose {
-    const pose = this.pose;
-    const t = time + look.seed * 10;
-    pose.lift = a.z;
-    pose.bob = 0;
-    pose.tilt = 0;
-    pose.sx = 1;
-    pose.sy = 1;
-    pose.legs = "stand";
-    pose.face = t % 4.3 < 0.13 ? "blink" : "open";
-    pose.facing = a.facing;
-    pose.phone = false;
-    switch (a.state) {
-      case State.Wandering:
-      case State.Commuting:
-      case State.Arriving:
-      case State.RunningHome: {
-        const step = Math.sin(a.walkPhase);
-        pose.legs = step > 0 ? "stepA" : "stepB";
-        pose.bob = Math.abs(step) * 1.4;
-        pose.tilt = a.facing * (a.state === State.RunningHome ? 0.16 : 0.05);
-        if (a.state === State.RunningHome) pose.face = "wow";
-        break;
-      }
-      case State.Idle:
-        this.idlePose(pose, a, t);
-        break;
-      case State.Chatting:
-        pose.sy = 1 + Math.sin(t * 11) * 0.025;
-        pose.face = Math.sin(t * 2.3) > 0.6 ? "happy" : pose.face;
-        break;
-      case State.Held:
-        pose.face = "wow";
-        pose.sy = 0.94;
-        break;
-      case State.Grabbed:
-        pose.legs = Math.sin(t * 22) > 0 ? "dangle" : "stepA";
-        pose.face = "wow";
-        pose.tilt = Math.sin(t * 9) * 0.14;
-        pose.lift = a.z + Math.sin(t * 15) * 1.5;
-        break;
-      case State.Thrown:
-        pose.legs = "dangle";
-        pose.face = "wow";
-        pose.tilt = Math.max(-0.7, Math.min(0.7, a.vx / 900)) + Math.sin(t * 13) * 0.1;
-        break;
-      case State.Dizzy:
-        pose.face = "dizzy";
-        pose.tilt = Math.sin(t * 7) * 0.13;
-        break;
-    }
-    const squash = this.squash[index] ?? 0;
-    if (squash > 0.01) {
-      pose.sy *= 1 - squash * 0.45;
-      pose.sx *= 1 + squash * 0.35;
-    }
-    return pose;
+  private writeRing(index: number, a: Agent, alpha: number): void {
+    const pulse = 1 + Math.sin(this.world.time * 6) * 0.06;
+    this.place(lerpX(a, alpha), lerpY(a, alpha), pulse, pulse, 0);
+    this.stamp(this.atlas.ring, (index === this.selected ? RANI : MARIGOLD) + OPAQUE);
   }
 
-  private idlePose(pose: Pose, a: Agent, t: number): void {
-    switch (a.idleKind) {
-      case IdleKind.LookAround:
-        pose.facing = Math.sin(t * 0.9) > 0 ? 1 : -1;
-        break;
-      case IdleKind.Hop: {
-        const hop = Math.max(0, Math.sin(t * 7));
-        pose.lift = hop * 6;
-        pose.sy = 1 + hop * 0.08;
-        pose.sx = 1 - hop * 0.05;
-        pose.face = "happy";
-        break;
-      }
-      case IdleKind.Phone:
-        pose.face = "down";
-        pose.phone = true;
-        break;
-      case IdleKind.Wave: {
-        const hop = Math.max(0, Math.sin(t * 9));
-        pose.lift = hop * 7;
-        pose.face = "happy";
-        break;
-      }
-      default:
-        pose.sy = 1 + Math.sin(t * 2.2) * 0.012;
+  private writeCrowd(alpha: number, view: View, time: number, lod: boolean): void {
+    this.robotQueue = lod ? [] : this.sortedRobots();
+    this.nextRobot = 0;
+    for (const index of this.order) {
+      const a = this.onScreen(index, alpha, view);
+      const look = this.looks[index];
+      if (!a || !look) continue;
+      this.writeRobotsBefore(a.y, view);
+      if (lod) this.writeLod(index, a, look, alpha);
+      else this.writeBean(index, a, look, alpha, time);
     }
+    this.writeRobotsBefore(Infinity, view);
   }
 
   private writeBean(index: number, a: Agent, look: BeanLook, alpha: number, time: number): void {
-    const pose = this.computePose(index, a, look, time);
-    const x = a.px + (a.x - a.px) * alpha;
-    const y = a.py + (a.y - a.py) * alpha - pose.lift;
-    const upper = y - pose.bob;
-    const fx = pose.facing * pose.sx;
-    const fy = pose.sy;
-    const r = pose.tilt;
-    const al = (this.dimmed(a, index) ? 70 : 255) << 24;
-    const atlas = this.atlas;
+    const pose = computePose(this.pose, a, time + look.seed * 10, this.squash[index] ?? 0);
     const wading = this.inPool(a);
-    const body = wading ? upper + Math.sin(time * 2.4 + look.seed * 6) * 1.2 : upper;
-    if (!wading) this.emit(atlas.legs[pose.legs], x, y, fx, fy, r, WHITE_BGR + al);
-    this.emit(atlas.body, x, body, fx, fy, r, look.shirt + al);
-    if (wading) this.emit(atlas.floatie, x, body, fx, fy, r, WHITE_BGR + al);
-    this.emit(atlas.head, x, body, fx, fy, r, look.skin + al);
-    this.emit(atlas.faces[pose.face], x + pose.facing * 0.7, body, fx, fy, r, WHITE_BGR + al);
-    if (look.hairFrame) this.emit(look.hairFrame, x, body, fx, fy, r, look.hair + al);
+    const alphaBits = this.dimmed(a, index) ? DIMMED : OPAQUE;
+    const float = wading ? Math.sin(time * 2.4 + look.seed * 6) * 1.2 : 0;
+    this.place(
+      lerpX(a, alpha),
+      lerpY(a, alpha) - pose.lift,
+      pose.facing * pose.sx,
+      pose.sy,
+      pose.tilt,
+    );
+    if (!wading) this.stamp(this.atlas.legs[pose.legs], WHITE + alphaBits);
+    this.writeUpperBody(a, look, pose, float - pose.bob, alphaBits);
+    if (wading) this.stamp(this.atlas.floatie, WHITE + alphaBits, float - pose.bob);
+    if (this.needsOverlay(index, a)) this.overlays.push(index);
+  }
+
+  private needsOverlay(index: number, a: Agent): boolean {
+    return index === this.selected || a.isYou || a.state === State.Dizzy;
+  }
+
+  private writeUpperBody(
+    a: Agent,
+    look: BeanLook,
+    pose: Pose,
+    dy: number,
+    alphaBits: number,
+  ): void {
+    const atlas = this.atlas;
+    this.stamp(atlas.body, look.shirt + alphaBits, dy);
+    this.stamp(atlas.head, look.skin + alphaBits, dy);
+    this.stamp(atlas.faces[pose.face], WHITE + alphaBits, dy, pose.facing * 0.7);
+    if (look.hairFrame) this.stamp(look.hairFrame, look.hair + alphaBits, dy);
     const accessory = this.accessoryFor(a, look, pose.face);
-    if (accessory) this.emit(accessory, x, body, fx, fy, r, WHITE_BGR + al);
-    if (pose.phone) this.emit(atlas.phone, x, body, fx, fy, r, WHITE_BGR + al);
-    if (index === this.selected || a.isYou || a.state === State.Dizzy) this.overlays.push(index);
+    if (accessory) this.stamp(accessory, WHITE + alphaBits, dy);
+    if (pose.phone) this.stamp(atlas.phone, WHITE + alphaBits, dy);
   }
 
   private inPool(a: Agent): boolean {
@@ -351,12 +281,68 @@ export class CrowdRenderer {
 
   /** Everyone at the Privacy booth wears shades, unless their face is mid-surprise. */
   private accessoryFor(a: Agent, look: BeanLook, face: FaceKind): Frame | null {
-    const shades = this.atlas.accessories[2] ?? null;
-    if (a.zone === this.gags.shadesZone && face !== "wow" && face !== "dizzy") {
-      return look.accessory === this.atlas.accessories[3] ? look.accessory : shades;
-    }
-    return look.accessory;
+    if (a.zone !== this.gags.shadesZone || face === "wow" || face === "dizzy")
+      return look.accessory;
+    const headphones = this.atlas.accessories[3];
+    return look.accessory === headphones ? look.accessory : (this.atlas.accessories[2] ?? null);
   }
+
+  private writeLod(index: number, a: Agent, look: BeanLook, alpha: number): void {
+    const bob = a.moving ? Math.abs(Math.sin(a.walkPhase)) * 1.5 : 0;
+    const squash = 1 - (this.squash[index] ?? 0) * 0.4;
+    const alphaBits = this.dimmed(a, index) ? 60 << 24 : OPAQUE;
+    this.place(lerpX(a, alpha), lerpY(a, alpha) - a.z - bob, a.facing, squash, 0);
+    this.stamp(look.lod, WHITE + alphaBits);
+    if (index !== this.selected) return;
+    const s = 2.6 + Math.sin(this.world.time * 5) * 0.2;
+    this.place(lerpX(a, alpha), lerpY(a, alpha) - 70, s, s, 0);
+    this.stamp(this.atlas.bang, WHITE + OPAQUE);
+  }
+
+  private writeOverlays(alpha: number, time: number): void {
+    for (const index of this.overlays) {
+      const a = this.world.agents[index];
+      if (!a) continue;
+      const x = lerpX(a, alpha);
+      const head = lerpY(a, alpha) - a.z - 33.5;
+      if (a.state === State.Dizzy) this.writeDizzyStars(x, head, time);
+      if (index !== this.selected) continue;
+      const bounce = Math.abs(Math.sin(time * 4)) * 2.5;
+      this.place(x, head - 22 - bounce, 1, 1, 0);
+      this.stamp(this.atlas.bang, WHITE + OPAQUE);
+    }
+  }
+
+  private writeDizzyStars(x: number, head: number, time: number): void {
+    for (let k = 0; k < 3; k++) {
+      const angle = time * 5 + (k * Math.PI * 2) / 3;
+      this.place(x + Math.cos(angle) * 11, head - 13 + Math.sin(angle) * 3.5, 0.8, 0.8, angle);
+      this.stamp(this.atlas.star, WHITE + OPAQUE);
+    }
+  }
+
+  private writeEffects(effects: EffectPool, alpha: number): void {
+    const agents = this.world.agents;
+    for (const e of effects.effects) {
+      if (!e.active) continue;
+      let x = e.x;
+      let y = e.y;
+      if (e.follow >= 0) {
+        const a = agents[e.follow];
+        if (!a?.active) {
+          e.active = false;
+          continue;
+        }
+        x += lerpX(a, alpha);
+        y += lerpY(a, alpha) - a.z + e.followDy;
+      }
+      const scale = effectScale(e);
+      this.place(x, y, scale, scale, e.rotation);
+      this.stamp(e.frame, bgr(e.tint) + (((effectAlpha(e) * 255) | 0) << 24));
+    }
+  }
+
+  // ---- AI booth robots --------------------------------------------------------------------------
 
   private sortedRobots(): number[] {
     const crew = this.gags.robots;
@@ -374,106 +360,39 @@ export class CrowdRenderer {
     return this.gags.robots?.robots[i]?.y ?? 0;
   }
 
+  /** Draws queued robots standing behind depth `y`, keeping them correctly layered in the crowd. */
+  private writeRobotsBefore(y: number, view: View): void {
+    const queue = this.robotQueue;
+    while (this.nextRobot < queue.length) {
+      const robot = queue[this.nextRobot] ?? 0;
+      if (this.robotY(robot) > y) return;
+      this.writeRobot(robot, view);
+      this.nextRobot++;
+    }
+  }
+
   private writeRobot(i: number, view: View): void {
     const robot = this.gags.robots?.robots[i];
     const frame = this.atlas.icons.get("robot");
-    if (!robot || !frame) return;
-    if (
-      robot.x < view.x0 - 30 ||
-      robot.x > view.x1 + 30 ||
-      robot.y < view.y0 ||
-      robot.y > view.y1 + 40
-    )
-      return;
+    if (!robot || !frame || !robotVisible(robot, view)) return;
     const hop = robot.wait > 0 ? 0 : Math.abs(Math.sin(robot.phase)) * 5;
-    const tilt = Math.sin(robot.phase * 0.5) * 0.08;
-    this.emit(
-      this.atlas.shadow,
-      robot.x,
-      robot.y,
-      0.9,
-      0.9,
-      0,
-      (((0.22 * 255) | 0) << 24) + WHITE_BGR,
-    );
-    this.emit(
-      frame,
+    this.place(robot.x, robot.y, 0.9, 0.9, 0);
+    this.stamp(this.atlas.shadow, (((0.22 * 255) | 0) << 24) + WHITE);
+    this.place(
       robot.x,
       robot.y - 16 - hop,
       robot.facing * 2.1,
       2.1,
-      tilt,
-      WHITE_BGR + ALPHA_FULL,
+      Math.sin(robot.phase * 0.5) * 0.08,
     );
+    this.stamp(frame, WHITE + OPAQUE);
   }
+}
 
-  private writeLod(index: number, a: Agent, look: BeanLook, alpha: number, time: number): void {
-    const x = a.px + (a.x - a.px) * alpha;
-    const y = a.py + (a.y - a.py) * alpha - a.z;
-    const bob = a.moving ? Math.abs(Math.sin(a.walkPhase)) * 1.5 : 0;
-    const al = (this.dimmed(a, index) ? 60 : 255) << 24;
-    const squash = 1 - (this.squash[index] ?? 0) * 0.4;
-    this.emit(look.lod, x, y - bob, a.facing, squash, 0, WHITE_BGR + al);
-    if (index === this.selected) {
-      const s = 2.6 + Math.sin(time * 5) * 0.2;
-      this.emit(this.atlas.bang, x, y - 70, s, s, 0, WHITE_BGR + ALPHA_FULL);
-    }
-  }
-
-  private writeOverlays(alpha: number, time: number): void {
-    const agents = this.world.agents;
-    for (const index of this.overlays) {
-      const a = agents[index];
-      if (!a) continue;
-      const x = a.px + (a.x - a.px) * alpha;
-      const head = a.py + (a.y - a.py) * alpha - a.z - 33.5;
-      if (a.state === State.Dizzy) {
-        for (let k = 0; k < 3; k++) {
-          const angle = time * 5 + (k * Math.PI * 2) / 3;
-          this.emit(
-            this.atlas.star,
-            x + Math.cos(angle) * 11,
-            head - 13 + Math.sin(angle) * 3.5,
-            0.8,
-            0.8,
-            angle,
-            WHITE_BGR + ALPHA_FULL,
-          );
-        }
-      }
-      if (index === this.selected) {
-        const bounce = Math.abs(Math.sin(time * 4)) * 2.5;
-        this.emit(this.atlas.bang, x, head - 22 - bounce, 1, 1, 0, WHITE_BGR + ALPHA_FULL);
-      }
-    }
-  }
-
-  private writeEffects(effects: EffectPool, alpha: number): void {
-    const agents = this.world.agents;
-    for (const e of effects.effects) {
-      if (!e.active) continue;
-      let x = e.x;
-      let y = e.y;
-      if (e.follow >= 0) {
-        const a = agents[e.follow];
-        if (!a?.active) {
-          e.active = false;
-          continue;
-        }
-        x += a.px + (a.x - a.px) * alpha;
-        y += a.py + (a.y - a.py) * alpha - a.z + e.followDy;
-      }
-      this.emit(
-        e.frame,
-        x,
-        y,
-        effectScale(e),
-        effectScale(e),
-        e.rotation,
-        bgr(e.tint) + (((effectAlpha(e) * 255) | 0) << 24),
-      );
-    }
-  }
+function robotVisible(robot: { x: number; y: number }, view: View): boolean {
+  return (
+    robot.x > view.x0 - 30 && robot.x < view.x1 + 30 && robot.y > view.y0 && robot.y < view.y1 + 40
+  );
 }
 
 function effectScale(e: Effect): number {

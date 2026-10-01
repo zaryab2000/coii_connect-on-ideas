@@ -195,22 +195,26 @@ export class Gestures {
     if (e.pointerId !== this.primary) return;
     this.clearLongPress();
     this.record(p.x, p.y);
-    const elapsed = performance.now() - this.startT;
-    if (this.mode === "pressing" && elapsed < TAP_MAX_MS + (this.touch ? 0 : 400)) {
+    this.finishPrimary(p.x, p.y);
+    this.reset();
+  };
+
+  /** Resolves what a lifted finger/mouse meant: tap, fling of the map, or a throw. */
+  private finishPrimary(x: number, y: number): void {
+    if (this.mode === "pressing") {
       this.releaseHeld();
-      this.tap(p.x, p.y);
-    } else if (this.mode === "pressing") {
-      this.releaseHeld();
-    } else if (this.mode === "panning") {
-      const v = this.velocity();
+      const elapsed = performance.now() - this.startT;
+      if (elapsed < TAP_MAX_MS + (this.touch ? 0 : 400)) this.tap(x, y);
+      return;
+    }
+    const v = this.velocity();
+    if (this.mode === "panning") {
       this.target.camera.vx = v.x;
       this.target.camera.vy = v.y;
     } else if (this.mode === "grabbing") {
-      const v = this.velocity();
       this.target.release(this.bean, v.x, v.y);
     }
-    this.reset();
-  };
+  }
 
   private readonly onCancel = (e: PointerEvent): void => {
     this.pointers.delete(e.pointerId);

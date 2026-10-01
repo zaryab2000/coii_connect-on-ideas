@@ -24,6 +24,8 @@ import { zoneCapacities } from "@/sim/capacity";
 import { computeLayout, modeForAspect } from "@/sim/layout";
 import type { VenueLayout, Zone } from "@/sim/layout";
 import { State, World } from "@/sim/world";
+import type { Agent } from "@/sim/world";
+import type { SimEvent, SimEventKind } from "@/sim/world";
 
 const STEP = 1 / 30;
 const MAX_STEPS = 3;
@@ -55,12 +57,55 @@ function seedOf(id: string): number {
   return ((hash >>> 0) % 1000) / 1000;
 }
 
+interface SceneParts {
+  readonly app: Application;
+  readonly world: World;
+  readonly layout: VenueLayout;
+  readonly atlas: CrowdAtlas;
+  readonly icons: Map<IconId, Texture>;
+  readonly rect: DOMRect;
+}
+
 interface VenueLayers {
   readonly worldLayer: Container;
   readonly booths: readonly BoothView[];
   readonly crowd: CrowdRenderer;
   readonly robots: RobotCrew | null;
   readonly ticker: Ticker | null;
+}
+
+function buildBooths(
+  layout: VenueLayout,
+  icons: Map<IconId, Texture>,
+  layer: Container,
+): BoothView[] {
+  return layout.zones
+    .filter((zone) => zone.kind === "booth")
+    .map((zone) => {
+      const topic = TOPICS[zone.topic];
+      const icon = topic ? icons.get(topic.icon) : undefined;
+      if (!topic || !icon) throw new Error(`Booth zone ${zone.topic} has no topic or icon`);
+      const view = new BoothView(zone, topic, icon);
+      layer.addChild(view.container);
+      return view;
+    });
+}
+
+interface Gags {
+  readonly defi: Zone | null;
+  readonly ticker: Ticker | null;
+  readonly robots: RobotCrew | null;
+}
+
+function buildGags(layout: VenueLayout): Gags {
+  const zoneOf = (id: TopicId): Zone | null => layout.zones[topicIndex(id)] ?? null;
+  const prediction = zoneOf("prediction");
+  const ai = zoneOf("ai");
+  return {
+    defi: zoneOf("defi"),
+    ticker: prediction && new Ticker(prediction, DISPLAY_FONT),
+    robots: ai && new RobotCrew(ai, 7),
+  };
 }
 
 /** Builds the static venue (floor, stalls, gags) around the dynamic crowd layer. */
@@ -70,48 +115,36 @@ function buildVenueLayers(
   atlas: CrowdAtlas,
   icons: Map<IconId, Texture>,
 ): VenueLayers {
+  const { defi, ticker, robots } = buildGags(layout);
   const worldLayer = new Container({ isRenderGroup: true, label: "world" });
   worldLayer.addChild(buildFloor(layout));
-  const zoneOf = (id: TopicId): Zone | undefined => layout.zones[topicIndex(id)];
-  const defi = zoneOf("defi");
   if (defi) worldLayer.addChild(buildPool(defi));
   const boothLayer = new Container({ label: "booths" });
-  const booths = layout.zones
-    .filter((zone) => zone.kind === "booth")
-    .map((zone) => {
-      const topic = TOPICS[zone.topic];
-      const icon = topic ? icons.get(topic.icon) : undefined;
-      if (!topic || !icon) throw new Error(`Booth zone ${zone.topic} has no topic or icon`);
-      const view = new BoothView(zone, topic, icon);
-      boothLayer.addChild(view.container);
-      return view;
-    });
-  const prediction = zoneOf("prediction");
-  const ticker = prediction ? new Ticker(prediction, DISPLAY_FONT) : null;
+  const booths = buildBooths(layout, icons, boothLayer);
   if (ticker) boothLayer.addChild(ticker.view);
-  const plaza = layout.zones[layout.plazaIndex];
-  const cup = icons.get("hot_beverage");
-  if (plaza && cup) boothLayer.addChild(buildChaiStall(plaza, DISPLAY_FONT, cup));
+  boothLayer.addChild(buildChaiStall(plazaOf(layout), DISPLAY_FONT, iconOf(icons, "hot_beverage")));
   worldLayer.addChild(boothLayer);
-  const ai = zoneOf("ai");
-  const robots = ai ? new RobotCrew(ai, 7) : null;
-  const crowd = new CrowdRenderer(
-    atlas,
-    world,
-    {
-      shadesZone: topicIndex("privacy"),
-      poolZone: topicIndex("defi"),
-      pool: defi ? poolRect(defi) : null,
-      robots,
-    },
-    layout.width,
-    layout.height,
-  );
+
+  const pool = defi && poolRect(defi);
+  const gags = { shadesZone: topicIndex("privacy"), poolZone: topicIndex("defi"), pool, robots };
+  const crowd = new CrowdRenderer(atlas, world, gags, layout.width, layout.height);
   worldLayer.addChild(crowd.container);
   worldLayer.addChild(buildGarlands(layout));
   if (defi) worldLayer.addChild(buildPoolSign(defi, DISPLAY_FONT));
   worldLayer.addChild(buildGate(layout, DISPLAY_FONT));
   return { worldLayer, booths, crowd, robots, ticker };
+}
+
+function plazaOf(layout: VenueLayout): Zone {
+  const plaza = layout.zones[layout.plazaIndex];
+  if (!plaza) throw new Error("Venue layout has no plaza zone");
+  return plaza;
+}
+
+function iconOf(icons: Map<IconId, Texture>, id: IconId): Texture {
+  const icon = icons.get(id);
+  if (!icon) throw new Error(`Icon texture "${id}" was not loaded`);
+  return icon;
 }
 
 export class AddaEngine implements EngineApi {
@@ -345,7 +378,7 @@ export class AddaEngine implements EngineApi {
       buildCrowdAtlas(),
       loadIconTextures([...TOPICS.map((t) => t.icon), "hot_beverage"], 96),
     ]);
-    this.scene = this.buildScene(app, world, layout, atlas, icons, rect);
+    this.scene = this.buildScene({ app, world, layout, atlas, icons, rect });
     this.starting = false;
     for (const person of this.people) this.addAgent(this.scene, person, "scatter");
     for (const run of this.queue.splice(0)) run(this.scene);
@@ -355,14 +388,8 @@ export class AddaEngine implements EngineApi {
     for (const listener of this.listeners.ready) listener();
   }
 
-  private buildScene(
-    app: Application,
-    world: World,
-    layout: VenueLayout,
-    atlas: CrowdAtlas,
-    icons: Map<IconId, Texture>,
-    rect: DOMRect,
-  ): Scene {
+  private buildScene(parts: SceneParts): Scene {
+    const { app, world, layout, atlas, icons, rect } = parts;
     const venue = buildVenueLayers(layout, world, atlas, icons);
     app.stage.addChild(venue.worldLayer);
     const camera = new Camera();
@@ -493,47 +520,56 @@ export class AddaEngine implements EngineApi {
   }
 
   private updateYouLabel(scene: Scene, alpha: number): void {
-    const a = this.youIndex >= 0 ? scene.world.agents[this.youIndex] : undefined;
-    const person = this.youIndex >= 0 ? this.personAt[this.youIndex] : undefined;
-    if (!a?.active || !person || scene.crowd.selected === this.youIndex) {
+    const you = this.youOnMap(scene);
+    if (!you) {
       scene.labels.set("you", "", null, "you");
       return;
     }
-    const x = a.px + (a.x - a.px) * alpha;
+    const { a, person } = you;
     const lift = scene.camera.zoom < LOD_ZOOM ? 40 : 66;
+    const x = a.px + (a.x - a.px) * alpha;
     const y = a.py + (a.y - a.py) * alpha - a.z - lift;
     const first = person.name.split(" ")[0] ?? person.name;
     scene.labels.set("you", `You · ${first}`, scene.camera.worldToScreen(x, y), "you");
   }
 
+  /** Your bean and profile when you have joined and are not the current selection. */
+  private youOnMap(scene: Scene): { a: Agent; person: Person } | null {
+    const index = this.youIndex;
+    if (index < 0 || scene.crowd.selected === index) return null;
+    const a = scene.world.agents[index];
+    const person = this.personAt[index];
+    return a?.active && person ? { a, person } : null;
+  }
+
+  private readonly eventHandlers: Readonly<
+    Record<SimEventKind, (scene: Scene, e: SimEvent) => void>
+  > = {
+    bounce: (scene, e) => {
+      scene.crowd.impulse(e.agent, 0.55);
+      this.dust(scene, e.x, e.y, 3);
+    },
+    bump: (scene, e) => {
+      scene.crowd.impulse(e.agent, 0.4);
+      this.dust(scene, e.x, e.y, 2);
+    },
+    dizzy: (scene, e) => {
+      scene.crowd.impulse(e.agent, 0.7);
+      this.dust(scene, e.x, e.y, 4);
+    },
+    arrive: (scene, e) => {
+      scene.crowd.impulse(e.agent, 0.35);
+      if (scene.world.agents[e.agent]?.isYou) this.confetti(scene, e.x, e.y - 40, 60);
+    },
+    bubble: (scene, e) => this.chatBubble(scene, e.agent, e.x, e.y),
+    chat: () => undefined,
+  };
+
   private consumeEvents(scene: Scene): void {
-    const { world, crowd } = scene;
+    const { world } = scene;
     for (let i = 0; i < world.eventCount; i++) {
       const event = world.events[i];
-      if (!event) continue;
-      switch (event.kind) {
-        case "bounce":
-          crowd.impulse(event.agent, 0.55);
-          this.dust(scene, event.x, event.y, 3);
-          break;
-        case "bump":
-          crowd.impulse(event.agent, 0.4);
-          this.dust(scene, event.x, event.y, 2);
-          break;
-        case "dizzy":
-          crowd.impulse(event.agent, 0.7);
-          this.dust(scene, event.x, event.y, 4);
-          break;
-        case "arrive":
-          crowd.impulse(event.agent, 0.35);
-          if (world.agents[event.agent]?.isYou) this.confetti(scene, event.x, event.y - 40, 60);
-          break;
-        case "bubble":
-          this.chatBubble(scene, event.agent, event.x, event.y);
-          break;
-        case "chat":
-          break;
-      }
+      if (event) this.eventHandlers[event.kind](scene, event);
     }
   }
 

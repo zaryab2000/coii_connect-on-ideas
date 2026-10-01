@@ -21,7 +21,10 @@ function finish(ctx: Ctx, fill: string, line = LINE): void {
   ctx.stroke();
 }
 
-function roundRect(ctx: Ctx, x: number, y: number, w: number, h: number, r: number): void {
+/** x, y, width, height, corner radius. */
+type Box = readonly [number, number, number, number, number];
+
+function roundRect(ctx: Ctx, [x, y, w, h, r]: Box): void {
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, r);
 }
@@ -32,7 +35,7 @@ function leg(ctx: Ctx, x: number, lift: number, tilt: number): void {
   ctx.save();
   ctx.translate(x, -lift);
   ctx.rotate(tilt);
-  roundRect(ctx, -2.3, -10, 4.6, 10, 2.2);
+  roundRect(ctx, [-2.3, -10, 4.6, 10, 2.2]);
   finish(ctx, INK_CSS, 1);
   ctx.beginPath();
   ctx.ellipse(0.6, -1, 3.1, 1.9, 0, 0, Math.PI * 2);
@@ -156,69 +159,72 @@ function stroke(ctx: Ctx, width: number): void {
   ctx.stroke();
 }
 
+function smile(ctx: Ctx): void {
+  ctx.beginPath();
+  ctx.arc(0, HEAD_Y + 2.4, 2.4, 0.25, Math.PI - 0.25);
+  stroke(ctx, 1.1);
+}
+
+const FACES: Readonly<Record<FaceKind, (ctx: Ctx, ey: number) => void>> = {
+  open: (ctx, ey) => {
+    dotEyes(ctx, ey, 1.55);
+    smile(ctx);
+  },
+  blink: (ctx, ey) => {
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(side * 3.6 - 1.6, ey);
+      ctx.lineTo(side * 3.6 + 1.6, ey);
+      stroke(ctx, 1.1);
+    }
+    smile(ctx);
+  },
+  happy: (ctx, ey) => {
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.arc(side * 3.6, ey + 1, 1.8, Math.PI + 0.3, -0.3);
+      stroke(ctx, 1.2);
+    }
+    ctx.beginPath();
+    ctx.arc(0, HEAD_Y + 1.8, 3.2, 0.15, Math.PI - 0.15);
+    ctx.closePath();
+    ctx.fillStyle = INK_CSS;
+    ctx.fill();
+  },
+  dizzy: (ctx, ey) => {
+    for (const side of [-1, 1]) {
+      const cx = side * 3.6;
+      ctx.beginPath();
+      ctx.moveTo(cx - 1.5, ey - 1.5);
+      ctx.lineTo(cx + 1.5, ey + 1.5);
+      ctx.moveTo(cx + 1.5, ey - 1.5);
+      ctx.lineTo(cx - 1.5, ey + 1.5);
+      stroke(ctx, 1.1);
+    }
+    ctx.beginPath();
+    ctx.moveTo(-2.6, HEAD_Y + 3.6);
+    ctx.quadraticCurveTo(-1.3, HEAD_Y + 2.4, 0, HEAD_Y + 3.6);
+    ctx.quadraticCurveTo(1.3, HEAD_Y + 4.8, 2.6, HEAD_Y + 3.6);
+    stroke(ctx, 1);
+  },
+  wow: (ctx, ey) => {
+    dotEyes(ctx, ey - 0.3, 2.05);
+    ctx.beginPath();
+    ctx.ellipse(0, HEAD_Y + 3.6, 1.5, 1.9, 0, 0, Math.PI * 2);
+    ctx.fillStyle = INK_CSS;
+    ctx.fill();
+  },
+  down: (ctx, ey) => {
+    dotEyes(ctx, ey + 1.6, 1.35);
+    ctx.beginPath();
+    ctx.arc(0, HEAD_Y + 3.6, 1.6, 0.3, Math.PI - 0.3);
+    stroke(ctx, 1);
+  },
+};
+
 export function drawFace(ctx: Ctx, kind: FaceKind): void {
-  const ey = HEAD_Y - 0.6;
   blush(ctx, HEAD_Y + 3);
-  switch (kind) {
-    case "open":
-      dotEyes(ctx, ey, 1.55);
-      ctx.beginPath();
-      ctx.arc(0, HEAD_Y + 2.4, 2.4, 0.25, Math.PI - 0.25);
-      stroke(ctx, 1.1);
-      break;
-    case "blink":
-      for (const side of [-1, 1]) {
-        ctx.beginPath();
-        ctx.moveTo(side * 3.6 - 1.6, ey);
-        ctx.lineTo(side * 3.6 + 1.6, ey);
-        stroke(ctx, 1.1);
-      }
-      ctx.beginPath();
-      ctx.arc(0, HEAD_Y + 2.4, 2.4, 0.25, Math.PI - 0.25);
-      stroke(ctx, 1.1);
-      break;
-    case "happy":
-      for (const side of [-1, 1]) {
-        ctx.beginPath();
-        ctx.arc(side * 3.6, ey + 1, 1.8, Math.PI + 0.3, -0.3);
-        stroke(ctx, 1.2);
-      }
-      ctx.beginPath();
-      ctx.arc(0, HEAD_Y + 1.8, 3.2, 0.15, Math.PI - 0.15);
-      ctx.closePath();
-      ctx.fillStyle = INK_CSS;
-      ctx.fill();
-      break;
-    case "dizzy":
-      for (const side of [-1, 1]) {
-        const cx = side * 3.6;
-        ctx.beginPath();
-        ctx.moveTo(cx - 1.5, ey - 1.5);
-        ctx.lineTo(cx + 1.5, ey + 1.5);
-        ctx.moveTo(cx + 1.5, ey - 1.5);
-        ctx.lineTo(cx - 1.5, ey + 1.5);
-        stroke(ctx, 1.1);
-      }
-      ctx.beginPath();
-      ctx.moveTo(-2.6, HEAD_Y + 3.6);
-      ctx.quadraticCurveTo(-1.3, HEAD_Y + 2.4, 0, HEAD_Y + 3.6);
-      ctx.quadraticCurveTo(1.3, HEAD_Y + 4.8, 2.6, HEAD_Y + 3.6);
-      stroke(ctx, 1);
-      break;
-    case "wow":
-      dotEyes(ctx, ey - 0.3, 2.05);
-      ctx.beginPath();
-      ctx.ellipse(0, HEAD_Y + 3.6, 1.5, 1.9, 0, 0, Math.PI * 2);
-      ctx.fillStyle = INK_CSS;
-      ctx.fill();
-      break;
-    case "down":
-      dotEyes(ctx, ey + 1.6, 1.35);
-      ctx.beginPath();
-      ctx.arc(0, HEAD_Y + 3.6, 1.6, 0.3, Math.PI - 0.3);
-      stroke(ctx, 1);
-      break;
-  }
+  FACES[kind](ctx, HEAD_Y - 0.6);
 }
 
 // ---- hair and headwear ------------------------------------------------------------------------
@@ -255,7 +261,7 @@ function hairCap(ctx: Ctx, fringe: "even" | "side" | "spiky"): void {
 
 function longLocks(ctx: Ctx): void {
   for (const side of [-1, 1]) {
-    roundRect(ctx, side > 0 ? R - 2.6 : -R - 2.6, HY - 2, 5.2, 13.5, 2.6);
+    roundRect(ctx, [side > 0 ? R - 2.6 : -R - 2.6, HY - 2, 5.2, 13.5, 2.6]);
     finish(ctx, "#e8e8e8");
   }
 }
@@ -297,7 +303,7 @@ function beanie(ctx: Ctx): void {
   ctx.bezierCurveTo(-R - 1, HY - R - 7, R + 1, HY - R - 7, R + 1.4, HY - 2);
   ctx.closePath();
   finish(ctx, "#ffffff");
-  roundRect(ctx, -R - 2, HY - 4.6, 2 * R + 4, 4.6, 2.2);
+  roundRect(ctx, [-R - 2, HY - 4.6, 2 * R + 4, 4.6, 2.2]);
   finish(ctx, "#dedede");
   ctx.beginPath();
   ctx.arc(0, HY - R - 6.2, 2.6, 0, Math.PI * 2);
@@ -333,52 +339,44 @@ function turban(ctx: Ctx): void {
   ctx.stroke();
 }
 
+function bun(ctx: Ctx): void {
+  ctx.beginPath();
+  ctx.arc(0, HY - R - 2.6, 4.4, 0, Math.PI * 2);
+  finish(ctx, "#f0f0f0");
+  hairCap(ctx, "even");
+}
+
+function ponytail(ctx: Ctx): void {
+  ctx.beginPath();
+  ctx.ellipse(-R - 2.4, HY + 3, 3.2, 6.6, 0.35, 0, Math.PI * 2);
+  finish(ctx, "#ececec");
+  hairCap(ctx, "side");
+}
+
+const HAIR: Readonly<Record<HairStyle, ((ctx: Ctx) => void) | null>> = {
+  short: (ctx) => hairCap(ctx, "even"),
+  spiky: (ctx) => hairCap(ctx, "spiky"),
+  sidepart: (ctx) => hairCap(ctx, "side"),
+  long: (ctx) => {
+    longLocks(ctx);
+    hairCap(ctx, "even");
+  },
+  bun,
+  ponytail,
+  curly: curlyCloud,
+  cap: capHat,
+  beanie,
+  headscarf,
+  turban,
+  bald: null,
+};
+
 /** Draws a hair style or headwear; returns false for styles with nothing to draw (bald). */
 export function drawHair(ctx: Ctx, style: HairStyle): boolean {
-  switch (style) {
-    case "short":
-      hairCap(ctx, "even");
-      return true;
-    case "spiky":
-      hairCap(ctx, "spiky");
-      return true;
-    case "sidepart":
-      hairCap(ctx, "side");
-      return true;
-    case "long":
-      longLocks(ctx);
-      hairCap(ctx, "even");
-      return true;
-    case "bun":
-      ctx.beginPath();
-      ctx.arc(0, HY - R - 2.6, 4.4, 0, Math.PI * 2);
-      finish(ctx, "#f0f0f0");
-      hairCap(ctx, "even");
-      return true;
-    case "ponytail":
-      ctx.beginPath();
-      ctx.ellipse(-R - 2.4, HY + 3, 3.2, 6.6, 0.35, 0, Math.PI * 2);
-      finish(ctx, "#ececec");
-      hairCap(ctx, "side");
-      return true;
-    case "curly":
-      curlyCloud(ctx);
-      return true;
-    case "cap":
-      capHat(ctx);
-      return true;
-    case "beanie":
-      beanie(ctx);
-      return true;
-    case "headscarf":
-      headscarf(ctx);
-      return true;
-    case "turban":
-      turban(ctx);
-      return true;
-    case "bald":
-      return false;
-  }
+  const draw = HAIR[style];
+  if (!draw) return false;
+  draw(ctx);
+  return true;
 }
 
 // ---- accessories, props, shadow, low-detail ---------------------------------------------------
@@ -390,7 +388,7 @@ export function drawAccessory(ctx: Ctx, kind: "glasses" | "sunglasses" | "headph
     ctx.arc(0, HY, R + 2.4, Math.PI * 1.08, Math.PI * 1.92);
     stroke(ctx, 2.2);
     for (const side of [-1, 1]) {
-      roundRect(ctx, side * (R + 1.2) - 2.4, HY - 2.6, 4.8, 6.4, 2);
+      roundRect(ctx, [side * (R + 1.2) - 2.4, HY - 2.6, 4.8, 6.4, 2]);
       finish(ctx, "#ff2e88", 1.1);
     }
     return;
@@ -401,7 +399,7 @@ export function drawAccessory(ctx: Ctx, kind: "glasses" | "sunglasses" | "headph
       ctx.arc(side * 3.7, ey, 2.7, 0, Math.PI * 2);
       stroke(ctx, 0.9);
     } else {
-      roundRect(ctx, side * 3.7 - 3, ey - 2.2, 6, 4.2, 1.8);
+      roundRect(ctx, [side * 3.7 - 3, ey - 2.2, 6, 4.2, 1.8]);
       ctx.fillStyle = INK_CSS;
       ctx.fill();
       ctx.fillStyle = "rgba(255,255,255,0.7)";
@@ -415,7 +413,7 @@ export function drawAccessory(ctx: Ctx, kind: "glasses" | "sunglasses" | "headph
 }
 
 export function drawPhone(ctx: Ctx): void {
-  roundRect(ctx, 4.2, -28.5, 4.8, 7.6, 1.2);
+  roundRect(ctx, [4.2, -28.5, 4.8, 7.6, 1.2]);
   finish(ctx, INK_CSS, 0.8);
   ctx.fillStyle = "#3fe0d0";
   ctx.fillRect(5, -27.6, 3.2, 5.4);
@@ -430,12 +428,12 @@ export function drawShadow(ctx: Ctx): void {
 
 /** One-piece far-zoom bean: shirt-coloured body and skin head, no face details. */
 export function drawLodBean(ctx: Ctx, shirt: string, skin: string): void {
-  roundRect(ctx, -6, -9, 4.6, 9, 2);
+  roundRect(ctx, [-6, -9, 4.6, 9, 2]);
   ctx.fillStyle = INK_CSS;
   ctx.fill();
-  roundRect(ctx, 1.4, -9, 4.6, 9, 2);
+  roundRect(ctx, [1.4, -9, 4.6, 9, 2]);
   ctx.fill();
-  roundRect(ctx, -10.5, -26, 21, 19, 8);
+  roundRect(ctx, [-10.5, -26, 21, 19, 8]);
   finish(ctx, shirt, 2);
   ctx.beginPath();
   ctx.arc(0, HY, R + 0.5, 0, Math.PI * 2);

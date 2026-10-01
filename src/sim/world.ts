@@ -78,16 +78,29 @@ const GRAVITY = 1500;
 const MAX_THROW_SPEED = 2600;
 const CHAT_RADIUS = 46;
 const STROLL_RADIUS = 110;
-const TRAVEL_FACTOR: Partial<Record<State, number>> = {
+const SPEED_FACTOR: Partial<Record<State, number>> = {
   [State.Arriving]: 1.25,
   [State.Commuting]: 1.6,
+  [State.RunningHome]: RUN_FACTOR,
 };
 const WORLD_EDGE = 40;
 export const BODY_CENTER_Y = 18;
 
+interface Near {
+  readonly x: number;
+  readonly y: number;
+  readonly radius: number;
+}
+
 interface ZoneSpots {
   readonly spots: Float32Array;
   readonly occupant: Int32Array;
+}
+
+function spotDistance(zs: ZoneSpots, spot: number, near: Near): number {
+  const dx = (zs.spots[spot * 2] ?? 0) - near.x;
+  const dy = (zs.spots[spot * 2 + 1] ?? 0) - near.y;
+  return Math.hypot(dx, dy);
 }
 
 export interface WorldOptions {
@@ -297,34 +310,33 @@ export class World {
     }
   }
 
+  private readonly updaters: Readonly<
+    Record<State, (index: number, a: Agent, dt: number) => void>
+  > = {
+    [State.Idle]: (index, a, dt) => {
+      a.t -= dt;
+      if (a.t <= 0) this.decideNext(index, a);
+    },
+    [State.Chatting]: (index, a, dt) => this.updateChat(index, a, dt),
+    [State.Wandering]: (index, a, dt) => this.walk(index, a, dt),
+    [State.Commuting]: (index, a, dt) => this.walk(index, a, dt),
+    [State.Arriving]: (index, a, dt) => this.walk(index, a, dt),
+    [State.RunningHome]: (index, a, dt) => this.walk(index, a, dt),
+    [State.Thrown]: (index, a, dt) => this.updateThrown(index, a, dt),
+    [State.Dizzy]: (index, a, dt) => {
+      a.t -= dt;
+      if (a.t <= 0) this.goHome(index);
+    },
+    [State.Held]: () => undefined,
+    [State.Grabbed]: () => undefined,
+  };
+
   private updateAgent(index: number, a: Agent, dt: number): void {
-    switch (a.state) {
-      case State.Idle:
-        a.t -= dt;
-        if (a.t <= 0) this.decideNext(index, a);
-        break;
-      case State.Chatting:
-        this.updateChat(index, a, dt);
-        break;
-      case State.Wandering:
-      case State.Commuting:
-      case State.Arriving:
-        if (this.moveToward(index, a, dt, TRAVEL_FACTOR[a.state] ?? 1)) this.arrive(index, a);
-        break;
-      case State.RunningHome:
-        if (this.moveToward(index, a, dt, RUN_FACTOR)) this.arrive(index, a);
-        break;
-      case State.Thrown:
-        this.updateThrown(index, a, dt);
-        break;
-      case State.Dizzy:
-        a.t -= dt;
-        if (a.t <= 0) this.goHome(index);
-        break;
-      case State.Held:
-      case State.Grabbed:
-        break;
-    }
+    this.updaters[a.state](index, a, dt);
+  }
+
+  private walk(index: number, a: Agent, dt: number): void {
+    if (this.moveToward(index, a, dt, SPEED_FACTOR[a.state] ?? 1)) this.arrive(index, a);
   }
 
   private decideNext(index: number, a: Agent): void {
@@ -348,7 +360,7 @@ export class World {
   /** A short walk to a free spot near where the person already stands. */
   private stroll(index: number, a: Agent): void {
     this.releaseSpot(index);
-    this.claimSpot(index, a.zone, a.x, a.y, STROLL_RADIUS);
+    this.claimSpot(index, a.zone, { x: a.x, y: a.y, radius: STROLL_RADIUS });
     a.hasWaypoint = false;
     a.state = State.Wandering;
   }
@@ -506,6 +518,14 @@ export class World {
   // ---- throwing ----------------------------------------------------------------------------
 
   private updateThrown(index: number, a: Agent, dt: number): void {
+    this.integrateThrow(a, dt);
+    this.bounceOnGround(index, a);
+    this.bounceOffWalls(index, a);
+    if (this.pushOutOfObstacles(a)) this.emit("bump", index, a.x, a.y);
+    if (this.hasSettled(a)) this.becomeDizzy(index, a);
+  }
+
+  private integrateThrow(a: Agent, dt: number): void {
     a.airTime += dt;
     a.x += a.vx * dt;
     a.y += a.vy * dt;
@@ -515,28 +535,31 @@ export class World {
     a.vx *= drag;
     a.vy *= drag;
     if (Math.abs(a.vx) > 4) a.facing = a.vx > 0 ? 1 : -1;
+  }
 
-    if (a.z <= 0) {
-      a.z = 0;
-      if (a.vz < -140) {
-        a.vz = -a.vz * 0.42;
-        this.emit("bounce", index, a.x, a.y);
-      } else {
-        a.vz = 0;
-      }
+  private bounceOnGround(index: number, a: Agent): void {
+    if (a.z > 0) return;
+    a.z = 0;
+    if (a.vz < -140) {
+      a.vz = -a.vz * 0.42;
+      this.emit("bounce", index, a.x, a.y);
+    } else {
+      a.vz = 0;
     }
-    this.bounceOffWalls(index, a);
-    if (this.pushOutOfObstacles(a)) this.emit("bump", index, a.x, a.y);
+  }
 
-    const settled = a.z === 0 && a.vz === 0 && Math.hypot(a.vx, a.vy) < 28;
-    if (settled || a.airTime > 6) {
-      a.z = 0;
-      a.vx = 0;
-      a.vy = 0;
-      a.state = State.Dizzy;
-      a.t = 1.4;
-      this.emit("dizzy", index, a.x, a.y);
-    }
+  private hasSettled(a: Agent): boolean {
+    const still = a.z === 0 && a.vz === 0 && Math.hypot(a.vx, a.vy) < 28;
+    return still || a.airTime > 6;
+  }
+
+  private becomeDizzy(index: number, a: Agent): void {
+    a.z = 0;
+    a.vx = 0;
+    a.vy = 0;
+    a.state = State.Dizzy;
+    a.t = 1.4;
+    this.emit("dizzy", index, a.x, a.y);
   }
 
   private bounceOffWalls(index: number, a: Agent): void {
@@ -638,38 +661,36 @@ export class World {
     return a.topics[this.rng.weighted(weights)] ?? 0;
   }
 
-  /** Claims a free spot in the zone, preferring one within `radius` of (nearX, nearY) if given. */
-  private claimSpot(
-    index: number,
-    zoneIndex: number,
-    nearX = 0,
-    nearY = 0,
-    radius = Infinity,
-  ): void {
+  /** Claims a free spot in the zone, preferring one close to `near` when given. */
+  private claimSpot(index: number, zoneIndex: number, near: Near | null = null): void {
     const a = this.agent(index);
     const zs = this.zoneSpots[zoneIndex];
     const zone = this.layout.zones[zoneIndex];
     if (!zs || !zone) throw new Error(`Zone ${zoneIndex} does not exist`);
-    const count = zs.occupant.length;
-    const attempts = radius === Infinity ? 10 : 24;
-    for (let attempt = 0; attempt < attempts; attempt++) {
-      const spot = this.rng.int(count);
-      const sx = zs.spots[spot * 2] ?? zone.x;
-      const sy = zs.spots[spot * 2 + 1] ?? zone.y;
-      const near = radius === Infinity || Math.hypot(sx - nearX, sy - nearY) <= radius;
-      if (zs.occupant[spot] === -1 && (near || attempt === attempts - 1)) {
-        zs.occupant[spot] = index;
-        a.spot = spot;
-        a.tx = zs.spots[spot * 2] ?? zone.x;
-        a.ty = zs.spots[spot * 2 + 1] ?? zone.y;
-        return;
-      }
+    const spot = this.findFreeSpot(zs, near);
+    a.spot = spot;
+    if (spot >= 0) {
+      zs.occupant[spot] = index;
+      a.tx = zs.spots[spot * 2] ?? zone.x;
+      a.ty = zs.spots[spot * 2 + 1] ?? zone.y;
+      return;
     }
-    a.spot = -1;
     const angle = this.rng.range(0, Math.PI * 2);
     const r = this.rng.range(zone.r0 + 8, zone.r1);
     a.tx = zone.x + Math.cos(angle) * r;
     a.ty = zone.y + Math.sin(angle) * r;
+  }
+
+  /** A few random probes; with `near`, only the last probe may be far away. Returns -1 if full. */
+  private findFreeSpot(zs: ZoneSpots, near: Near | null): number {
+    const attempts = near ? 24 : 10;
+    for (let attempt = 0; attempt < attempts; attempt++) {
+      const spot = this.rng.int(zs.occupant.length);
+      if (zs.occupant[spot] !== -1) continue;
+      const lastTry = attempt === attempts - 1;
+      if (!near || lastTry || spotDistance(zs, spot, near) <= near.radius) return spot;
+    }
+    return -1;
   }
 
   private releaseSpot(index: number): void {
