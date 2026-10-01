@@ -20,6 +20,17 @@ const BOX_H = 52;
 const FEET_X = 17;
 const FEET_Y = 48;
 
+function blankCanvas(width: number, height: number): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  return canvas;
+}
+
+/**
+ * Draws one part into its own canvas. Tinted parts are multiplied by their colour and then
+ * masked by the untinted art in a single `drawImage`, so multi-shape parts keep every shape.
+ */
 function layer(
   draw: Draw,
   width: number,
@@ -27,28 +38,23 @@ function layer(
   scale: number,
   tint: string | null,
 ): HTMLCanvasElement {
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return canvas;
-  const paint = (): void => {
-    ctx.save();
-    ctx.translate((width - BOX_W * scale) / 2 + FEET_X * scale, FEET_Y * scale);
-    ctx.scale(scale, scale);
-    draw(ctx);
-    ctx.restore();
-  };
-  paint();
-  if (tint) {
-    ctx.globalCompositeOperation = "multiply";
-    ctx.fillStyle = tint;
-    ctx.fillRect(0, 0, width, height);
-    ctx.globalCompositeOperation = "destination-in";
-    paint();
-    ctx.globalCompositeOperation = "source-over";
-  }
-  return canvas;
+  const art = blankCanvas(width, height);
+  const ctx = art.getContext("2d");
+  if (!ctx) return art;
+  ctx.translate((width - BOX_W * scale) / 2 + FEET_X * scale, FEET_Y * scale);
+  ctx.scale(scale, scale);
+  draw(ctx);
+  if (!tint) return art;
+  const tinted = blankCanvas(width, height);
+  const tctx = tinted.getContext("2d");
+  if (!tctx) return art;
+  tctx.drawImage(art, 0, 0);
+  tctx.globalCompositeOperation = "multiply";
+  tctx.fillStyle = tint;
+  tctx.fillRect(0, 0, width, height);
+  tctx.globalCompositeOperation = "destination-in";
+  tctx.drawImage(art, 0, 0);
+  return tinted;
 }
 
 /**
