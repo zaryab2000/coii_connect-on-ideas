@@ -18,6 +18,8 @@ export interface BeanLook {
   readonly hair: number;
   readonly hairFrame: Frame | null;
   readonly accessory: Frame | null;
+  /** Prop for the person's main intent (laptop, megaphone, …), held at their side. */
+  readonly intentProp: Frame | null;
   readonly lod: Frame;
   readonly seed: number;
 }
@@ -49,6 +51,7 @@ const DIMMED = 70 << 24;
 const SHADOW = ((0.2 * 255) | 0) << 24;
 const RANI = bgr(0xff2e88);
 const MARIGOLD = bgr(0xffb31a);
+const PEACOCK = bgr(0x0fa3a3);
 
 /** Interpolated agent position for this frame. */
 function lerpX(a: Agent, alpha: number): number {
@@ -154,8 +157,8 @@ export class CrowdRenderer {
     pen.rotation = rotation;
   }
 
-  /** Emits one particle at the pen, optionally offset in world units. */
-  private stamp(frame: Frame, color: number, dy = 0, dx = 0): void {
+  /** Emits one particle at the pen, optionally offset in world units and scaled by `k`. */
+  private stamp(frame: Frame, color: number, dy = 0, dx = 0, k = 1): void {
     let p = this.particles[this.count];
     if (!p) {
       p = new Particle({ texture: frame.texture });
@@ -167,8 +170,8 @@ export class CrowdRenderer {
     p.anchorY = frame.anchorY;
     p.x = pen.x + dx;
     p.y = pen.y + dy;
-    p.scaleX = pen.sx * frame.scale;
-    p.scaleY = pen.sy * frame.scale;
+    p.scaleX = pen.sx * frame.scale * k;
+    p.scaleY = pen.sy * frame.scale * k;
     p.rotation = pen.rotation;
     p.color = color;
     this.count++;
@@ -217,6 +220,7 @@ export class CrowdRenderer {
       this.place(lerpX(a, alpha), lerpY(a, alpha), shrink, shrink, 0);
       this.stamp(this.atlas.shadow, shade + WHITE);
       if (index === this.selected || a.isYou) this.writeRing(index, a, alpha);
+      else if (this.highlightIds.has(index)) this.writeTribeGlow(a, alpha);
     }
   }
 
@@ -224,6 +228,13 @@ export class CrowdRenderer {
     const pulse = 1 + Math.sin(this.world.time * 6) * 0.06;
     this.place(lerpX(a, alpha), lerpY(a, alpha), pulse, pulse, 0);
     this.stamp(this.atlas.ring, (index === this.selected ? RANI : MARIGOLD) + OPAQUE);
+  }
+
+  /** Soft teal halo marking a tribe member while "My tribe" is on. */
+  private writeTribeGlow(a: Agent, alpha: number): void {
+    const breathe = 1.15 + Math.sin(this.world.time * 3 + a.x * 0.01) * 0.08;
+    this.place(lerpX(a, alpha), lerpY(a, alpha), breathe, breathe, 0);
+    this.stamp(this.atlas.ring, PEACOCK + (((0.9 * 255) | 0) << 24));
   }
 
   private writeCrowd(alpha: number, view: View, time: number, lod: boolean): void {
@@ -277,6 +288,9 @@ export class CrowdRenderer {
     const accessory = this.accessoryFor(a, look, pose.face);
     if (accessory) this.stamp(accessory, WHITE + alphaBits, dy);
     if (pose.phone) this.stamp(atlas.phone, WHITE + alphaBits, dy);
+    else if (look.intentProp) {
+      this.stamp(look.intentProp, WHITE + alphaBits, dy - 16, pose.facing * 13.5, 0.78);
+    }
   }
 
   private inPool(a: Agent): boolean {

@@ -166,4 +166,21 @@ describe("World", () => {
     expect(hit).toBeGreaterThanOrEqual(0);
     expect(world.pick(-1000, -1000, 10)).toBe(-1);
   });
+
+  it("walks two people up to each other for a chai and clinks once both arrive", () => {
+    const world = makeWorld("landscape", 200);
+    let clinks = 0;
+    world.rendezvous(5, 150);
+    for (let t = 0; t < 60 && clinks === 0; t += DT) {
+      world.step(DT);
+      for (let e = 0; e < world.eventCount; e++) if (world.events[e]?.kind === "clink") clinks++;
+    }
+    expect(clinks).toBe(1);
+    const a = world.agent(5);
+    const b = world.agent(150);
+    expect(a.state).toBe(State.Chatting);
+    expect(a.partner).toBe(150);
+    expect(b.partner).toBe(5);
+    expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeLessThan(40);
+  });
 });

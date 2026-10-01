@@ -1,6 +1,7 @@
 import { CanvasSource, Rectangle, Texture } from "pixi.js";
 
 import { HAIR_STYLES, SKIN_TONES } from "@/data/avatar";
+import { INTENTS } from "@/data/intents";
 import { TOPICS } from "@/data/topics";
 import type { IconId } from "@/data/types";
 import {
@@ -173,8 +174,9 @@ function record<K extends string>(
 
 /** Draws every crowd and effect sprite into one mip-mapped canvas texture. */
 export async function buildCrowdAtlas(): Promise<CrowdAtlas> {
+  const intentIcons = INTENTS.map((intent) => intent.icon);
   const icons = await loadIconImages([
-    ...BUBBLE_ICONS,
+    ...new Set([...BUBBLE_ICONS, ...intentIcons]),
     "waving_hand",
     "dizzy",
     "party_popper",

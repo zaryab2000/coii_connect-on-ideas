@@ -3,10 +3,11 @@ import type { Texture } from "pixi.js";
 
 import { hairTint, SKIN_TONES } from "@/data/avatar";
 import { iconUrl } from "@/data/icons";
+import { intentById } from "@/data/intents";
 import { TOPICS, topicIndex } from "@/data/topics";
 import type { IconId, Person, TopicId } from "@/data/types";
 import { BUBBLE_ICONS, buildCrowdAtlas } from "@/engine/atlas";
-import type { CrowdAtlas } from "@/engine/atlas";
+import type { CrowdAtlas, Frame } from "@/engine/atlas";
 import { BOOTH_LABEL_DY, BoothView } from "@/engine/booths";
 import { Camera } from "@/engine/camera";
 import { CrowdRenderer, LOD_ZOOM } from "@/engine/crowd";
@@ -50,6 +51,11 @@ interface Scene {
 }
 
 type Listeners = { [K in keyof EngineEvents]: Set<EngineEvents[K]> };
+
+function intentPropFor(atlas: CrowdAtlas, person: Person): Frame | null {
+  const main = person.intent[0];
+  return main ? (atlas.icons.get(intentById(main).icon) ?? null) : null;
+}
 
 function seedOf(id: string): number {
   let hash = 2166136261;
@@ -728,6 +734,7 @@ export class AddaEngine implements EngineApi {
       hair: bgr(hairTint(avatar.hair, avatar.hairColor)),
       hairFrame: atlas.hair[avatar.hair] ?? null,
       accessory: atlas.accessories[avatar.accessory] ?? null,
+      intentProp: intentPropFor(atlas, person),
       lod,
       seed: seedOf(person.id),
     };
