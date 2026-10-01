@@ -15,6 +15,10 @@ interface Tween {
   duration: number;
 }
 
+function clampTo(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
 function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
 }
@@ -29,6 +33,8 @@ export class Camera {
   worldH = 1;
   minZoom = 0.1;
   fitZoom = 0.1;
+  /** Screen pixels at the top covered by UI (the HUD); framing keeps content below it. */
+  insetTop = 0;
   /** Inertia velocity in screen pixels per second. */
   vx = 0;
   vy = 0;
@@ -46,8 +52,14 @@ export class Camera {
     this.updateLimits();
   }
 
+  setInsets(top: number): void {
+    this.insetTop = Math.max(0, Math.min(top, this.viewH * 0.5));
+    this.updateLimits();
+  }
+
   private updateLimits(): void {
-    this.fitZoom = Math.min(this.viewW / this.worldW, this.viewH / this.worldH) * 0.96;
+    const visibleH = Math.max(1, this.viewH - this.insetTop);
+    this.fitZoom = Math.min(this.viewW / this.worldW, visibleH / this.worldH) * 0.96;
     this.minZoom = this.fitZoom * 0.9;
     this.zoom = Math.min(MAX_ZOOM, Math.max(this.minZoom, this.zoom));
     this.clamp();
@@ -98,18 +110,19 @@ export class Camera {
   clamp(): void {
     const halfW = this.viewW / 2 / this.zoom;
     const halfH = this.viewH / 2 / this.zoom;
+    const inset = this.insetTop / this.zoom;
     this.x =
-      this.worldW <= halfW * 2
-        ? this.worldW / 2
-        : Math.min(this.worldW - halfW, Math.max(halfW, this.x));
+      this.worldW <= halfW * 2 ? this.worldW / 2 : clampTo(this.x, halfW, this.worldW - halfW);
     this.y =
-      this.worldH <= halfH * 2
-        ? this.worldH / 2
-        : Math.min(this.worldH - halfH, Math.max(halfH, this.y));
+      this.worldH <= halfH * 2 - inset
+        ? this.worldH / 2 - inset / 2
+        : clampTo(this.y, halfH - inset, this.worldH - halfH);
   }
 
   flyTo(x: number, y: number, zoom: number, duration: number): void {
     const toZoom = Math.min(MAX_ZOOM, Math.max(this.minZoom, zoom));
+    // Put the target in the middle of the area below the HUD, not under it.
+    y -= this.insetTop / 2 / toZoom;
     this.vx = 0;
     this.vy = 0;
     if (duration <= 0) {

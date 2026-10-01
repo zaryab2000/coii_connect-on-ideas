@@ -168,6 +168,7 @@ export class AddaEngine implements EngineApi {
   private accumulator = 0;
   private follow = -1;
   private youIndex = -1;
+  private insetTop = 0;
   private readonly perf = { fps: 60, frameMs: 0, simMs: 0 };
   private debugEl: HTMLDivElement | null = null;
   private bubbleCount = 0;
@@ -294,6 +295,11 @@ export class AddaEngine implements EngineApi {
     });
   }
 
+  setInsets(top: number): void {
+    this.insetTop = top;
+    this.scene?.camera.setInsets(top);
+  }
+
   pause(): void {
     this.paused = true;
     this.scene?.app.ticker.stop();
@@ -395,6 +401,7 @@ export class AddaEngine implements EngineApi {
     const camera = new Camera();
     camera.setWorld(layout.width, layout.height);
     camera.setViewport(rect.width, rect.height);
+    camera.setInsets(this.insetTop);
     const labels = new LabelLayer();
     const boothLabels = new BoothLabels(
       TOPICS,

@@ -74,4 +74,20 @@ describe("Camera", () => {
     expect(cam.vx).toBe(0);
     expect(cam.x).toBeLessThan(1500);
   });
+
+  it("fits the whole world below a HUD inset", () => {
+    const cam = camera();
+    cam.setInsets(120);
+    cam.fit(0);
+    expect(cam.worldToScreen(1500, 0).y).toBeGreaterThanOrEqual(120 - 1e-6);
+    expect(cam.worldToScreen(1500, 2000).y).toBeLessThanOrEqual(800 + 1e-6);
+  });
+
+  it("can pan the top of the world down to the HUD edge when zoomed in", () => {
+    const cam = camera();
+    cam.setInsets(120);
+    cam.flyTo(1500, 0, 1, 0);
+    cam.panBy(0, 100000);
+    expect(cam.worldToScreen(1500, 0).y).toBeCloseTo(120, 6);
+  });
 });

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { RefObject } from "react";
 
 import { useActions, useApp } from "@/app/context";
 import { MapHost } from "@/app/MapHost";
@@ -36,6 +37,17 @@ function useEscapeCloses(): void {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [panel, actions]);
+}
+
+/** Tells the engine how much of the map's top the HUD covers, so framing stays below it. */
+function useHudInset(engine: EngineApi, hud: RefObject<HTMLElement | null>): void {
+  useEffect(() => {
+    const el = hud.current;
+    if (!el) return undefined;
+    const observer = new ResizeObserver(() => engine.setInsets(el.offsetTop + el.offsetHeight + 8));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [engine, hud]);
 }
 
 /** Pauses the venue while a phone sheet covers most of it, to save battery. */
@@ -102,6 +114,7 @@ export function App({ engine }: { readonly engine: EngineApi }) {
   const appRef = useRef<HTMLDivElement>(null);
   const hudRef = useRef<HTMLDivElement>(null);
   useHeightVar(hudRef, appRef, "--hud-h");
+  useHudInset(engine, hudRef);
   useEscapeCloses();
   usePauseWhileCovered(engine, flags.covered);
   const onSheetHeight = useCallback((height: number) => {

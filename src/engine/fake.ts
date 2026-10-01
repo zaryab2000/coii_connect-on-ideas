@@ -49,6 +49,9 @@ export class FakeEngine implements EngineApi {
   fit(): void {
     this.log("fit");
   }
+  setInsets(top: number): void {
+    this.log("setInsets", top);
+  }
   pause(): void {
     this.log("pause");
   }

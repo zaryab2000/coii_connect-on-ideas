@@ -32,6 +32,8 @@ export interface EngineApi {
   focusBooth(topic: TopicId): void;
   highlightTopics(topics: readonly TopicId[]): void;
   fit(): void;
+  /** Screen pixels at the top of the map covered by UI, so framing keeps content visible. */
+  setInsets(top: number): void;
   pause(): void;
   resume(): void;
   setReducedMotion(reduced: boolean): void;
