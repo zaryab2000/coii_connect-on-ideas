@@ -105,3 +105,19 @@ test("joining puts you in the venue and you are still there after a reload", asy
   expect(you).toBe(id);
   await expect(page.locator(".map-tag--you")).toHaveCount(1);
 });
+
+test("filling in the join form walks your bean into the venue", async ({ page }) => {
+  await page.goto("/?still");
+  await waitForCrowd(page);
+  await page.getByRole("button", { name: "Join", exact: true }).first().click();
+  const form = page.locator("form").first();
+  await form.getByLabel("Your name").fill("Asha Rao");
+  await form.getByLabel("Telegram username").fill("asha_builds");
+  await form.getByRole("button", { name: /Privacy/ }).click();
+  await form.getByRole("button", { name: /Core/ }).click();
+  await form.getByRole("checkbox").check({ force: true });
+  await form.getByRole("button", { name: "Walk into the adda" }).click();
+  await expect(page.locator(".map-tag--you")).toContainText("Asha", { timeout: 15_000 });
+  const you = await page.evaluate(() => window.__adda?.controller.store.get().you?.id ?? null);
+  expect(you).not.toBeNull();
+});
