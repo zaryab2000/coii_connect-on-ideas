@@ -67,6 +67,10 @@
   display: none;
 }
 
+.filter-row--intents {
+  padding-top: 0;
+}
+
 .people__meta {
   display: flex;
   align-items: center;

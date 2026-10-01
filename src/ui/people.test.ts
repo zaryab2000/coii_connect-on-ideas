@@ -26,7 +26,7 @@ function person(id: string, topics: TopicId[], overrides: Partial<Person> = {}):
   };
 }
 
-const ALL: PeopleQuery = { search: "", topics: [], match: "any", sort: "newest" };
+const ALL: PeopleQuery = { search: "", topics: [], match: "any", intents: [], sort: "newest" };
 
 const priya = person("1", ["ai", "defi"], {
   name: "Priya Shah",
@@ -34,8 +34,17 @@ const priya = person("1", ["ai", "defi"], {
   oneLiner: "Agent wallets for chai stalls",
   joinedAt: 30,
 });
-const omar = person("2", ["defi"], { name: "Omar Ali", x: "omar_onchain", joinedAt: 20 });
-const lena = person("3", ["privacy", "ai", "core"], { name: "Lena Berg", joinedAt: 10 });
+const omar = person("2", ["defi"], {
+  name: "Omar Ali",
+  x: "omar_onchain",
+  intent: ["hiring"],
+  joinedAt: 20,
+});
+const lena = person("3", ["privacy", "ai", "core"], {
+  name: "Lena Berg",
+  intent: ["job_hunting", "learning"],
+  joinedAt: 10,
+});
 const you = person("you", ["ai", "core"], { name: "Zara", isYou: true, isDemo: false });
 const CROWD = [omar, lena, priya];
 
@@ -70,6 +79,20 @@ describe("queryPeople", () => {
     const topics: TopicId[] = ["ai", "defi"];
     expect(queryPeople(CROWD, { ...ALL, topics }, null)).toEqual([priya, omar, lena]);
     expect(queryPeople(CROWD, { ...ALL, topics, match: "all" }, null)).toEqual([priya]);
+  });
+
+  it("keeps people here for any picked intent", () => {
+    expect(queryPeople(CROWD, { ...ALL, intents: ["hiring"] }, null)).toEqual([omar]);
+    expect(queryPeople(CROWD, { ...ALL, intents: ["hiring", "learning"] }, null)).toEqual([
+      omar,
+      lena,
+    ]);
+    expect(queryPeople(CROWD, { ...ALL, intents: ["raising"] }, null)).toEqual([]);
+  });
+
+  it("combines the intent and topic filters", () => {
+    const query = { ...ALL, topics: ["ai" as const], intents: ["learning" as const] };
+    expect(queryPeople(CROWD, query, null)).toEqual([lena]);
   });
 
   it("sorts A to Z", () => {
