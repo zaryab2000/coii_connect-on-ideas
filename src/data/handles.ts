@@ -1,10 +1,6 @@
 export type HandleResult = { ok: true; value: string } | { ok: false; error: string };
 
-const TELEGRAM_PREFIXES = [
-  /^https?:\/\//i,
-  /^(www\.)?(t\.me|telegram\.me|telegram\.dog)\//i,
-  /^@/,
-];
+const TELEGRAM_PREFIXES = [/^https?:\/\//i, /^(www\.)?(t\.me|telegram\.me|telegram\.dog)\//i, /^@/];
 const X_PREFIXES = [/^https?:\/\//i, /^(www\.)?(x\.com|twitter\.com)\//i, /^@/];
 
 const TELEGRAM_PATTERN = /^[a-z][a-z0-9_]{4,31}$/i;

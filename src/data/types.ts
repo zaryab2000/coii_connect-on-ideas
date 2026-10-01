@@ -68,6 +68,7 @@ export interface Person {
   readonly ticketVerified: boolean;
   readonly isDemo: boolean;
   readonly isYou: boolean;
-  readonly origin: Origin;
+  /** Name pool used for demo people; null for real people. */
+  readonly origin: Origin | null;
   readonly joinedAt: number;
 }

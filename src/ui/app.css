@@ -1,0 +1,13 @@
+.app {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.app-map {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}

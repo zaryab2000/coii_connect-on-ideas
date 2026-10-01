@@ -7,7 +7,10 @@ const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".split("")
 const tail = [...letters, ..."0123456789_".split("")];
 
 const telegramHandle = fc
-  .tuple(fc.constantFrom(...letters), fc.array(fc.constantFrom(...tail), { minLength: 4, maxLength: 31 }))
+  .tuple(
+    fc.constantFrom(...letters),
+    fc.array(fc.constantFrom(...tail), { minLength: 4, maxLength: 31 }),
+  )
   .map(([head, rest]) => head + rest.join(""));
 
 const xHandle = fc
@@ -18,7 +21,13 @@ describe("normalizeTelegram", () => {
   it("returns the same username for every accepted input shape", () => {
     fc.assert(
       fc.property(telegramHandle, (handle) => {
-        for (const input of [handle, `@${handle}`, `t.me/${handle}`, `https://t.me/${handle}`, ` ${handle} `]) {
+        for (const input of [
+          handle,
+          `@${handle}`,
+          `t.me/${handle}`,
+          `https://t.me/${handle}`,
+          ` ${handle} `,
+        ]) {
           expect(normalizeTelegram(input)).toEqual({ ok: true, value: handle });
         }
       }),
@@ -38,7 +47,12 @@ describe("normalizeX", () => {
   it("returns the same handle for every accepted input shape", () => {
     fc.assert(
       fc.property(xHandle, (handle) => {
-        for (const input of [handle, `@${handle}`, `x.com/${handle}`, `https://twitter.com/${handle}`]) {
+        for (const input of [
+          handle,
+          `@${handle}`,
+          `x.com/${handle}`,
+          `https://twitter.com/${handle}`,
+        ]) {
           expect(normalizeX(input)).toEqual({ ok: true, value: handle });
         }
       }),

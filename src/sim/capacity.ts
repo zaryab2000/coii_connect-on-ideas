@@ -6,7 +6,10 @@ const MIN_EXTRA = 14;
  * Expected number of people standing in each booth zone (plus the plaza, last), with headroom.
  * Mirrors the zone choice weights in the world: 55% primary topic, the rest shared by the others.
  */
-export function zoneCapacities(topicLists: readonly (readonly number[])[], boothCount: number): number[] {
+export function zoneCapacities(
+  topicLists: readonly (readonly number[])[],
+  boothCount: number,
+): number[] {
   const expected: number[] = Array.from({ length: boothCount + 1 }, () => 0);
   for (const topics of topicLists) {
     if (topics.length === 0) continue;

@@ -16,7 +16,9 @@ function makeWorld(mode: LayoutMode = "landscape", count = 400): World {
   const capacities = zoneCapacities(topicLists, 10);
   const layout = computeLayout(mode, capacities.slice(0, 10), capacities[10] ?? 40);
   const world = new World(layout, { seed: 11, capacities });
-  crowd.people.forEach((p, i) => world.spawn({ id: p.id, topics: topicLists[i] ?? [0], isYou: false }, "scatter"));
+  crowd.people.forEach((p, i) =>
+    world.spawn({ id: p.id, topics: topicLists[i] ?? [0], isYou: false }, "scatter"),
+  );
   return world;
 }
 
@@ -54,7 +56,8 @@ describe("World", () => {
     for (let t = 0; t < 20; t += DT) {
       world.step(DT);
       for (let e = 0; e < world.eventCount; e++) if (world.events[e]?.kind === "chat") chats++;
-      if (Math.round(t * 30) % 30 === 0) movingSeen = Math.max(movingSeen, world.agents.filter((a) => a.moving).length);
+      if (Math.round(t * 30) % 30 === 0)
+        movingSeen = Math.max(movingSeen, world.agents.filter((a) => a.moving).length);
     }
     expect(movingSeen).toBeGreaterThan(20);
     expect(chats).toBeGreaterThan(5);

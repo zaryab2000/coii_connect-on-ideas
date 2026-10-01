@@ -304,7 +304,8 @@ export class World {
       case State.Wandering:
       case State.Commuting:
       case State.Arriving:
-        if (this.moveToward(index, a, dt, a.state === State.Arriving ? 1.25 : 1)) this.arrive(index, a);
+        if (this.moveToward(index, a, dt, a.state === State.Arriving ? 1.25 : 1))
+          this.arrive(index, a);
         break;
       case State.RunningHome:
         if (this.moveToward(index, a, dt, RUN_FACTOR)) this.arrive(index, a);

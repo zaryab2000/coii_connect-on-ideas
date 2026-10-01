@@ -1,13 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": [
-    "typescript",
-    "unicorn",
-    "oxc",
-    "import",
-    "react",
-    "vitest"
-  ],
+  "plugins": ["typescript", "unicorn", "oxc", "import", "react", "vitest"],
   "categories": {
     "correctness": "error",
     "suspicious": "warn",
@@ -15,8 +8,12 @@
   },
   "rules": {
     "import/no-cycle": "error",
+    // Side-effect imports are how CSS and fonts are loaded.
+    "import/no-unassigned-import": ["warn", { "allow": ["**/*.css"] }],
     "react/react-in-jsx-scope": "off",
     "unicorn/no-null": "off",
+    // False positive: PixiJS Graphics has a chainable `.fill({ color })` that is not Array#fill.
+    "unicorn/no-array-fill-with-reference-type": "off",
     "vitest/expect-expect": [
       "error",
       {
@@ -29,10 +26,5 @@
       }
     ]
   },
-  "ignorePatterns": [
-    ".claude/**",
-    "dist/**",
-    "coverage/**",
-    "src/assets/icons/**"
-  ]
+  "ignorePatterns": [".claude/**", "dist/**", "coverage/**", "src/assets/icons/**"]
 }

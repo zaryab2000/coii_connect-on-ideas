@@ -58,7 +58,12 @@ export class SpatialGrid {
   }
 
   /** Calls `visit` for every inserted index within `radius` of (x, y). */
-  forEachNear(x: number, y: number, radius: number, visit: (index: number, distSq: number) => void): void {
+  forEachNear(
+    x: number,
+    y: number,
+    radius: number,
+    visit: (index: number, distSq: number) => void,
+  ): void {
     const minCx = Math.max(0, Math.floor((x - radius) / this.cellSize));
     const maxCx = Math.min(this.cols - 1, Math.floor((x + radius) / this.cellSize));
     const minCy = Math.max(0, Math.floor((y - radius) / this.cellSize));

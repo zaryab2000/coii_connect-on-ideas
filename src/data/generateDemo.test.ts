@@ -62,7 +62,10 @@ describe("generateDemo", () => {
         }
       }
     }
-    const top = [...pairs.entries()].toSorted((a, b) => b[1] - a[1]).slice(0, 4).map(([k]) => k);
+    const top = [...pairs.entries()]
+      .toSorted((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([k]) => k);
     expect(top).toContain("ai+stablecoins");
     expect(top).toContain("defi+prediction");
   });

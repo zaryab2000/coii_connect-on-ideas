@@ -5,7 +5,10 @@ import { SpatialGrid } from "@/sim/grid";
 
 describe("SpatialGrid.forEachNear", () => {
   it("finds exactly the points a brute-force scan finds", () => {
-    const point = fc.record({ x: fc.float({ min: 0, max: 999, noNaN: true }), y: fc.float({ min: 0, max: 599, noNaN: true }) });
+    const point = fc.record({
+      x: fc.float({ min: 0, max: 999, noNaN: true }),
+      y: fc.float({ min: 0, max: 599, noNaN: true }),
+    });
     fc.assert(
       fc.property(
         fc.array(point, { minLength: 0, maxLength: 200 }),

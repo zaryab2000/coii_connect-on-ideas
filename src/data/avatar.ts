@@ -1,6 +1,8 @@
 import type { Origin } from "@/data/types";
 
-export const SKIN_TONES: readonly number[] = [0xf6d2b8, 0xebb894, 0xd9a066, 0xc68642, 0x9c6b43, 0x6b4430];
+export const SKIN_TONES: readonly number[] = [
+  0xf6d2b8, 0xebb894, 0xd9a066, 0xc68642, 0x9c6b43, 0x6b4430,
+];
 
 const SKIN_WEIGHTS: Readonly<Record<Origin, readonly number[]>> = {
   india: [1, 4, 8, 8, 5, 2],

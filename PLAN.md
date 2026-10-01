@@ -1,6 +1,6 @@
 # Adda — Plan
 
-> *adda* (Hindi/Urdu): the spot where friends gather and talk for hours.
+> _adda_ (Hindi/Urdu): the spot where friends gather and talk for hours.
 > Find your people at Devcon by **ideas**, not logos.
 
 Name: **Adda** (final). On-site wordmark: "gm adda". Free web address: `gmadda.pages.dev`
@@ -14,15 +14,15 @@ about. Tap a bean to see how to reach them, then DM them. A sortable list view s
 
 ## 1. Facts & constraints
 
-| | |
-|---|---|
-| Event | **Devcon 8**: 3–6 Nov 2026, Jio World Centre, BKC, Mumbai |
-| Today | 1 Oct 2026, so **~33 days** to the event |
-| Budget | **$0** (a custom domain at ~$10/yr is the only optional spend) |
-| Platforms | **Responsive web only**: phone, tablet, desktop browsers. No native app, PWA, or Mini App |
-| Data | Seeded dummy data for the demo (70% Indian names, 30% international); real data later from opt-in sign-ups and organizer opt-in lists |
-| Current focus | **Localhost demo only.** No external services (Telegram, Supabase, hosting) until the demo is approved |
-| X / Twitter | No X API at all. An X handle is just an optional, self-reported text field |
+|               |                                                                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Event         | **Devcon 8**: 3–6 Nov 2026, Jio World Centre, BKC, Mumbai                                                                             |
+| Today         | 1 Oct 2026, so **~33 days** to the event                                                                                              |
+| Budget        | **$0** (a custom domain at ~$10/yr is the only optional spend)                                                                        |
+| Platforms     | **Responsive web only**: phone, tablet, desktop browsers. No native app, PWA, or Mini App                                             |
+| Data          | Seeded dummy data for the demo (70% Indian names, 30% international); real data later from opt-in sign-ups and organizer opt-in lists |
+| Current focus | **Localhost demo only.** No external services (Telegram, Supabase, hosting) until the demo is approved                                |
+| X / Twitter   | No X API at all. An X handle is just an optional, self-reported text field                                                            |
 
 Devcon 8 official tracks (for reference): Core Protocol · Privacy & Consent · Security · Futures
 Worth Building · Users, Builders & Agents · Rights, Freedoms & Governance · Applied Cryptography ·
@@ -54,7 +54,7 @@ sip chai, and walk between booths. Each booth shows a live counter badge and gro
    ranked list of them.
 6. **Where's Waldo search.** Search a name and the camera flies to that bean, which jumps and
    waves under a spotlight.
-7. **Booth puns.** The DeFi booth is a literal *liquidity pool* with beans on floaties. Beans in the
+7. **Booth puns.** The DeFi booth is a literal _liquidity pool_ with beans on floaties. Beans in the
    Privacy zone wear hoodies and shades and look slightly pixelated. Prediction Markets has a
    ticker board ("YES 62¢"). Tiny robot NPCs carrying coins roam AI Agents. Jobs has a bulletin
    board with flying résumés.
@@ -74,6 +74,7 @@ only knows who is interested in what.
 ## 3. Features by priority
 
 **P0: Playable demo (dummy data, no backend)**
+
 - Venue with 10 booths, 1,500 seeded demo beans: wander, idle animations, pair chats, commuting
 - Tap/click a bean to open its profile card (bottom sheet on mobile, side card on desktop)
 - Drag/fling physics with run-back; long-press to grab on touch so it doesn't fight panning
@@ -84,6 +85,7 @@ only knows who is interested in what.
   handles); no external services
 
 **P1: Real registrations**
+
 - Supabase schema + RLS; writes only through Edge Functions
 - Two sign-up paths: **Telegram Login** (verified ✓) and an **open form** (self-reported, no ✓)
 - Optional X handle (plain text, no API)
@@ -92,19 +94,22 @@ only knows who is interested in what.
 - Bean customizer (skin, hair, accessory, 🎲 reroll); consent checkbox; privacy page
 
 **P2: Delight & growth (public launch)**
+
 - Find my tribe, Where's Waldo search, live ticker, trending 🔥 booth, milestone celebrations
 - Desire paths, booth pun props, NPCs (robots, pigeons, chai-wala; never fake attendees)
 - Share card (OG image) per person/booth
 - Organizer CSV import + "claim your avatar" via Telegram login
 
 **P3: Event week**
+
 - Kiosk mode, stats page for organizers (topic counts, top topic pairs), sound (off by default)
 - Load test (5k people, simulated viewers), usage monitoring, moderation runbook
 
 **Stretch (only if time allows)**
-- *Meetup flares*: light a time-boxed beacon on a booth ("Agentic payments jam, 4pm, Hall 2")
-- *Handshake QR*: scan each other's QR in person and both beans get a 🤝 stamp
-- *Multiplayer yeets*: others see your throws live (Realtime broadcast)
+
+- _Meetup flares_: light a time-boxed beacon on a booth ("Agentic payments jam, 4pm, Hall 2")
+- _Handshake QR_: scan each other's QR in person and both beans get a 🤝 stamp
+- _Multiplayer yeets_: others see your throws live (Realtime broadcast)
 - Optional "I am…" prop: builder 💻 / founder 🚀 / investor 💼 / hiring 📣 / job-hunting 📄
 - ENS name/avatar via Sign-In with Ethereum
 
@@ -112,18 +117,18 @@ only knows who is interested in what.
 
 ## 4. Booths (default proposal: 10)
 
-| Booth | Emoji | Notes |
-|---|---|---|
-| AI Agents & Agentic Payments | 🤖 | robot NPCs |
-| Prediction Markets | 🔮 | ticker board |
-| DeFi | 🏊 | liquidity pool pun |
-| Privacy & ZK | 🕶️ | blur/hoodie effect |
-| Stablecoins & Payments | 💵 | |
-| Core Protocol & Scaling (L1/L2) | ⛓️ | |
-| Security | 🛡️ | |
-| Wallets & UX | 👛 | |
-| Consumer, Social & Gaming | 🎮 | |
-| Jobs & Hiring | 💼 | hirers and seekers meet here |
+| Booth                           | Emoji | Notes                        |
+| ------------------------------- | ----- | ---------------------------- |
+| AI Agents & Agentic Payments    | 🤖    | robot NPCs                   |
+| Prediction Markets              | 🔮    | ticker board                 |
+| DeFi                            | 🏊    | liquidity pool pun           |
+| Privacy & ZK                    | 🕶️    | blur/hoodie effect           |
+| Stablecoins & Payments          | 💵    |                              |
+| Core Protocol & Scaling (L1/L2) | ⛓️    |                              |
+| Security                        | 🛡️    |                              |
+| Wallets & UX                    | 👛    |                              |
+| Consumer, Social & Gaming       | 🎮    |                              |
+| Jobs & Hiring                   | 💼    | hirers and seekers meet here |
 
 Rules: 1–3 topics per person (beyond 3 the map stops carrying signal). Topics live in a DB table,
 so booths can change without a code change. 8–12 booths is the readable maximum on a phone.
@@ -149,6 +154,7 @@ For the localhost demo, both paths are mocked: "Join" adds you locally, with no 
 ### 5a. Verifying Devcon ticket holders (researched 1 Oct 2026)
 
 **Current state: we can't do it alone.**
+
 - Devcon 8 tickets run on Pretix (`tickets.devcon.org`), which has no public verification API.
 - General Admission tickets are anonymous and transferable.
 - The public "Devcon 8 India 🇮🇳" Telegram group (~2k members) has an open invite link on
@@ -157,13 +163,14 @@ For the localhost demo, both paths are mocked: "Join" adds you locally, with no 
 
 Three ways that work, each needing one thing from organizers:
 
-| Path | How | Needs | Privacy |
-|---|---|---|---|
-| **Zupass ticket proof** | "Verify with Zupass" popup returns a zero-knowledge proof (`@pcd/zuauth`) that the user holds a Devcon 8 ticket. A nullifier gives one profile per ticket | Devcon 8 tickets issued in Zupass, as at Devcon 7 (2024). Not yet announced for Devcon 8 | Best: reveals nothing but "has a ticket" |
-| **Gated chat membership** | After Telegram sign-in, our bot calls `getChatMember` on the official ticket-gated attendee chat | That chat exists (Zupass-gated at Devcon 7 and Devconnect ARG; invite sent ~8 days before the event), and organizers add our bot as an admin | Reveals only membership |
-| **Invite codes by email** | We generate single-use codes; organizers mail-merge one per ticket holder into a pre-event email | Organizers willing to send it | We never see attendee data |
+| Path                      | How                                                                                                                                                       | Needs                                                                                                                                        | Privacy                                  |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| **Zupass ticket proof**   | "Verify with Zupass" popup returns a zero-knowledge proof (`@pcd/zuauth`) that the user holds a Devcon 8 ticket. A nullifier gives one profile per ticket | Devcon 8 tickets issued in Zupass, as at Devcon 7 (2024). Not yet announced for Devcon 8                                                     | Best: reveals nothing but "has a ticket" |
+| **Gated chat membership** | After Telegram sign-in, our bot calls `getChatMember` on the official ticket-gated attendee chat                                                          | That chat exists (Zupass-gated at Devcon 7 and Devconnect ARG; invite sent ~8 days before the event), and organizers add our bot as an admin | Reveals only membership                  |
+| **Invite codes by email** | We generate single-use codes; organizers mail-merge one per ticket holder into a pre-event email                                                          | Organizers willing to send it                                                                                                                | We never see attendee data               |
 
 Not recommended:
+
 - Asking users for a ticket QR or order code: the QR secret is the entry credential, and short
   order codes can be brute-forced.
 - On-chain ETH purchase checks: fiat buyers are excluded, tickets are transferable, and it links
@@ -197,17 +204,17 @@ the event. The demo data includes a mocked badge state so the UI is designed for
                           └─────────────────────────────────┘
 ```
 
-| Layer | Choice | Why |
-|---|---|---|
-| UI shell | Vite + React + TypeScript | Fast to build forms, sheets, list |
-| Venue renderer | PixiJS (WebGL) + pixi-viewport | Thousands of animated sprites at 60fps; pinch/pan/zoom on mobile |
-| Crowd sim | Custom pure-TS module | Behaviors are bespoke; pure functions are unit-testable |
-| List | TanStack Virtual | Smooth with thousands of rows |
-| Backend | Supabase free | Postgres, Realtime, Edge Functions, table editor for moderation |
-| Hosting | Cloudflare Pages | Static requests free and unlimited |
-| Auth | Telegram Login Widget (HMAC verified in Edge Fn) + open form | Free; verifies Telegram handles |
-| Anti-bot | Cloudflare Turnstile | Free |
-| Art | Procedural vector beans + hand-built booths; Google Fonts | Zero asset cost, crisp at any zoom |
+| Layer          | Choice                                                       | Why                                                              |
+| -------------- | ------------------------------------------------------------ | ---------------------------------------------------------------- |
+| UI shell       | Vite + React + TypeScript                                    | Fast to build forms, sheets, list                                |
+| Venue renderer | PixiJS (WebGL) + pixi-viewport                               | Thousands of animated sprites at 60fps; pinch/pan/zoom on mobile |
+| Crowd sim      | Custom pure-TS module                                        | Behaviors are bespoke; pure functions are unit-testable          |
+| List           | TanStack Virtual                                             | Smooth with thousands of rows                                    |
+| Backend        | Supabase free                                                | Postgres, Realtime, Edge Functions, table editor for moderation  |
+| Hosting        | Cloudflare Pages                                             | Static requests free and unlimited                               |
+| Auth           | Telegram Login Widget (HMAC verified in Edge Fn) + open form | Free; verifies Telegram handles                                  |
+| Anti-bot       | Cloudflare Turnstile                                         | Free                                                             |
+| Art            | Procedural vector beans + hand-built booths; Google Fonts    | Zero asset cost, crisp at any zoom                               |
 
 Exact package versions are looked up when scaffolding, not assumed.
 
@@ -316,27 +323,27 @@ Label it "unofficial community project" until then.
 
 ### Stage A: localhost demo (now → ~Oct 6), no external services
 
-| Step | What | Done when |
-|---|---|---|
-| **A1. Design direction** | Use `frontend-design` to produce 2 directions: palette, fonts, bean character sheet, booth style, venue layout, phone + desktop UI. Delivered as a static HTML mockup plus Playwright screenshots | Owner picks one ✋ |
-| **A2. Scaffold & guardrails** | git init; Vite + React + strict TS; PixiJS v8 + pixi-viewport; pnpm supply-chain settings; oxlint/oxfmt; vitest + fast-check; Playwright; prek hooks | `pnpm dev` shows an empty venue; all checks green |
-| **A3. Demo data** | 1,500 seeded people: 70% Indian (regional mix) / 30% international names; weighted topics with realistic overlaps; one-liners; mocked ✓ Telegram + 🎟️ ticket badges; `demo_*` handles | Generator unit-tested (deterministic, distribution, valid handles) |
-| **A4. Venue + crowd** | 10 booths with live counters; procedural beans; wander / idle / chat / commute sim; pan / pinch / zoom; level of detail | Living map; owner checks the crowd feel ✋ |
-| **A5. Interactions** | Tap → profile card; grab / fling / dizzy / run home; booth sheet; search fly-to + wave; find my tribe | All work with mouse and touch |
-| **A6. UI shell** | Phone tab bar (Map / People / Join); desktop side panel; People list (search, filter, sort, locate on map); Google-Form-style Join form with a mocked Telegram button → your bean walks in | Full flow works end to end |
-| **A7. Polish & verify** | Screenshots at 375 / 768 / 1440 px; perf budget (1,500 beans: 60fps desktop, ≥30fps phone); reduced motion; real-phone test over home Wi-Fi | Demo review with owner ✋ |
+| Step                          | What                                                                                                                                                                                              | Done when                                                          |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| **A1. Design direction**      | Use `frontend-design` to produce 2 directions: palette, fonts, bean character sheet, booth style, venue layout, phone + desktop UI. Delivered as a static HTML mockup plus Playwright screenshots | Owner picks one ✋                                                 |
+| **A2. Scaffold & guardrails** | git init; Vite + React + strict TS; PixiJS v8 + pixi-viewport; pnpm supply-chain settings; oxlint/oxfmt; vitest + fast-check; Playwright; prek hooks                                              | `pnpm dev` shows an empty venue; all checks green                  |
+| **A3. Demo data**             | 1,500 seeded people: 70% Indian (regional mix) / 30% international names; weighted topics with realistic overlaps; one-liners; mocked ✓ Telegram + 🎟️ ticket badges; `demo_*` handles             | Generator unit-tested (deterministic, distribution, valid handles) |
+| **A4. Venue + crowd**         | 10 booths with live counters; procedural beans; wander / idle / chat / commute sim; pan / pinch / zoom; level of detail                                                                           | Living map; owner checks the crowd feel ✋                         |
+| **A5. Interactions**          | Tap → profile card; grab / fling / dizzy / run home; booth sheet; search fly-to + wave; find my tribe                                                                                             | All work with mouse and touch                                      |
+| **A6. UI shell**              | Phone tab bar (Map / People / Join); desktop side panel; People list (search, filter, sort, locate on map); Google-Form-style Join form with a mocked Telegram button → your bean walks in        | Full flow works end to end                                         |
+| **A7. Polish & verify**       | Screenshots at 375 / 768 / 1440 px; perf budget (1,500 beans: 60fps desktop, ≥30fps phone); reduced motion; real-phone test over home Wi-Fi                                                       | Demo review with owner ✋                                          |
 
 ✋ = checkpoint where the owner reviews before work continues.
 
 ### Stage B: go live (after the demo is approved)
 
-| Target | Milestone |
-|---|---|
-| ~Oct 8 | Free accounts ready: GitHub, Supabase, Cloudflare, Telegram bot |
+| Target  | Milestone                                                                                                    |
+| ------- | ------------------------------------------------------------------------------------------------------------ |
+| ~Oct 8  | Free accounts ready: GitHub, Supabase, Cloudflare, Telegram bot                                              |
 | ~Oct 12 | Real sign-ups (Telegram ✓ + form), moderation, deploy to `gmadda.pages.dev`, soft launch to friends/speakers |
-| ~Oct 19 | P2 delighters + **public launch** (Devcon 8 India Telegram group, X) |
-| ~Oct 30 | P3 done, load-tested, **feature freeze** |
-| Nov 3–6 | Event: monitor, moderate, kiosk mode on screens |
+| ~Oct 19 | P2 delighters + **public launch** (Devcon 8 India Telegram group, X)                                         |
+| ~Oct 30 | P3 done, load-tested, **feature freeze**                                                                     |
+| Nov 3–6 | Event: monitor, moderate, kiosk mode on screens                                                              |
 
 **In parallel (owner, any time):** the organizer conversation (§14).
 
@@ -347,14 +354,14 @@ Never cut: map, profile card, list, Telegram sign-up, moderation.
 
 ## 12. Risks
 
-| Risk | Mitigation |
-|---|---|
-| Empty map at launch | Launch ~2 weeks early; seed with friends, speakers, organizer opt-ins; cozy booth design for small crowds; ambient NPCs that are clearly not people |
-| Scammers / impersonation | Telegram-verified handles, blocklist, no URLs, report → auto-hide, safety tips |
-| Free-tier limits at peak | Static on CDN, client-side sim, snapshot + deltas, polling fallback |
-| Phone performance | WebGL, LOD, reduced motion, test on a real mid-range Android |
-| Branding / endorsement | "Unofficial" label unless organizers approve |
-| Supabase idle pause | Ongoing dev + traffic keeps it active; check before launch |
+| Risk                     | Mitigation                                                                                                                                          |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Empty map at launch      | Launch ~2 weeks early; seed with friends, speakers, organizer opt-ins; cozy booth design for small crowds; ambient NPCs that are clearly not people |
+| Scammers / impersonation | Telegram-verified handles, blocklist, no URLs, report → auto-hide, safety tips                                                                      |
+| Free-tier limits at peak | Static on CDN, client-side sim, snapshot + deltas, polling fallback                                                                                 |
+| Phone performance        | WebGL, LOD, reduced motion, test on a real mid-range Android                                                                                        |
+| Branding / endorsement   | "Unofficial" label unless organizers approve                                                                                                        |
+| Supabase idle pause      | Ongoing dev + traffic keeps it active; check before launch                                                                                          |
 
 ---
 
@@ -384,6 +391,7 @@ list filters), prek hooks, GitHub Actions with SHA-pinned actions + zizmor.
 ## 14. What's needed from the owner
 
 **Decided:**
+
 - Name: Adda
 - Sign-up: Telegram ✓ plus an on-site form
 - Responsive web only
@@ -391,6 +399,7 @@ list filters), prek hooks, GitHub Actions with SHA-pinned actions + zizmor.
 - Ticket verification parked (launch open; add the 🎟️ badge later)
 
 **Still open:**
+
 - Art direction: picked at A1
 - Final booth list: the default 10 unless changed
 
@@ -398,6 +407,7 @@ list filters), prek hooks, GitHub Actions with SHA-pinned actions + zizmor.
 @BotFather. Secrets go into Supabase/Cloudflare secret stores directly, never into chat or the repo.
 
 **From organizers:**
+
 1. OK to reference Devcon 8 / use branding, or stay "unofficial"?
 2. Distribution: newsletter/Telegram mention, QR posters, a venue screen for kiosk mode.
 3. Data: opt-in lists only (CSV template above). Ideally they send attendees the link.

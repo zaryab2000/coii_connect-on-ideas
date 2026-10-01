@@ -4,11 +4,11 @@ import { distance } from "@/sim/geometry";
 export type LayoutMode = "landscape" | "portrait";
 
 /** Booth stall art fits inside this circle (world units); beans are kept outside it. */
-export const BOOTH_OBSTACLE_R = 150;
+export const BOOTH_OBSTACLE_R = 160;
 /** The chai stall in the plaza. */
 export const PLAZA_OBSTACLE_R = 78;
 /** Average floor area one standing bean needs. */
-export const SPOT_SPACING = 26;
+export const SPOT_SPACING = 28;
 
 const ZONE_INSET = 16;
 const MARGIN = 70;
@@ -128,7 +128,10 @@ function landscapeBooths(radii: readonly number[], plaza: Placed): Placed[] {
   throw new Error("Could not fit booths on the landscape ring after 120 attempts");
 }
 
-function portraitBooths(radii: readonly number[], plazaR: number): { booths: Placed[]; plaza: Placed } {
+function portraitBooths(
+  radii: readonly number[],
+  plazaR: number,
+): { booths: Placed[]; plaza: Placed } {
   const d = Math.max(...radii) + STREET_HALF;
   const left = [0, 2, 4, 6, 8];
   const right = [1, 3, 5, 7, 9];
@@ -143,7 +146,8 @@ function portraitBooths(radii: readonly number[], plazaR: number): { booths: Pla
     );
     let y = prevY + sameSide + MARGIN;
     if (row === 2) {
-      const reach = (rr: number): number => Math.sqrt(Math.max(0, (rr + plazaR + MARGIN) ** 2 - d * d));
+      const reach = (rr: number): number =>
+        Math.sqrt(Math.max(0, (rr + plazaR + MARGIN) ** 2 - d * d));
       const above = Math.max(reach(r(left[1] ?? 0)), reach(r(right[1] ?? 0)));
       const below = Math.max(reach(r(left[2] ?? 0)), reach(r(right[2] ?? 0)));
       plazaY = prevY + Math.max(above, plazaR + MARGIN);
@@ -165,7 +169,11 @@ function portraitBooths(radii: readonly number[], plazaR: number): { booths: Pla
  * Lays out 10 booth zones plus the central chai plaza. Landscape rings booths around the plaza;
  * portrait lines them along a market street ("gully") with the plaza mid-street.
  */
-export function computeLayout(mode: LayoutMode, capacities: readonly number[], plazaCapacity: number): VenueLayout {
+export function computeLayout(
+  mode: LayoutMode,
+  capacities: readonly number[],
+  plazaCapacity: number,
+): VenueLayout {
   const boothR0 = BOOTH_OBSTACLE_R + ZONE_INSET;
   const plazaR0 = PLAZA_OBSTACLE_R + ZONE_INSET;
   const radii = capacities.map((cap) => zoneOuterRadius(boothR0, cap));

@@ -1,0 +1,52 @@
+/* "Rangoli Pop" design tokens. Canvas art mirrors these in src/engine/palette.ts. */
+:root {
+  --ink: #1e1538;
+  --ink-soft: #4a4166;
+  --ink-faint: #7d7499;
+  --floor: #ece4ff;
+  --floor-deep: #dfd3fb;
+  --paper: #ffffff;
+  --cream: #fff6e6;
+  --marigold: #ffb31a;
+  --marigold-deep: #ff8c1a;
+  --rani: #ff2e88;
+  --rani-deep: #e0156f;
+  --peacock: #0fa3a3;
+  --leaf: #2f9e5b;
+  --danger: #e5383b;
+
+  --font-display: "Baloo 2", "Arial Rounded MT Bold", ui-rounded, system-ui, sans-serif;
+  --font-body: "Mukta", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --text-xs: 0.78rem;
+  --text-sm: 0.9rem;
+  --text-md: 1rem;
+  --text-lg: 1.2rem;
+  --text-xl: 1.55rem;
+  --text-2xl: 2.1rem;
+
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-pill: 999px;
+
+  --line: 2.5px solid var(--ink);
+  --line-thin: 2px solid var(--ink);
+  /* Sticker look: hard offset shadow, no blur. */
+  --pop: 4px 4px 0 var(--ink);
+  --pop-sm: 2px 2px 0 var(--ink);
+  --pop-pressed: 1px 1px 0 var(--ink);
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  --tabbar-h: 64px;
+  --panel-w: 392px;
+  --hud-gap: 12px;
+}
