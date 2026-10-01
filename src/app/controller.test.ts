@@ -59,10 +59,10 @@ describe("controller panels and map taps", () => {
     expect(engine.calls.at(-1)).toEqual({ method: "locate", args: ["b"] });
   });
 
-  it("a bean tapped on the map opens the profile without framing", () => {
+  it("a bean tapped on the map opens the profile, framed so the sheet will not cover it", () => {
     const { store, engine } = setup();
     engine.emitSelect("a");
-    expect(store.get()).toMatchObject({ selectedId: "a", panel: "profile", framed: false });
+    expect(store.get()).toMatchObject({ selectedId: "a", panel: "profile", framed: true });
   });
 
   it("clearing the selection on the map closes only a profile", () => {

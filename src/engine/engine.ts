@@ -756,6 +756,8 @@ export class AddaEngine implements EngineApi {
     }
     scene.crowd.selected = index;
     scene.crowd.impulse(index, 0.45);
+    this.follow = -1;
+    scene.camera.flyTo(a.x, a.y - 30, scene.camera.zoom, this.reducedMotion ? 0 : 0.45);
     for (const listener of this.listeners.select) listener(person.id);
   }
 

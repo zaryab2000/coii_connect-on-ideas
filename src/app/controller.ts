@@ -210,7 +210,8 @@ function youActions(
 function followEngine(engine: EngineApi, store: AppStore): void {
   engine.on("ready", () => store.set({ ready: true }));
   engine.on("select", (id) => {
-    if (id) store.set({ selectedId: id, panel: "profile", framed: false });
+    // The engine centres a tapped bean, so the phone layout can lift it above the sheet.
+    if (id) store.set({ selectedId: id, panel: "profile", framed: true });
     else if (store.get().panel === "profile")
       store.set({ selectedId: null, panel: "none", framed: false });
   });
