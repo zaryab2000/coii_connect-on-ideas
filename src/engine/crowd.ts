@@ -339,7 +339,8 @@ export class CrowdRenderer {
     const frame = this.atlas.icons.get("sparkles");
     if (!frame) return;
     const bob = Math.sin(time * 3 + x * 0.01) * 2.5;
-    this.place(x, head - 24 + bob, 0.85, 0.85, Math.sin(time * 2) * 0.15);
+    const pulse = 1.35 + Math.sin(time * 5 + x * 0.02) * 0.15;
+    this.place(x, head - 30 + bob, pulse, pulse, Math.sin(time * 2) * 0.15);
     this.stamp(frame, WHITE + OPAQUE);
   }
 
