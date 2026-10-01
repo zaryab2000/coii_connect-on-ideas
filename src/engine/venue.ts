@@ -149,7 +149,8 @@ export function buildGarlands(layout: VenueLayout): Graphics {
   for (const [a, b] of garlandPairs(layout)) {
     const za = layout.zones[a];
     const zb = layout.zones[b];
-    if (!za || !zb) continue;
+    // Mostly-vertical neighbours would string the garland straight through a stall; skip them.
+    if (!za || !zb || Math.abs(zb.y - za.y) > Math.abs(zb.x - za.x) * 0.9) continue;
     const dir = zb.x >= za.x ? 1 : -1;
     garlandDots(g, za.x + dir * 58, za.y - 118, zb.x - dir * 58, zb.y - 118);
   }
