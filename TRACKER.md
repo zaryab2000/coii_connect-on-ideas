@@ -96,10 +96,10 @@ Full spec: [docs/prd/who-should-i-meet.md](docs/prd/who-should-i-meet.md)
 
 | ID  | Task                                                                                                                                            | Effort | Needs                            | Pri | Status |
 | --- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------ | -------------------------------- | --- | ------ |
-| M1  | "Today's Adda 3": three daily picks ranked by shared topics and complementary intent (hiring ↔ looking, founder ↔ investor). Swipe Wave or Skip | M      | — (client ranking); BE for waves | P1  | ☐      |
-| M2  | Waves: send a 👋; when it's mutual, "It's a match!" confetti plus a suggested spot ("chai plaza, 4pm?")                                         | M      | BE                               | P1  | ☐      |
-| M3  | "Find my tribe" spotlight: dim everyone except people who share 2+ of your topics                                                               | S      | —                                | P1  | ☐      |
-| M4  | Intent props on beans so intent is visible on the map: hiring megaphone, résumé, laptop, briefcase                                              | S      | —                                | P2  | ☐      |
+| M1  | "Today's Adda 3": three daily picks ranked by shared topics and complementary intent (hiring ↔ looking, founder ↔ investor). Swipe Wave or Skip | M      | — (client ranking); BE for waves | P1  | ☑      |
+| M2  | Waves: send a 👋; when it's mutual, "It's a match!" confetti plus a suggested spot ("chai plaza, 4pm?")                                         | M      | BE                               | P1  | ◐      |
+| M3  | "Find my tribe" spotlight: dim everyone except people who share 2+ of your topics                                                               | S      | —                                | P1  | ☑      |
+| M4  | Intent props on beans so intent is visible on the map: hiring megaphone, résumé, laptop, briefcase                                              | S      | —                                | P2  | ☑      |
 | M5  | Meetup flares: light a beacon on a booth ("agent payments jam · 4pm · Hall 2"). It glows on the map; joining walks your bean over               | M      | BE                               | P1  | ☐      |
 
 ## 5. Live and social proof (it feels alive)

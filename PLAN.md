@@ -29,6 +29,14 @@ for how to run it.
 - Quality: 89 unit/property tests, 8 Playwright smoke tests (desktop + phone); prek hooks
   enforce format, lint (complexity ≤ 8, ≤ 100 lines/function, ≤ 5 params), types and tests
 
+**Meet (Who should I meet), Phase 0 built (2 Oct 2026):**
+
+- Daily Adda 3 with card reveal, hidden waves (20/day), demo replies, "Chai's on!" with a
+  Telegram opener, We met + bonus cards, Unmatch
+- Intent field and props, My tribe glow, pick sparkles
+- Spec: `docs/prd/who-should-i-meet.md`. Phase 1 needs the backend (real waves, 18+ gate);
+  Phase 2 adds flares
+
 **Next** (detailed task list with fun and engagement ideas: [TRACKER.md](TRACKER.md))
 
 1. Owner phone test on the LAN URL (`pnpm dev`, then `http://<mac-ip>:5173/?debug`): FPS +
