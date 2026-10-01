@@ -441,3 +441,29 @@ export function drawLodBean(ctx: Ctx, shirt: string, skin: string): void {
   ctx.arc(0, HY, R + 0.5, 0, Math.PI * 2);
   finish(ctx, skin, 2);
 }
+
+/** Pool floatie worn around the waist (DeFi "liquidity pool" gag); drawn white for tinting. */
+export function drawFloatie(ctx: Ctx): void {
+  ctx.beginPath();
+  ctx.ellipse(0, -13, 14.5, 6, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, -13.5, 9, 3.2, 0, 0, Math.PI * 2);
+  ctx.fillStyle = "#ffffff";
+  ctx.fill("evenodd");
+  ctx.save();
+  ctx.clip("evenodd");
+  ctx.fillStyle = "#ff2e88";
+  for (const angle of [0.4, 1.9, 3.4, 4.9]) {
+    ctx.beginPath();
+    ctx.moveTo(0, -13);
+    ctx.arc(0, -13, 16, angle, angle + 0.75);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+  ctx.beginPath();
+  ctx.ellipse(0, -13, 14.5, 6, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, -13.5, 9, 3.2, 0, 0, Math.PI * 2);
+  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = INK_CSS;
+  ctx.stroke();
+}

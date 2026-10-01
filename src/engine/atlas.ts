@@ -12,6 +12,7 @@ import {
   drawLegs,
   drawLodBean,
   drawPhone,
+  drawFloatie,
   drawShadow,
 } from "@/engine/beanArt";
 import type { FaceKind, LegPose } from "@/engine/beanArt";
@@ -49,6 +50,7 @@ export interface CrowdAtlas {
   /** Indexed like ACCESSORIES; index 0 ("none") is null. */
   readonly accessories: readonly (Frame | null)[];
   readonly phone: Frame;
+  readonly floatie: Frame;
   readonly shadow: Frame;
   /** Far-zoom one-piece beans, index `topic * SKIN_TONES.length + skin`. */
   readonly lod: readonly Frame[];
@@ -164,7 +166,13 @@ function record<K extends string>(
 
 /** Draws every crowd and effect sprite into one mip-mapped canvas texture. */
 export async function buildCrowdAtlas(): Promise<CrowdAtlas> {
-  const icons = await loadIconImages([...BUBBLE_ICONS, "waving_hand", "dizzy", "party_popper"]);
+  const icons = await loadIconImages([
+    ...BUBBLE_ICONS,
+    "waving_hand",
+    "dizzy",
+    "party_popper",
+    "robot",
+  ]);
   const b = new AtlasBuilder();
   const bean = (draw: Request["draw"]): Promise<Frame> => b.add(BEAN_BOX, BEAN_SCALE, draw);
 
@@ -205,6 +213,7 @@ export async function buildCrowdAtlas(): Promise<CrowdAtlas> {
     body: bean(drawBody),
     head: bean(drawHead),
     phone: bean(drawPhone),
+    floatie: bean(drawFloatie),
     shadow: b.add({ w: 24, h: 10, ox: 12, oy: 5 }, BEAN_SCALE, drawShadow),
     dust: b.add(centered(18), FX_SCALE, drawDust),
     star: b.add(centered(14), FX_SCALE, drawStar),
@@ -226,6 +235,7 @@ export async function buildCrowdAtlas(): Promise<CrowdAtlas> {
     body: await frames.body,
     head: await frames.head,
     phone: await frames.phone,
+    floatie: await frames.floatie,
     shadow: await frames.shadow,
     dust: await frames.dust,
     star: await frames.star,

@@ -1,4 +1,5 @@
 import { Application, Container } from "pixi.js";
+import type { Texture } from "pixi.js";
 
 import { hairTint, SKIN_TONES } from "@/data/avatar";
 import { iconUrl } from "@/data/icons";
@@ -11,6 +12,7 @@ import { Camera } from "@/engine/camera";
 import { CrowdRenderer, LOD_ZOOM } from "@/engine/crowd";
 import type { BeanLook } from "@/engine/crowd";
 import { EffectPool } from "@/engine/fx";
+import { buildPool, buildPoolSign, poolRect, RobotCrew, Ticker } from "@/engine/gags";
 import { Gestures } from "@/engine/gestures";
 import type { GestureTarget } from "@/engine/gestures";
 import { loadIconTextures } from "@/engine/icons";
@@ -20,7 +22,7 @@ import type { EngineApi, EngineEvents, EngineStats } from "@/engine/types";
 import { buildChaiStall, buildFloor, buildGarlands, buildGate } from "@/engine/venue";
 import { zoneCapacities } from "@/sim/capacity";
 import { computeLayout, modeForAspect } from "@/sim/layout";
-import type { VenueLayout } from "@/sim/layout";
+import type { VenueLayout, Zone } from "@/sim/layout";
 import { State, World } from "@/sim/world";
 
 const STEP = 1 / 30;
@@ -41,6 +43,8 @@ interface Scene {
   readonly boothLabels: BoothLabels;
   readonly atlas: CrowdAtlas;
   readonly worldLayer: Container;
+  readonly robots: RobotCrew | null;
+  readonly ticker: Ticker | null;
 }
 
 type Listeners = { [K in keyof EngineEvents]: Set<EngineEvents[K]> };
@@ -49,6 +53,65 @@ function seedOf(id: string): number {
   let hash = 2166136261;
   for (let i = 0; i < id.length; i++) hash = Math.imul(hash ^ id.charCodeAt(i), 16777619);
   return ((hash >>> 0) % 1000) / 1000;
+}
+
+interface VenueLayers {
+  readonly worldLayer: Container;
+  readonly booths: readonly BoothView[];
+  readonly crowd: CrowdRenderer;
+  readonly robots: RobotCrew | null;
+  readonly ticker: Ticker | null;
+}
+
+/** Builds the static venue (floor, stalls, gags) around the dynamic crowd layer. */
+function buildVenueLayers(
+  layout: VenueLayout,
+  world: World,
+  atlas: CrowdAtlas,
+  icons: Map<IconId, Texture>,
+): VenueLayers {
+  const worldLayer = new Container({ isRenderGroup: true, label: "world" });
+  worldLayer.addChild(buildFloor(layout));
+  const zoneOf = (id: TopicId): Zone | undefined => layout.zones[topicIndex(id)];
+  const defi = zoneOf("defi");
+  if (defi) worldLayer.addChild(buildPool(defi));
+  const boothLayer = new Container({ label: "booths" });
+  const booths = layout.zones
+    .filter((zone) => zone.kind === "booth")
+    .map((zone) => {
+      const topic = TOPICS[zone.topic];
+      const icon = topic ? icons.get(topic.icon) : undefined;
+      if (!topic || !icon) throw new Error(`Booth zone ${zone.topic} has no topic or icon`);
+      const view = new BoothView(zone, topic, icon);
+      boothLayer.addChild(view.container);
+      return view;
+    });
+  const prediction = zoneOf("prediction");
+  const ticker = prediction ? new Ticker(prediction, DISPLAY_FONT) : null;
+  if (ticker) boothLayer.addChild(ticker.view);
+  const plaza = layout.zones[layout.plazaIndex];
+  const cup = icons.get("hot_beverage");
+  if (plaza && cup) boothLayer.addChild(buildChaiStall(plaza, DISPLAY_FONT, cup));
+  worldLayer.addChild(boothLayer);
+  const ai = zoneOf("ai");
+  const robots = ai ? new RobotCrew(ai, 7) : null;
+  const crowd = new CrowdRenderer(
+    atlas,
+    world,
+    {
+      shadesZone: topicIndex("privacy"),
+      poolZone: topicIndex("defi"),
+      pool: defi ? poolRect(defi) : null,
+      robots,
+    },
+    layout.width,
+    layout.height,
+  );
+  worldLayer.addChild(crowd.container);
+  worldLayer.addChild(buildGarlands(layout));
+  if (defi) worldLayer.addChild(buildPoolSign(defi, DISPLAY_FONT));
+  worldLayer.addChild(buildGate(layout, DISPLAY_FONT));
+  return { worldLayer, booths, crowd, robots, ticker };
 }
 
 export class AddaEngine implements EngineApi {
@@ -297,32 +360,11 @@ export class AddaEngine implements EngineApi {
     world: World,
     layout: VenueLayout,
     atlas: CrowdAtlas,
-    icons: Map<IconId, import("pixi.js").Texture>,
+    icons: Map<IconId, Texture>,
     rect: DOMRect,
   ): Scene {
-    const worldLayer = new Container({ isRenderGroup: true, label: "world" });
-    worldLayer.addChild(buildFloor(layout));
-    const boothLayer = new Container({ label: "booths" });
-    const booths = layout.zones
-      .filter((zone) => zone.kind === "booth")
-      .map((zone) => {
-        const topic = TOPICS[zone.topic];
-        const icon = topic ? icons.get(topic.icon) : undefined;
-        if (!topic || !icon) throw new Error(`Booth zone ${zone.topic} has no topic or icon`);
-        const view = new BoothView(zone, topic, icon);
-        boothLayer.addChild(view.container);
-        return view;
-      });
-    const plaza = layout.zones[layout.plazaIndex];
-    const cup = icons.get("hot_beverage");
-    if (plaza && cup) boothLayer.addChild(buildChaiStall(plaza, DISPLAY_FONT, cup));
-    worldLayer.addChild(boothLayer);
-    const crowd = new CrowdRenderer(atlas, world, layout.width, layout.height);
-    worldLayer.addChild(crowd.container);
-    worldLayer.addChild(buildGarlands(layout));
-    worldLayer.addChild(buildGate(layout, DISPLAY_FONT));
-    app.stage.addChild(worldLayer);
-
+    const venue = buildVenueLayers(layout, world, atlas, icons);
+    app.stage.addChild(venue.worldLayer);
     const camera = new Camera();
     camera.setWorld(layout.width, layout.height);
     camera.setViewport(rect.width, rect.height);
@@ -340,13 +382,11 @@ export class AddaEngine implements EngineApi {
       app,
       world,
       layout,
-      crowd,
-      booths,
       camera,
       labels,
       boothLabels,
       atlas,
-      worldLayer,
+      ...venue,
       effects: new EffectPool(),
       gestures: new Gestures(
         app.canvas,
@@ -414,6 +454,8 @@ export class AddaEngine implements EngineApi {
       camera.viewH / 2 - camera.y * camera.zoom,
     );
     scene.effects.update(dt);
+    scene.robots?.update(dt);
+    scene.ticker?.update(dt);
     scene.crowd.render(alpha, camera.view(), scene.world.time + alpha * STEP, dt, scene.effects);
     this.updateLabels(scene, alpha);
     this.positionBoothLabels(scene);

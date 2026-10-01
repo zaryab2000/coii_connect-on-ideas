@@ -3,6 +3,8 @@ import { Particle, ParticleContainer, Rectangle } from "pixi.js";
 import type { CrowdAtlas, Frame } from "@/engine/atlas";
 import type { FaceKind, LegPose } from "@/engine/beanArt";
 import type { Effect, EffectPool } from "@/engine/fx";
+import { inRect } from "@/engine/gags";
+import type { Rect, RobotCrew } from "@/engine/gags";
 import { bgr } from "@/engine/palette";
 import { IdleKind, State } from "@/sim/world";
 import type { Agent, World } from "@/sim/world";
@@ -16,6 +18,16 @@ export interface BeanLook {
   readonly accessory: Frame | null;
   readonly lod: Frame;
   readonly seed: number;
+}
+
+/** Booth jokes the renderer needs to know about (see `@/engine/gags`). */
+export interface CrowdGags {
+  /** Zone where everyone wears shades (Privacy). */
+  readonly shadesZone: number;
+  /** Zone with the liquidity pool (DeFi) and the pool's floor rectangle. */
+  readonly poolZone: number;
+  readonly pool: Rect | null;
+  readonly robots: RobotCrew | null;
 }
 
 export interface View {
@@ -61,6 +73,7 @@ export class CrowdRenderer {
   private count = 0;
   private order: number[] = [];
   private readonly overlays: number[] = [];
+  private readonly robotOrder: number[] = [];
   private readonly pose: Pose = {
     lift: 0,
     bob: 0,
@@ -76,6 +89,7 @@ export class CrowdRenderer {
   constructor(
     private readonly atlas: CrowdAtlas,
     private readonly world: World,
+    private readonly gags: CrowdGags,
     worldWidth: number,
     worldHeight: number,
   ) {
@@ -131,13 +145,20 @@ export class CrowdRenderer {
       if (!this.visible(a, alpha, view)) continue;
       if (!lod) this.writeShadow(index, a, alpha);
     }
+    const robots = lod ? [] : this.sortedRobots();
+    let nextRobot = 0;
     for (const index of this.order) {
       const a = agents[index];
       const look = this.looks[index];
       if (!a?.active || !look || !this.visible(a, alpha, view)) continue;
+      while (nextRobot < robots.length && this.robotY(robots[nextRobot] ?? 0) <= a.y) {
+        this.writeRobot(robots[nextRobot] ?? 0, view);
+        nextRobot++;
+      }
       if (lod) this.writeLod(index, a, look, alpha, time);
       else this.writeBean(index, a, look, alpha, time);
     }
+    while (nextRobot < robots.length) this.writeRobot(robots[nextRobot++] ?? 0, view);
     if (!lod) this.writeOverlays(alpha, time);
     this.writeEffects(effects, alpha);
     const children = this.container.particleChildren;
@@ -308,14 +329,82 @@ export class CrowdRenderer {
     const r = pose.tilt;
     const al = (this.dimmed(a, index) ? 70 : 255) << 24;
     const atlas = this.atlas;
-    this.emit(atlas.legs[pose.legs], x, y, fx, fy, r, WHITE_BGR + al);
-    this.emit(atlas.body, x, upper, fx, fy, r, look.shirt + al);
-    this.emit(atlas.head, x, upper, fx, fy, r, look.skin + al);
-    this.emit(atlas.faces[pose.face], x + pose.facing * 0.7, upper, fx, fy, r, WHITE_BGR + al);
-    if (look.hairFrame) this.emit(look.hairFrame, x, upper, fx, fy, r, look.hair + al);
-    if (look.accessory) this.emit(look.accessory, x, upper, fx, fy, r, WHITE_BGR + al);
-    if (pose.phone) this.emit(atlas.phone, x, upper, fx, fy, r, WHITE_BGR + al);
+    const wading = this.inPool(a);
+    const body = wading ? upper + Math.sin(time * 2.4 + look.seed * 6) * 1.2 : upper;
+    if (!wading) this.emit(atlas.legs[pose.legs], x, y, fx, fy, r, WHITE_BGR + al);
+    this.emit(atlas.body, x, body, fx, fy, r, look.shirt + al);
+    if (wading) this.emit(atlas.floatie, x, body, fx, fy, r, WHITE_BGR + al);
+    this.emit(atlas.head, x, body, fx, fy, r, look.skin + al);
+    this.emit(atlas.faces[pose.face], x + pose.facing * 0.7, body, fx, fy, r, WHITE_BGR + al);
+    if (look.hairFrame) this.emit(look.hairFrame, x, body, fx, fy, r, look.hair + al);
+    const accessory = this.accessoryFor(a, look, pose.face);
+    if (accessory) this.emit(accessory, x, body, fx, fy, r, WHITE_BGR + al);
+    if (pose.phone) this.emit(atlas.phone, x, body, fx, fy, r, WHITE_BGR + al);
     if (index === this.selected || a.isYou || a.state === State.Dizzy) this.overlays.push(index);
+  }
+
+  private inPool(a: Agent): boolean {
+    const pool = this.gags.pool;
+    if (!pool || a.zone !== this.gags.poolZone || a.z > 0) return false;
+    return a.state !== State.Grabbed && a.state !== State.Thrown && inRect(pool, a.x, a.y);
+  }
+
+  /** Everyone at the Privacy booth wears shades, unless their face is mid-surprise. */
+  private accessoryFor(a: Agent, look: BeanLook, face: FaceKind): Frame | null {
+    const shades = this.atlas.accessories[2] ?? null;
+    if (a.zone === this.gags.shadesZone && face !== "wow" && face !== "dizzy") {
+      return look.accessory === this.atlas.accessories[3] ? look.accessory : shades;
+    }
+    return look.accessory;
+  }
+
+  private sortedRobots(): number[] {
+    const crew = this.gags.robots;
+    const order = this.robotOrder;
+    if (!crew) return order;
+    if (order.length !== crew.robots.length) {
+      order.length = 0;
+      crew.robots.forEach((_, i) => order.push(i));
+    }
+    order.sort((i, j) => this.robotY(i) - this.robotY(j));
+    return order;
+  }
+
+  private robotY(i: number): number {
+    return this.gags.robots?.robots[i]?.y ?? 0;
+  }
+
+  private writeRobot(i: number, view: View): void {
+    const robot = this.gags.robots?.robots[i];
+    const frame = this.atlas.icons.get("robot");
+    if (!robot || !frame) return;
+    if (
+      robot.x < view.x0 - 30 ||
+      robot.x > view.x1 + 30 ||
+      robot.y < view.y0 ||
+      robot.y > view.y1 + 40
+    )
+      return;
+    const hop = robot.wait > 0 ? 0 : Math.abs(Math.sin(robot.phase)) * 5;
+    const tilt = Math.sin(robot.phase * 0.5) * 0.08;
+    this.emit(
+      this.atlas.shadow,
+      robot.x,
+      robot.y,
+      0.9,
+      0.9,
+      0,
+      (((0.22 * 255) | 0) << 24) + WHITE_BGR,
+    );
+    this.emit(
+      frame,
+      robot.x,
+      robot.y - 16 - hop,
+      robot.facing * 2.1,
+      2.1,
+      tilt,
+      WHITE_BGR + ALPHA_FULL,
+    );
   }
 
   private writeLod(index: number, a: Agent, look: BeanLook, alpha: number, time: number): void {
