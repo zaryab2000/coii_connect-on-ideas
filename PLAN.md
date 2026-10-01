@@ -29,7 +29,7 @@ for how to run it.
 - Quality: 89 unit/property tests, 8 Playwright smoke tests (desktop + phone); prek hooks
   enforce format, lint (complexity ≤ 8, ≤ 100 lines/function, ≤ 5 params), types and tests
 
-**Next**
+**Next** (detailed task list with fun and engagement ideas: [TRACKER.md](TRACKER.md))
 
 1. Owner phone test on the LAN URL (`pnpm dev`, then `http://<mac-ip>:5173/?debug`): FPS +
    gestures
