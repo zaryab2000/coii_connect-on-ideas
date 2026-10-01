@@ -1,3 +1,4 @@
+import { isIntentId } from "@/data/intents";
 import { isTopicId } from "@/data/topics";
 import type { Person } from "@/data/types";
 
@@ -20,13 +21,20 @@ function isPerson(value: unknown): value is Person {
   );
 }
 
+/** Profiles saved before intents existed load with none; unknown ids are dropped. */
+function withIntent(person: Person): Person {
+  const raw: unknown = (person as { intent?: unknown }).intent;
+  const intent = Array.isArray(raw) ? raw.filter(isIntentId).slice(0, 2) : [];
+  return { ...person, intent };
+}
+
 /** Your own profile from this browser, if you joined before. Storage may be unavailable. */
 export function loadYou(): Person | null {
   try {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
-    return isPerson(parsed) ? parsed : null;
+    return isPerson(parsed) ? withIntent(parsed) : null;
   } catch {
     return null;
   }

@@ -8,6 +8,7 @@ import type { TopicId } from "@/data/types";
 import { BoothPanel } from "@/ui/BoothPanel";
 import { usePresence } from "@/ui/hooks";
 import { JoinPanel } from "@/ui/JoinPanel";
+import { MeetPanel } from "@/ui/MeetPanel";
 import type { PanelChrome } from "@/ui/PanelChrome";
 import type { PeopleQuery } from "@/ui/people";
 import { PeopleList } from "@/ui/PeopleList";
@@ -79,6 +80,8 @@ export function PanelContent({
       return <PeopleList chrome={chrome} query={query.query} onQuery={query.onQuery} />;
     case "join":
       return <JoinPanel chrome={chrome} />;
+    case "meet":
+      return <MeetPanel chrome={chrome} />;
   }
 }
 
@@ -87,6 +90,7 @@ const SHEET: Record<PanelView["panel"], { size: SheetSize; modal: boolean; label
   booth: { size: "peek", modal: false, label: "Booth" },
   people: { size: "tall", modal: true, label: "People" },
   join: { size: "tall", modal: true, label: "Join the adda" },
+  meet: { size: "tall", modal: true, label: "Meet" },
 };
 
 function backTo(

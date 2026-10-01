@@ -13,6 +13,7 @@ function person(id: string, topics: TopicId[], overrides: Partial<Person> = {}):
     telegram: `demo_${id}`,
     x: null,
     topics,
+    intent: [],
     oneLiner: null,
     avatar: { skin: 0, hair: 0, hairColor: 0, accessory: 0 },
     telegramVerified: false,
@@ -32,6 +33,7 @@ const JOIN: JoinInput = {
   telegram: "zara_builds",
   x: null,
   topics: ["wallets", "ai"],
+  intent: ["building"],
   oneLiner: null,
   avatar: { skin: 1, hair: 2, hairColor: 3, accessory: 0 },
 };
@@ -157,7 +159,7 @@ describe("controller join and leave", () => {
     expect(state.people.at(-1)).toBe(you);
     expect(state.panel).toBe("none");
     expect(engine.present.get(you.id)).toBe(you);
-    expect(engine.calls.at(-1)).toEqual({ method: "spawn", args: [you.id, true] });
+    expect(engine.calls).toContainEqual({ method: "spawn", args: [you.id, true] });
     expect(state.toasts.at(-1)).toMatchObject({ icon: "party_popper", tone: "success" });
   });
 

@@ -49,6 +49,18 @@ export class FakeEngine implements EngineApi {
   fit(): void {
     this.log("fit");
   }
+  highlightPeople(personIds: readonly string[]): void {
+    this.log("highlightPeople", [...personIds]);
+  }
+  setPicks(personIds: readonly string[]): void {
+    this.log("setPicks", [...personIds]);
+  }
+  chaiMoment(aId: string, bId: string): void {
+    this.log("chaiMoment", aId, bId);
+  }
+  greet(personId: string): void {
+    this.log("greet", personId);
+  }
   setInsets(top: number): void {
     this.log("setInsets", top);
   }

@@ -1,9 +1,11 @@
+import { createMeet, realClock } from "@/app/meet";
+import type { MeetActions, MeetClock, MeetController } from "@/app/meet";
 import { createStore } from "@/app/store";
 import type { AppState, Panel, Store, Toast } from "@/app/store";
 import { clearYou, saveYou } from "@/data/localUser";
 import type { PeopleSource } from "@/data/source";
 import { topicById } from "@/data/topics";
-import type { Avatar, IconId, Person, TopicId } from "@/data/types";
+import type { Avatar, IconId, IntentId, Person, TopicId } from "@/data/types";
 import type { EngineApi } from "@/engine/types";
 
 export interface JoinInput {
@@ -11,11 +13,12 @@ export interface JoinInput {
   readonly telegram: string | null;
   readonly x: string | null;
   readonly topics: readonly TopicId[];
+  readonly intent: readonly IntentId[];
   readonly oneLiner: string | null;
   readonly avatar: Avatar;
 }
 
-export interface Actions {
+export interface Actions extends MeetActions {
   selectPerson(id: string | null): void;
   locate(id: string): void;
   openBooth(topic: TopicId): void;
@@ -43,6 +46,8 @@ export interface ControllerOptions {
   readonly people: readonly Person[];
   readonly you: Person | null;
   readonly reducedMotion: boolean;
+  /** Time, randomness and timers for Meet; defaults to the real ones. */
+  readonly clock?: MeetClock;
 }
 
 function topicNames(person: Person): string {
@@ -60,6 +65,7 @@ function personFromJoin(input: JoinInput): Person {
     telegram: input.telegram,
     x: input.x,
     topics: [...input.topics],
+    intent: [...input.intent],
     oneLiner: input.oneLiner,
     avatar: input.avatar,
     telegramVerified: false,
@@ -174,6 +180,7 @@ function youActions(
   engine: EngineApi,
   store: AppStore,
   toasts: ToastActions,
+  meet: MeetController,
 ): Pick<Actions, "join" | "leave"> {
   return {
     join(input) {
@@ -190,6 +197,8 @@ function youActions(
       }));
       engine.select(null);
       engine.spawn(person, true);
+      meet.forget();
+      meet.sync();
       toasts.pushToast(
         saved
           ? "You're in! Watch yourself walk in."
@@ -201,6 +210,7 @@ function youActions(
     },
     leave() {
       if (!removeYou(engine, store)) return;
+      meet.forget();
       toasts.pushToast("You left the adda. Come back anytime.", "waving_hand", "info");
     },
   };
@@ -221,6 +231,12 @@ function followEngine(engine: EngineApi, store: AppStore): void {
   });
 }
 
+function meetActionsOf(meet: MeetController): MeetActions {
+  const { revealCard, wave, unwave, skip, dismissChai, markMessaged, confirmMet, toggleTribe } =
+    meet;
+  return { revealCard, wave, unwave, skip, dismissChai, markMessaged, confirmMet, toggleTribe };
+}
+
 /** Owns app state and keeps the engine in sync with it. UI components only call `actions`. */
 export function createController(engine: EngineApi, options: ControllerOptions): AppController {
   const store = createStore<AppState>({
@@ -233,17 +249,22 @@ export function createController(engine: EngineApi, options: ControllerOptions):
     joinTopic: null,
     you: options.you,
     toasts: [],
+    meet: null,
+    tribe: false,
     reducedMotion: options.reducedMotion,
     ready: false,
   });
   const toasts = toastActions(store);
+  const meet = createMeet(engine, store, toasts.pushToast, options.clock ?? realClock);
   const actions: Actions = {
     ...panelActions(engine, store),
     ...mapActions(engine, store),
-    ...youActions(engine, store, toasts),
+    ...youActions(engine, store, toasts, meet),
     ...toasts,
+    ...meetActionsOf(meet),
   };
   followEngine(engine, store);
+  meet.sync();
 
   return {
     store,

@@ -1,6 +1,7 @@
 import type { JoinInput } from "@/app/controller";
 import { containsLink, normalizeTelegram, normalizeX } from "@/data/handles";
-import type { Avatar, Person, TopicId } from "@/data/types";
+import { INTENTS_MAX } from "@/data/intents";
+import type { Avatar, IntentId, Person, TopicId } from "@/data/types";
 
 export const NAME_MAX = 40;
 export const ONE_LINER_MAX = 80;
@@ -12,6 +13,7 @@ export interface JoinDraft {
   readonly telegram: string;
   readonly x: string;
   readonly topics: readonly TopicId[];
+  readonly intent: readonly IntentId[];
   readonly oneLiner: string;
   readonly avatar: Avatar;
   readonly consent: boolean;
@@ -106,10 +108,18 @@ export function validateJoin(draft: JoinDraft): JoinResult {
       telegram,
       x,
       topics: [...draft.topics],
+      intent: draft.intent.slice(0, INTENTS_MAX),
       oneLiner: oneLiner.length > 0 ? oneLiner : null,
       avatar: draft.avatar,
     },
   };
+}
+
+/** Adds `intent` as the newest pick, or removes it when already picked. Never exceeds two. */
+export function toggleIntent(intent: readonly IntentId[], id: IntentId): readonly IntentId[] {
+  if (intent.includes(id)) return intent.filter((i) => i !== id);
+  if (intent.length >= INTENTS_MAX) return intent;
+  return [...intent, id];
 }
 
 /** Adds `topic` as the newest pick, or removes it when already picked. Never exceeds the max. */
@@ -136,6 +146,7 @@ function draftOf(you: Person): JoinDraft {
     telegram: you.telegram ?? "",
     x: you.x ?? "",
     topics: you.topics,
+    intent: you.intent,
     oneLiner: you.oneLiner ?? "",
     avatar: you.avatar,
     consent: true,
@@ -143,5 +154,14 @@ function draftOf(you: Person): JoinDraft {
 }
 
 function emptyDraft(avatar: Avatar): JoinDraft {
-  return { name: "", telegram: "", x: "", topics: [], oneLiner: "", avatar, consent: false };
+  return {
+    name: "",
+    telegram: "",
+    x: "",
+    topics: [],
+    intent: [],
+    oneLiner: "",
+    avatar,
+    consent: false,
+  };
 }

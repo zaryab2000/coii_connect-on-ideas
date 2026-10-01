@@ -32,6 +32,14 @@ export interface EngineApi {
   focusBooth(topic: TopicId): void;
   highlightTopics(topics: readonly TopicId[]): void;
   fit(): void;
+  /** "My tribe": these people glow and everyone else dims; an empty list clears it. */
+  highlightPeople(personIds: readonly string[]): void;
+  /** Sparkles above today's picks, visible only to you. */
+  setPicks(personIds: readonly string[]): void;
+  /** Two people walk up to each other and clink chai cups ("Chai's on!"). */
+  chaiMoment(aId: string, bId: string): void;
+  /** Their bean waves back at you (feedback after you wave at them). */
+  greet(personId: string): void;
   /** Screen pixels at the top of the map covered by UI, so framing keeps content visible. */
   setInsets(top: number): void;
   pause(): void;

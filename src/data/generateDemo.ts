@@ -1,3 +1,4 @@
+import { affinity } from "@/data/affinity";
 import {
   ACCESSORY_WEIGHTS,
   HAIR_STYLE_WEIGHTS,
@@ -9,8 +10,8 @@ import type { NameRegion } from "@/data/names";
 import { ONE_LINERS } from "@/data/oneLiners";
 import { createRng } from "@/data/rng";
 import type { Rng } from "@/data/rng";
-import { TOPIC_IDS } from "@/data/types";
-import type { Avatar, Origin, Person, TopicId } from "@/data/types";
+import { INTENT_IDS, TOPIC_IDS } from "@/data/types";
+import type { Avatar, IntentId, Origin, Person, TopicId } from "@/data/types";
 
 export const INDIA_SHARE = 0.7;
 
@@ -29,30 +30,7 @@ const TOPIC_POPULARITY: Readonly<Record<TopicId, number>> = {
   jobs: 5,
 };
 
-/** Extra pull between topics that tend to be picked together. Unlisted pairs have affinity 1. */
-const AFFINITY_PAIRS: ReadonlyArray<readonly [TopicId, TopicId, number]> = [
-  ["ai", "stablecoins", 4],
-  ["ai", "wallets", 2],
-  ["ai", "consumer", 1.6],
-  ["defi", "prediction", 4],
-  ["defi", "stablecoins", 2.6],
-  ["defi", "security", 2],
-  ["privacy", "core", 2.6],
-  ["privacy", "security", 2.2],
-  ["privacy", "wallets", 1.6],
-  ["stablecoins", "wallets", 2],
-  ["core", "security", 1.6],
-  ["consumer", "wallets", 2],
-];
-
 const TOPIC_COUNT_WEIGHTS = [35, 45, 20];
-
-function affinity(a: TopicId, b: TopicId): number {
-  for (const [x, y, weight] of AFFINITY_PAIRS) {
-    if ((x === a && y === b) || (x === b && y === a)) return weight;
-  }
-  return 1;
-}
 
 function pickTopics(rng: Rng): TopicId[] {
   const count = rng.weighted(TOPIC_COUNT_WEIGHTS) + 1;
@@ -103,8 +81,36 @@ function pickAvatar(rng: Rng, origin: Origin): Avatar {
   };
 }
 
+const INTENT_COUNT_WEIGHTS = [20, 55, 25];
+const INTENT_WEIGHTS: Readonly<Record<IntentId, number>> = {
+  building: 26,
+  learning: 16,
+  researching: 9,
+  job_hunting: 9,
+  vibing: 8,
+  hiring: 7,
+  cofounder: 7,
+  investing: 5,
+  raising: 5,
+};
+
+/** 0–2 intents; people at the Jobs booth are mostly hiring or looking. */
+function pickIntents(rng: Rng, topics: readonly TopicId[]): IntentId[] {
+  const count = rng.weighted(INTENT_COUNT_WEIGHTS);
+  const chosen: IntentId[] = [];
+  if (count > 0 && topics.includes("jobs"))
+    chosen.push(rng.chance(0.45) ? "hiring" : "job_hunting");
+  while (chosen.length < count) {
+    const weights = INTENT_IDS.map((id) => (chosen.includes(id) ? 0 : INTENT_WEIGHTS[id]));
+    chosen.push(INTENT_IDS[rng.weighted(weights)] as IntentId);
+  }
+  return chosen;
+}
+
 interface PersonContext {
   readonly rng: Rng;
+  /** Separate stream so adding intents did not change anyone's name or handle. */
+  readonly intentRng: Rng;
   readonly seed: number;
   readonly now: number;
   readonly usedTelegram: Set<string>;
@@ -126,6 +132,7 @@ function generatePerson(ctx: PersonContext, index: number, origin: Origin): Pers
     telegram: uniqueHandle(`demo_${slug}`, ctx.usedTelegram, rng, 32),
     x: rng.chance(0.6) ? uniqueHandle(`${asciiSlug(first)}_`, ctx.usedX, rng, 15) : null,
     topics,
+    intent: pickIntents(ctx.intentRng, topics),
     oneLiner: rng.chance(0.85) ? rng.pick(ONE_LINERS[primary]) : null,
     avatar: pickAvatar(rng, origin),
     telegramVerified: rng.chance(0.4),
@@ -161,6 +168,7 @@ export function generateDemo(options: DemoOptions): DemoCrowd {
   const rng = createRng(options.seed);
   const ctx: PersonContext = {
     rng,
+    intentRng: createRng(options.seed ^ 0x1e7e17),
     seed: options.seed,
     now: options.now,
     usedTelegram: new Set(),

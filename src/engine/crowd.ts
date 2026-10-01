@@ -70,6 +70,10 @@ export class CrowdRenderer {
   selected = -1;
   /** Topics to highlight; empty means everyone is shown normally. */
   highlight: ReadonlySet<number> = new Set();
+  /** Agents to highlight ("My tribe"); combines with the topic highlight. Empty = off. */
+  highlightIds: ReadonlySet<number> = new Set();
+  /** Today's picks; they get sparkles that only the viewer sees. */
+  picks: ReadonlySet<number> = new Set();
   private readonly particles: Particle[] = [];
   private count = 0;
   private order: number[] = [];
@@ -191,7 +195,9 @@ export class CrowdRenderer {
   }
 
   private dimmed(a: Agent, index: number): boolean {
-    if (this.highlight.size === 0 || index === this.selected || a.isYou) return false;
+    if (index === this.selected || a.isYou) return false;
+    if (this.highlightIds.size > 0 && !this.highlightIds.has(index)) return true;
+    if (this.highlight.size === 0) return false;
     return !a.topics.some((topic) => this.highlight.has(topic));
   }
 
@@ -253,7 +259,7 @@ export class CrowdRenderer {
   }
 
   private needsOverlay(index: number, a: Agent): boolean {
-    return index === this.selected || a.isYou || a.state === State.Dizzy;
+    return index === this.selected || a.isYou || a.state === State.Dizzy || this.picks.has(index);
   }
 
   private writeUpperBody(
@@ -306,11 +312,21 @@ export class CrowdRenderer {
       const x = lerpX(a, alpha);
       const head = lerpY(a, alpha) - a.z - 33.5;
       if (a.state === State.Dizzy) this.writeDizzyStars(x, head, time);
+      if (this.picks.has(index) && index !== this.selected) this.writeSparkle(x, head, time);
       if (index !== this.selected) continue;
       const bounce = Math.abs(Math.sin(time * 4)) * 2.5;
       this.place(x, head - 22 - bounce, 1, 1, 0);
       this.stamp(this.atlas.bang, WHITE + OPAQUE);
     }
+  }
+
+  /** A gently bobbing sparkle above one of today's picks. */
+  private writeSparkle(x: number, head: number, time: number): void {
+    const frame = this.atlas.icons.get("sparkles");
+    if (!frame) return;
+    const bob = Math.sin(time * 3 + x * 0.01) * 2.5;
+    this.place(x, head - 24 + bob, 0.85, 0.85, Math.sin(time * 2) * 0.15);
+    this.stamp(frame, WHITE + OPAQUE);
   }
 
   private writeDizzyStars(x: number, head: number, time: number): void {

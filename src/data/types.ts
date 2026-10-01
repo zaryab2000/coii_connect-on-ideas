@@ -13,7 +13,27 @@ export const TOPIC_IDS = [
 
 export type TopicId = (typeof TOPIC_IDS)[number];
 
+export const INTENT_IDS = [
+  "building",
+  "hiring",
+  "job_hunting",
+  "cofounder",
+  "raising",
+  "investing",
+  "researching",
+  "learning",
+  "vibing",
+] as const;
+
+/** What someone is at Devcon for; drives complementary matching (hiring ↔ job hunting, …). */
+export type IntentId = (typeof INTENT_IDS)[number];
+
 export type IconId =
+  | "laptop"
+  | "megaphone"
+  | "page_facing_up"
+  | "magnifying_glass"
+  | "seedling"
   | "robot"
   | "crystal_ball"
   | "water_wave"
@@ -62,6 +82,8 @@ export interface Person {
   readonly telegram: string | null;
   readonly x: string | null;
   readonly topics: readonly TopicId[];
+  /** Up to two intents, most important first. */
+  readonly intent: readonly IntentId[];
   readonly oneLiner: string | null;
   readonly avatar: Avatar;
   readonly telegramVerified: boolean;

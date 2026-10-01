@@ -21,7 +21,7 @@ export type State = (typeof State)[keyof typeof State];
 export const IdleKind = { Stand: 0, LookAround: 1, Hop: 2, Phone: 3, Wave: 4 } as const;
 export type IdleKind = (typeof IdleKind)[keyof typeof IdleKind];
 
-export type SimEventKind = "bounce" | "bump" | "dizzy" | "arrive" | "bubble" | "chat";
+export type SimEventKind = "bounce" | "bump" | "dizzy" | "arrive" | "bubble" | "chat" | "clink";
 
 export interface SimEvent {
   kind: SimEventKind;
@@ -66,6 +66,8 @@ export class Agent {
   moving = false;
   walkPhase = 0;
   partner = -1;
+  /** Agent this one is walking over to meet ("Chai's on!"), or -1. */
+  meetPartner = -1;
   bubbleT = 0;
   airTime = 0;
 }
@@ -258,6 +260,45 @@ export class World {
   }
 
   /** Make an agent stop and wave (used when someone locates them). */
+  /**
+   * Two people walk up to each other and share a long chat ("Chai's on!"). A `clink` event is
+   * emitted when both have arrived.
+   */
+  rendezvous(i: number, j: number): void {
+    const a = this.agent(i);
+    const b = this.agent(j);
+    if (!a.active || !b.active || i === j) return;
+    const mx = (a.x + b.x) / 2;
+    const my = (a.y + b.y) / 2;
+    for (const [self, index, side, partner] of [
+      [a, i, -1, j],
+      [b, j, 1, i],
+    ] as const) {
+      this.endChat(self);
+      this.releaseSpot(index);
+      self.meetPartner = partner;
+      self.tx = mx + side * 13;
+      self.ty = my;
+      this.pushTargetOut(self);
+      this.route(self);
+      self.state = State.Commuting;
+    }
+  }
+
+  /** Keeps a meeting point out of booth obstacles. */
+  private pushTargetOut(a: Agent): void {
+    for (const zone of this.layout.zones) {
+      const o = zone.obstacle;
+      const dx = a.tx - o.x;
+      const dy = a.ty - o.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      if (dist < o.r + 6) {
+        a.tx = o.x + (dx / dist) * (o.r + 6);
+        a.ty = o.y + (dy / dist) * (o.r + 6);
+      }
+    }
+  }
+
   wave(index: number): void {
     const a = this.agent(index);
     if (!a.active || a.state === State.Grabbed || a.state === State.Thrown) return;
@@ -386,11 +427,34 @@ export class World {
   }
 
   private arrive(index: number, a: Agent): void {
+    if (a.meetPartner >= 0) {
+      this.arriveAtMeeting(index, a);
+      return;
+    }
     const wasArriving = a.state === State.Arriving;
     const wasRunning = a.state === State.RunningHome;
     this.toIdle(a, this.idleDuration());
     if (wasRunning) a.idleKind = IdleKind.Hop;
     if (wasArriving) this.emit("arrive", index, a.x, a.y);
+  }
+
+  /** Waits for the other person; once both are there they chat for a while and clink cups. */
+  private arriveAtMeeting(index: number, a: Agent): void {
+    const partnerIndex = a.meetPartner;
+    const partner = this.agents[partnerIndex];
+    this.toIdle(a, 30);
+    a.idleKind = IdleKind.LookAround;
+    if (!partner?.active || partner.meetPartner !== index) {
+      a.meetPartner = -1;
+      return;
+    }
+    if (partner.state !== State.Idle) return;
+    a.meetPartner = -1;
+    partner.meetPartner = -1;
+    this.startChat(index, partnerIndex);
+    a.t = 9;
+    partner.t = 9;
+    this.emit("clink", index, (a.x + partner.x) / 2, (a.y + partner.y) / 2);
   }
 
   private toIdle(a: Agent, duration: number): void {

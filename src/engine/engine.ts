@@ -288,6 +288,40 @@ export class AddaEngine implements EngineApi {
     });
   }
 
+  highlightPeople(personIds: readonly string[]): void {
+    this.whenReady((scene) => {
+      scene.crowd.highlightIds = this.indexesOf(personIds);
+    });
+  }
+
+  setPicks(personIds: readonly string[]): void {
+    this.whenReady((scene) => {
+      scene.crowd.picks = this.indexesOf(personIds);
+    });
+  }
+
+  chaiMoment(aId: string, bId: string): void {
+    this.whenReady((scene) => {
+      const a = this.agentOf.get(aId);
+      const b = this.agentOf.get(bId);
+      if (a === undefined || b === undefined) return;
+      if (this.reducedMotion) {
+        this.clinkAt(scene, scene.world.agent(b));
+        return;
+      }
+      scene.world.rendezvous(a, b);
+    });
+  }
+
+  greet(personId: string): void {
+    this.whenReady((scene) => {
+      const index = this.agentOf.get(personId);
+      if (index === undefined) return;
+      scene.world.wave(index);
+      this.waveBubble(scene, index);
+    });
+  }
+
   fit(): void {
     this.whenReady((scene) => {
       this.follow = -1;
@@ -570,6 +604,7 @@ export class AddaEngine implements EngineApi {
     },
     bubble: (scene, e) => this.chatBubble(scene, e.agent, e.x, e.y),
     chat: () => undefined,
+    clink: (scene, e) => this.clinkAt(scene, { x: e.x, y: e.y }),
   };
 
   private consumeEvents(scene: Scene): void {
@@ -614,6 +649,29 @@ export class AddaEngine implements EngineApi {
       e.size = 1 + Math.random() * 0.6;
       e.tint = TOPICS[k % TOPICS.length]?.color ?? 0xffffff;
     }
+  }
+
+  /** Two chai cups clink above a meeting point, with a burst of confetti. */
+  private clinkAt(scene: Scene, at: { x: number; y: number }): void {
+    const cup = scene.atlas.icons.get("hot_beverage");
+    if (!cup) return;
+    for (const side of [-1, 1]) {
+      const e = scene.effects.spawn(cup, at.x + side * 14, at.y - 62, 2.2);
+      e.vx = -side * 12;
+      e.size = 0.9;
+      e.spin = side * 0.6;
+      e.pop = true;
+    }
+    this.confetti(scene, at.x, at.y - 50, 46);
+  }
+
+  private indexesOf(personIds: readonly string[]): ReadonlySet<number> {
+    const set = new Set<number>();
+    for (const id of personIds) {
+      const index = this.agentOf.get(id);
+      if (index !== undefined) set.add(index);
+    }
+    return set;
   }
 
   private chatBubble(scene: Scene, agent: number, x: number, y: number): void {
