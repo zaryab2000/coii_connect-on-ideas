@@ -18,6 +18,13 @@ export interface AppState {
   readonly boothTopic: TopicId | null;
   readonly panel: Panel;
   readonly highlight: readonly TopicId[];
+  /**
+   * True while the camera is centred on the selected person or booth (after `locate` or a booth
+   * tap). The phone layout then lifts the map so that point stays visible above a sheet.
+   */
+  readonly framed: boolean;
+  /** Topic to preselect when the join form opens (from a booth's "Join this booth"). */
+  readonly joinTopic: TopicId | null;
   readonly you: Person | null;
   readonly toasts: readonly Toast[];
   readonly reducedMotion: boolean;

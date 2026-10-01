@@ -20,6 +20,8 @@ export interface Actions {
   locate(id: string): void;
   openBooth(topic: TopicId): void;
   openPanel(panel: Panel): void;
+  /** Opens the join form, optionally with a topic preselected (or added, when editing). */
+  startJoin(topic: TopicId | null): void;
   closePanel(): void;
   toggleHighlight(topic: TopicId): void;
   clearHighlight(): void;
@@ -51,45 +53,104 @@ function newId(): string {
   return `you-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 }
 
-/** Owns app state and keeps the engine in sync with it. UI components only call `actions`. */
-export function createController(engine: EngineApi, options: ControllerOptions): AppController {
-  const store = createStore<AppState>({
-    people: options.you ? [...options.people, options.you] : [...options.people],
-    selectedId: null,
-    boothTopic: null,
-    panel: "none",
-    highlight: [],
-    you: options.you,
-    toasts: [],
-    reducedMotion: options.reducedMotion,
-    ready: false,
-  });
-  let toastId = 0;
+function personFromJoin(input: JoinInput): Person {
+  return {
+    id: newId(),
+    name: input.name.trim(),
+    telegram: input.telegram,
+    x: input.x,
+    topics: [...input.topics],
+    oneLiner: input.oneLiner,
+    avatar: input.avatar,
+    telegramVerified: false,
+    ticketVerified: false,
+    isDemo: false,
+    isYou: true,
+    origin: null,
+    joinedAt: Date.now(),
+  };
+}
 
-  const actions: Actions = {
+type AppStore = Store<AppState>;
+
+/** Clears the map selection, e.g. when the profile gives way to another panel. */
+function deselect(engine: EngineApi, store: AppStore): void {
+  if (store.get().selectedId === null) return;
+  engine.select(null);
+  store.set({ selectedId: null });
+}
+
+/** Takes you off the map and out of storage; returns who was removed. */
+function removeYou(engine: EngineApi, store: AppStore): Person | null {
+  const you = store.get().you;
+  if (!you) return null;
+  clearYou();
+  engine.remove(you.id);
+  store.set((s) => ({
+    you: null,
+    people: s.people.filter((p) => p.id !== you.id),
+    selectedId: s.selectedId === you.id ? null : s.selectedId,
+    panel: s.selectedId === you.id ? "none" : s.panel,
+  }));
+  return you;
+}
+
+type ToastActions = Pick<Actions, "pushToast" | "dismissToast">;
+
+function toastActions(store: AppStore): ToastActions {
+  let toastId = 0;
+  return {
+    pushToast(text, icon, tone) {
+      toastId += 1;
+      const toast: Toast = { id: toastId, text, icon, tone };
+      store.set((s) => ({ toasts: [...s.toasts.slice(-3), toast] }));
+    },
+    dismissToast(id) {
+      store.set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+    },
+  };
+}
+
+type PanelActions = Pick<
+  Actions,
+  "selectPerson" | "locate" | "openBooth" | "openPanel" | "startJoin" | "closePanel"
+>;
+
+function panelActions(engine: EngineApi, store: AppStore): PanelActions {
+  const openPanel = (panel: Panel): void => {
+    if (panel !== "profile") deselect(engine, store);
+    store.set(panel === "join" ? { panel } : { panel, joinTopic: null });
+  };
+  return {
     selectPerson(id) {
-      store.set({ selectedId: id, panel: id ? "profile" : "none" });
+      store.set({ selectedId: id, panel: id ? "profile" : "none", framed: false });
       engine.select(id);
     },
     locate(id) {
-      store.set({ selectedId: id, panel: "profile" });
+      store.set({ selectedId: id, panel: "profile", framed: true });
       engine.locate(id);
     },
     openBooth(topic) {
-      store.set({ boothTopic: topic, panel: "booth" });
+      deselect(engine, store);
+      store.set({ boothTopic: topic, panel: "booth", framed: true });
       engine.focusBooth(topic);
     },
-    openPanel(panel) {
-      store.set({ panel });
+    openPanel,
+    startJoin(topic) {
+      openPanel("join");
+      store.set({ joinTopic: topic });
     },
     closePanel() {
-      const { panel } = store.get();
-      if (panel === "profile") {
-        engine.select(null);
-        store.set({ selectedId: null });
-      }
-      store.set({ panel: "none" });
+      deselect(engine, store);
+      store.set({ panel: "none", framed: false, joinTopic: null });
     },
+  };
+}
+
+type MapActions = Pick<Actions, "toggleHighlight" | "clearHighlight" | "fit">;
+
+function mapActions(engine: EngineApi, store: AppStore): MapActions {
+  return {
     toggleHighlight(topic) {
       const current = store.get().highlight;
       const highlight = current.includes(topic)
@@ -103,36 +164,33 @@ export function createController(engine: EngineApi, options: ControllerOptions):
       engine.highlightTopics([]);
     },
     fit() {
+      store.set({ framed: false });
       engine.fit();
     },
+  };
+}
+
+function youActions(
+  engine: EngineApi,
+  store: AppStore,
+  toasts: ToastActions,
+): Pick<Actions, "join" | "leave"> {
+  return {
     join(input) {
-      const previous = store.get().you;
-      if (previous) actions.leave();
-      const person: Person = {
-        id: newId(),
-        name: input.name.trim(),
-        telegram: input.telegram,
-        x: input.x,
-        topics: [...input.topics],
-        oneLiner: input.oneLiner,
-        avatar: input.avatar,
-        telegramVerified: false,
-        ticketVerified: false,
-        isDemo: false,
-        isYou: true,
-        origin: null,
-        joinedAt: Date.now(),
-      };
+      removeYou(engine, store);
+      const person = personFromJoin(input);
       const saved = saveYou(person);
       store.set((s) => ({
         you: person,
         people: [...s.people, person],
         panel: "none",
         selectedId: null,
+        framed: false,
+        joinTopic: null,
       }));
       engine.select(null);
       engine.spawn(person, true);
-      actions.pushToast(
+      toasts.pushToast(
         saved
           ? "You're in! Watch yourself walk in."
           : "You're in for this visit (this browser can't save it).",
@@ -142,33 +200,49 @@ export function createController(engine: EngineApi, options: ControllerOptions):
       return person;
     },
     leave() {
-      const you = store.get().you;
-      if (!you) return;
-      clearYou();
-      engine.remove(you.id);
-      store.set((s) => ({
-        you: null,
-        people: s.people.filter((p) => p.id !== you.id),
-        selectedId: s.selectedId === you.id ? null : s.selectedId,
-        panel: s.selectedId === you.id ? "none" : s.panel,
-      }));
-    },
-    pushToast(text, icon, tone) {
-      toastId += 1;
-      const toast: Toast = { id: toastId, text, icon, tone };
-      store.set((s) => ({ toasts: [...s.toasts.slice(-3), toast] }));
-    },
-    dismissToast(id) {
-      store.set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+      if (!removeYou(engine, store)) return;
+      toasts.pushToast("You left the adda. Come back anytime.", "waving_hand", "info");
     },
   };
+}
 
+/** Mirrors taps on the map (beans, empty floor, booth signs) into app state. */
+function followEngine(engine: EngineApi, store: AppStore): void {
   engine.on("ready", () => store.set({ ready: true }));
   engine.on("select", (id) => {
-    if (id) store.set({ selectedId: id, panel: "profile" });
-    else if (store.get().panel === "profile") store.set({ selectedId: null, panel: "none" });
+    if (id) store.set({ selectedId: id, panel: "profile", framed: false });
+    else if (store.get().panel === "profile")
+      store.set({ selectedId: null, panel: "none", framed: false });
   });
-  engine.on("boothTap", (topic) => store.set({ boothTopic: topic, panel: "booth" }));
+  engine.on("boothTap", (topic) => {
+    deselect(engine, store);
+    store.set({ boothTopic: topic, panel: "booth", framed: true });
+  });
+}
+
+/** Owns app state and keeps the engine in sync with it. UI components only call `actions`. */
+export function createController(engine: EngineApi, options: ControllerOptions): AppController {
+  const store = createStore<AppState>({
+    people: options.you ? [...options.people, options.you] : [...options.people],
+    selectedId: null,
+    boothTopic: null,
+    panel: "none",
+    highlight: [],
+    framed: false,
+    joinTopic: null,
+    you: options.you,
+    toasts: [],
+    reducedMotion: options.reducedMotion,
+    ready: false,
+  });
+  const toasts = toastActions(store);
+  const actions: Actions = {
+    ...panelActions(engine, store),
+    ...mapActions(engine, store),
+    ...youActions(engine, store, toasts),
+    ...toasts,
+  };
+  followEngine(engine, store);
 
   return {
     store,
