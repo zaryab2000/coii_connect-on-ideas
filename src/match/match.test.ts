@@ -7,7 +7,7 @@ import { daysBetween, meetDay, nextResetAt } from "@/match/day";
 import { demoReply } from "@/match/demoBots";
 import { buildHand, exposureCap } from "@/match/hand";
 import type { HandRequest } from "@/match/hand";
-import { openerText, suggestedSpot, telegramLink } from "@/match/opener";
+import { openerText, suggestedSpot, suggestedTime, telegramLink } from "@/match/opener";
 import { reasonsFor } from "@/match/reasons";
 import { complementOf, isEligible, keywordOverlap, scoreParts, topicOverlap } from "@/match/score";
 import type { ScoreContext } from "@/match/score";
@@ -19,6 +19,11 @@ const EMPTY_CONTEXT: ScoreContext = {
   wavedAtViewer: new Set(),
   inbound: new Map(),
 };
+
+/** Epoch ms for an IST wall-clock time on 3 Nov 2026. */
+function istTime(hour: number, minute: number): number {
+  return Date.UTC(2026, 10, 3, hour, minute) - 5.5 * 3_600_000;
+}
 
 function person(
   id: string,
@@ -227,10 +232,16 @@ describe("demo replies and openers", () => {
   it("builds a Telegram draft link and the same spot for both people", () => {
     const them = person("asha", ["privacy"]);
     expect(suggestedSpot("a", "b")).toBe(suggestedSpot("b", "a"));
-    const text = openerText(VIEWER, them, "the coffee lounge", "4:30 pm");
+    const text = openerText(VIEWER, them, "the coffee lounge", "around 4:30 pm");
     expect(text).toContain("Privacy");
     expect(telegramLink("asha_tg", text)).toBe(
       `https://t.me/asha_tg?text=${encodeURIComponent(text)}`,
     );
+  });
+
+  it("suggests meetups only during venue hours (IST)", () => {
+    expect(suggestedTime(istTime(15, 10))).toBe("around 3:45 pm");
+    expect(suggestedTime(istTime(2, 15))).toBe("today around 11:00 am");
+    expect(suggestedTime(istTime(21, 0))).toBe("tomorrow around 11:00 am");
   });
 });

@@ -151,6 +151,45 @@ function ChaiActions({
           {met ? "You met" : "We met"}
         </button>
       </div>
+      <UnmatchButton them={them} onDone={onClose} />
+    </div>
+  );
+}
+
+/** Quiet "Unmatch" with an inline confirm step (no browser dialogs). */
+function UnmatchButton({ them, onDone }: { readonly them: Person; readonly onDone: () => void }) {
+  const actions = useActions();
+  const [confirming, setConfirming] = useState(false);
+  if (!confirming) {
+    return (
+      <button
+        type="button"
+        className="btn btn--quiet chai__unmatch"
+        onClick={() => setConfirming(true)}
+      >
+        Unmatch
+      </button>
+    );
+  }
+  const first = them.name.split(" ")[0] ?? them.name;
+  return (
+    <div className="chai__confirm" role="group" aria-label={`Unmatch ${first}?`}>
+      <p>End this chai with {first}? They won't show up in your picks for a week.</p>
+      <div className="chai__row">
+        <button type="button" className="btn btn--secondary" onClick={() => setConfirming(false)}>
+          Keep it
+        </button>
+        <button
+          type="button"
+          className="btn btn--danger"
+          onClick={() => {
+            actions.unmatch(them.id);
+            onDone();
+          }}
+        >
+          Unmatch
+        </button>
+      </div>
     </div>
   );
 }
@@ -259,7 +298,7 @@ function ChaiDialog({ you, them, chai, leaving, onClose }: DialogProps) {
         <p className="chai__plan">
           <Glyph name="pin" size={18} />
           <span>
-            {plan.spot} · around {plan.time}
+            {plan.spot} · {plan.time}
           </span>
         </p>
         <Opener text={opener} />
@@ -317,7 +356,7 @@ export function ChaiOverlay({
   const celebrate = useApp((s) => s.meet?.celebrate ?? null);
   const items = usePresence(shown, EXIT_MS);
   const close = (): void => {
-    if (shown !== null && shown === celebrate) actions.dismissChai();
+    if (shown !== null && shown === celebrate) actions.dismissChai(shown);
     onClose();
   };
   return items.map(({ key, value, leaving }) => (

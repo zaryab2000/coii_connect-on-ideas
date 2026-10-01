@@ -43,11 +43,13 @@ export interface MeetActions {
   unwave(personId: string): void;
   /** Hide someone from your hands for a week. */
   skip(personId: string): void;
-  /** Close the "Chai's on!" moment. */
-  dismissChai(): void;
+  /** Marks this person's "Chai's on!" moment as seen; no-op if that chai is gone or seen. */
+  dismissChai(personId: string): void;
   markMessaged(personId: string): void;
   /** You met in person: the chai is done and today's hand grows by a bonus card. */
   confirmMet(personId: string): void;
+  /** Ends a chai: removes it and your wave, and keeps them out of your picks for a week. */
+  unmatch(personId: string): void;
   toggleTribe(): void;
 }
 
@@ -288,10 +290,9 @@ class Meet implements MeetController {
     this.publish();
   };
 
-  readonly dismissChai = (): void => {
-    const first = this.save?.chais.find((c) => !c.seen);
-    if (!this.save || !first) return;
-    const chais = this.save.chais.map((c) => (c === first ? { ...c, seen: true } : c));
+  readonly dismissChai = (personId: string): void => {
+    if (!this.save?.chais.some((c) => c.personId === personId && !c.seen)) return;
+    const chais = this.save.chais.map((c) => (c.personId === personId ? { ...c, seen: true } : c));
     this.save = { ...this.save, chais };
     this.publish();
   };
@@ -311,6 +312,19 @@ class Meet implements MeetController {
     this.save = withChaiStatus(this.save, personId, "met");
     this.publish();
     this.awardBonus(me, met);
+  };
+
+  readonly unmatch = (personId: string): void => {
+    if (!this.save?.chais.some((c) => c.personId === personId)) return;
+    const until = addDays(this.day(), SKIP_DAYS);
+    this.save = {
+      ...this.save,
+      chais: this.save.chais.filter((c) => c.personId !== personId),
+      waves: this.save.waves.filter((w) => w.to !== personId),
+      inbound: this.save.inbound.filter((id) => id !== personId),
+      skips: [...this.save.skips.filter((s) => s.id !== personId), { id: personId, until }],
+    };
+    this.publish();
   };
 
   private awardBonus(me: Person, met: Person): void {

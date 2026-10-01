@@ -31,10 +31,28 @@ const TIME = new Intl.DateTimeFormat("en-IN", {
   hour12: true,
 });
 
-/** About 30 minutes from now, rounded up to the next quarter hour, in Mumbai time ("4:30 pm"). */
+const HOUR_IN_IST = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Asia/Kolkata",
+  hour: "numeric",
+  hourCycle: "h23",
+});
+
+/** Venue hours for meetups (IST). Outside them we suggest the next morning. */
+const OPEN_HOUR = 9;
+const CLOSE_HOUR = 19;
+
+/**
+ * About 30 minutes from now, rounded up to the next quarter hour, in Mumbai time
+ * ("around 4:30 pm").
+ * Outside venue hours it suggests a morning slot instead of the middle of the night.
+ */
 export function suggestedTime(now: number): string {
   const quarter = 15 * 60_000;
-  return TIME.format(Math.ceil((now + 30 * 60_000) / quarter) * quarter).toLowerCase();
+  const slot = Math.ceil((now + 30 * 60_000) / quarter) * quarter;
+  const hour = Number(HOUR_IN_IST.format(slot));
+  if (hour < OPEN_HOUR) return "today around 11:00 am";
+  if (hour >= CLOSE_HOUR) return "tomorrow around 11:00 am";
+  return `around ${TIME.format(slot).toLowerCase()}`;
 }
 
 function firstName(person: Person): string {
@@ -45,7 +63,7 @@ function firstName(person: Person): string {
 export function openerText(you: Person, them: Person, spot: string, time: string): string {
   const shared = you.topics.filter((t) => them.topics.includes(t)).map((t) => topicById(t).short);
   const about = shared.length > 0 ? `we both like ${shared.join(" + ")}` : "we should meet";
-  return `gm ${firstName(them)}! Adda says ${about}. Chai at ${spot} around ${time}?`;
+  return `gm ${firstName(them)}! Adda says ${about}. Chai at ${spot} ${time}?`;
 }
 
 /** Opens their Telegram chat with the opener as an unsent draft (`t.me/<user>?text=`). */

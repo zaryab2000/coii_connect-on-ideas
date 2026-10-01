@@ -232,9 +232,17 @@ function followEngine(engine: EngineApi, store: AppStore): void {
 }
 
 function meetActionsOf(meet: MeetController): MeetActions {
-  const { revealCard, wave, unwave, skip, dismissChai, markMessaged, confirmMet, toggleTribe } =
-    meet;
-  return { revealCard, wave, unwave, skip, dismissChai, markMessaged, confirmMet, toggleTribe };
+  return {
+    revealCard: meet.revealCard,
+    wave: meet.wave,
+    unwave: meet.unwave,
+    skip: meet.skip,
+    dismissChai: meet.dismissChai,
+    markMessaged: meet.markMessaged,
+    confirmMet: meet.confirmMet,
+    unmatch: meet.unmatch,
+    toggleTribe: meet.toggleTribe,
+  };
 }
 
 /** Owns app state and keeps the engine in sync with it. UI components only call `actions`. */

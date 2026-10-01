@@ -144,7 +144,7 @@ describe("Meet", () => {
     advance(30_000);
     const [chai] = meetOf(store).chais;
     if (!chai) throw new Error("expected a demo chai within 30s");
-    actions.dismissChai();
+    actions.dismissChai(chai.personId);
     expect(meetOf(store).celebrate).not.toBe(chai.personId);
     actions.confirmMet(chai.personId);
     expect(meetOf(store).hand).toHaveLength(4);
@@ -175,5 +175,20 @@ describe("Meet", () => {
     actions.leave();
     expect(store.get().meet).toBeNull();
     expect(store.get().tribe).toBe(false);
+  });
+
+  it("unmatching removes the chai and your wave, and dismissing is per person", () => {
+    const { store, actions, advance } = setup();
+    actions.join(JOIN);
+    for (const p of CROWD.slice(0, 30)) actions.wave(p.id);
+    advance(30_000);
+    const [first, second] = meetOf(store).chais;
+    if (!first || !second) throw new Error("expected at least two demo chais");
+    actions.unmatch(first.personId);
+    expect(meetOf(store).chais.map((c) => c.personId)).not.toContain(first.personId);
+    expect(meetOf(store).waved).not.toContain(first.personId);
+    expect(meetOf(store).skipped).toContain(first.personId);
+    actions.dismissChai(first.personId);
+    expect(meetOf(store).celebrate).toBe(second.personId);
   });
 });
