@@ -31,7 +31,7 @@ for how to run it.
 
 **Meet (Who should I meet), Phase 0 built (2 Oct 2026):**
 
-- Daily 3 with card reveal, hidden waves (20/day), demo replies, "Chai's on!" with a
+- Daily 3 with card reveal, hidden waves (50/day), demo replies, "Chai's on!" with a
   Telegram opener, We met + bonus cards, Unmatch
 - Intent field and props, My tribe glow, pick sparkles
 - Spec: `docs/prd/who-should-i-meet.md`. Phase 1 needs the backend (real waves, 18+ gate);
@@ -45,6 +45,9 @@ for how to run it.
 - Your profile (join, view, edit) moved into a big centred overlay with a character studio:
   live profile preview plus hair, hair colour, extras and skin tone pickers. Tapping your own
   bean opens it; other people's profiles stay in the side panel / sheet
+- Catchy one-liners (up to 3) pop up over beans a few at a time; waving unlocks contact and
+  gives a wave point; live board, crowns and "+1" pops. Spec:
+  `docs/prd/wave-points-and-one-liners.md`
 
 **Next** (detailed task list with fun and engagement ideas: [TRACKER.md](TRACKER.md))
 

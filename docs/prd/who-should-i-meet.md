@@ -26,7 +26,9 @@ three hard parts remain:
 
 Each day you get a small hand of **three people worth meeting** (the "daily 3"), flipped over
 like trading cards, each with the reason you two should talk. You **wave** at the ones you like.
-Waves are private until they're mutual. When both of you wave, **"Chai's on!"**: your beans run
+Who waved stays private until it's mutual (a wave does give the other person a wave point and
+unlocks their contact; see [wave points](wave-points-and-one-liners.md)). When both of you wave,
+**"Chai's on!"**: your beans run
 to each other on the map and clink chai cups. You get a suggested venue spot and a one-tap
 Telegram opener. **My tribe** lights up everyone who shares your topics on the map, and
 **flares** let anyone call a group meetup at a booth. The best rewards go to meeting in person,
@@ -267,8 +269,8 @@ a surprise.
 
 - **Where you can wave:** a daily 3 card, any profile card (map or People list), the booth list.
 - **Limits:**
-  - 20 waves per day, shown as "14 waves left today"
-  - you can un-wave before it's mutual
+  - 50 waves per day, shown as "44 waves left today"
+  - waves are final (they award a wave point and unlock contact details)
   - waves last until 6 Nov 23:59 IST
 - **Teaser for recipients:** "🔒 2 people waved at you. They may show up in your next picks."
   This is a count only; identities are never sent to the client.
@@ -484,7 +486,7 @@ create table flare_joins (flare_id uuid references flares on delete cascade, per
 | Function                                              | Does                                                              |
 | ----------------------------------------------------- | ----------------------------------------------------------------- |
 | `get_hand()`                                          | Computes or returns today's hand (§6.3) for the caller            |
-| `wave(to)` / `unwave(to)`                             | Quota 20/day; creates a `chais` row when reciprocal               |
+| `wave(to)`                                            | Quota 50/day; awards a point; makes a `chais` row if reciprocal   |
 | `skip(id)`                                            | 7-day skip                                                        |
 | `confirm_met(chai)`                                   | Sets the caller's side; when both are set, awards stamp and bonus |
 | `inbound_count()`                                     | Number of hidden waves only                                       |
@@ -510,7 +512,7 @@ create table flare_joins (flare_id uuid references flares on delete cascade, per
 
 - `Panel` gains `"meet"`.
 - Store: `hand`, `inboundCount`, `chais`, `tribe`, `flares`.
-- New actions: `reveal`, `wave`, `unwave`, `skip`, `confirmMet`, `toggleTribe`, `lightFlare`,
+- New actions: `reveal`, `wave`, `skip`, `confirmMet`, `toggleTribe`, `lightFlare`,
   `joinFlare`.
 - `EngineApi` gains:
   - `highlightPeople(ids, style)` for tribe glow and pick sparkles
@@ -570,8 +572,8 @@ URL, tribe dims non-tribe beans, reduced motion fades instead of flipping.
 2. No card ever shows yourself, a blocked person, someone you waved at or skipped, someone you
    share a chai with, a paused or under-18 profile, or (in real mode) a demo person.
 3. Every card shows at least one reason that comes from real profile data.
-4. Waving updates the card within 100 ms. The 21st wave in a day is refused with "You've used
-   today's 20 waves. They refill at 06:00."
+4. Waving updates the card within 100 ms. The 51st wave in a day is refused with "You've used
+   today's 50 waves. They refill at 06:00."
 5. Two reciprocal waves create exactly one chai. Both people see "Chai's on!" live, or on their
    next open.
 6. No API response lets a person learn who waved at them before it's mutual.

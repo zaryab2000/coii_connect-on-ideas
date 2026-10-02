@@ -101,6 +101,8 @@ Full spec: [docs/prd/who-should-i-meet.md](docs/prd/who-should-i-meet.md)
 | M3  | "Find my tribe" spotlight: dim everyone except people who share 2+ of your topics                                                          | S      | —                                | P1  | ☑      |
 | M4  | Intent props on beans so intent is visible on the map: hiring megaphone, résumé, laptop, briefcase                                         | S      | —                                | P2  | ☑      |
 | M5  | Meetup flares: light a beacon on a booth ("agent payments jam · 4pm · Hall 2"). It glows on the map; joining walks your bean over          | M      | BE                               | P1  | ☐      |
+| M6  | Wave points: waving unlocks contact and gives a point; live board, crowns, "+1" pops ([spec](docs/prd/wave-points-and-one-liners.md))      | M      | BE for real waves                | P1  | ◐      |
+| M7  | Catchy one-liners: up to 3 per person, popping up over beans a few at a time, tap to open                                                  | M      | —                                | P1  | ☑      |
 
 ## 5. Live and social proof (it feels alive)
 
