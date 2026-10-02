@@ -107,10 +107,27 @@ function pickIntents(rng: Rng, topics: readonly TopicId[]): IntentId[] {
   return chosen;
 }
 
+/** How many one-liners demo people show: none, one, two or three. */
+const LINE_COUNT_WEIGHTS: readonly number[] = [12, 33, 30, 25];
+
+/** 0–3 distinct one-liners, drawn mostly from the person's first topic. */
+function pickOneLiners(rng: Rng, topics: readonly TopicId[]): string[] {
+  const count = rng.weighted(LINE_COUNT_WEIGHTS);
+  const topicWeights = topics.map((_, i) => (i === 0 ? 3 : 1));
+  const lines: string[] = [];
+  for (let attempt = 0; lines.length < count && attempt < 12; attempt++) {
+    const topic = topics[rng.weighted(topicWeights)] ?? "ai";
+    const line = rng.pick(ONE_LINERS[topic]);
+    if (!lines.includes(line)) lines.push(line);
+  }
+  return lines;
+}
+
 interface PersonContext {
   readonly rng: Rng;
-  /** Separate stream so adding intents did not change anyone's name or handle. */
+  /** Separate streams, so adding intents or one-liners doesn't change anyone else's details. */
   readonly intentRng: Rng;
+  readonly lineRng: Rng;
   readonly seed: number;
   readonly now: number;
   readonly usedTelegram: Set<string>;
@@ -124,7 +141,6 @@ function generatePerson(ctx: PersonContext, index: number, origin: Origin): Pers
   const last = rng.pick(region.last);
   const slug = `${asciiSlug(first)}${asciiSlug(last).slice(0, 1)}`;
   const topics = pickTopics(rng);
-  const primary = topics[0] as TopicId;
 
   return {
     id: `demo-${ctx.seed.toString(36)}-${index.toString(36)}`,
@@ -133,7 +149,7 @@ function generatePerson(ctx: PersonContext, index: number, origin: Origin): Pers
     x: rng.chance(0.6) ? uniqueHandle(`${asciiSlug(first)}_`, ctx.usedX, rng, 15) : null,
     topics,
     intent: pickIntents(ctx.intentRng, topics),
-    oneLiner: rng.chance(0.85) ? rng.pick(ONE_LINERS[primary]) : null,
+    oneLiners: pickOneLiners(ctx.lineRng, topics),
     avatar: pickAvatar(rng, origin),
     telegramVerified: rng.chance(0.4),
     ticketVerified: rng.chance(0.2),
@@ -169,6 +185,7 @@ export function generateDemo(options: DemoOptions): DemoCrowd {
   const ctx: PersonContext = {
     rng,
     intentRng: createRng(options.seed ^ 0x1e7e17),
+    lineRng: createRng(options.seed ^ 0x11e5),
     seed: options.seed,
     now: options.now,
     usedTelegram: new Set(),

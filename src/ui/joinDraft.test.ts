@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import type { Person } from "@/data/types";
-import { draftFrom, toggleTopic, validateJoin } from "@/ui/joinDraft";
+import {
+  addLine,
+  draftFrom,
+  lineErrors,
+  removeLine,
+  toggleTopic,
+  validateJoin,
+} from "@/ui/joinDraft";
 import type { JoinDraft } from "@/ui/joinDraft";
 
 const AVATAR = { skin: 1, hair: 2, hairColor: 3, accessory: 0 };
@@ -12,7 +19,7 @@ const VALID: JoinDraft = {
   x: "",
   topics: ["wallets", "ai"],
   intent: ["building", "hiring"],
-  oneLiner: "  Shipping agent wallets  ",
+  oneLiners: ["  Shipping agent wallets  ", "", "ask me about   passkeys"],
   avatar: AVATAR,
   consent: true,
 };
@@ -33,7 +40,7 @@ describe("validateJoin", () => {
         x: null,
         topics: ["wallets", "ai"],
         intent: ["building", "hiring"],
-        oneLiner: "Shipping agent wallets",
+        oneLiners: ["Shipping agent wallets", "ask me about passkeys"],
         avatar: AVATAR,
       },
     });
@@ -44,9 +51,11 @@ describe("validateJoin", () => {
     expect(result.ok && result.input).toMatchObject({ telegram: null, x: "zara" });
   });
 
-  it("stores an empty one-liner as null", () => {
-    const result = validateJoin({ ...VALID, oneLiner: "   " });
-    expect(result.ok && result.input.oneLiner).toBeNull();
+  it("drops blank and repeated one-liners", () => {
+    const result = validateJoin({ ...VALID, oneLiners: ["   ", "gm", "GM ", ""] });
+    expect(result.ok && result.input.oneLiners).toEqual(["gm"]);
+    const none = validateJoin({ ...VALID, oneLiners: [""] });
+    expect(none.ok && none.input.oneLiners).toEqual([]);
   });
 
   it("requires a name", () => {
@@ -74,13 +83,27 @@ describe("validateJoin", () => {
     expect(errorsOf({ ...VALID, topics: ["ai", "defi", "core", "jobs"] }).topics).toMatch(/3/);
   });
 
-  it("rejects links and overlong one-liners", () => {
-    expect(errorsOf({ ...VALID, oneLiner: "see zara.xyz" }).oneLiner).toMatch(/Links/);
-    expect(errorsOf({ ...VALID, oneLiner: "a".repeat(81) }).oneLiner).toMatch(/80/);
+  it("rejects a link or an overlong line in any one-liner", () => {
+    expect(errorsOf({ ...VALID, oneLiners: ["fine", "see zara.xyz"] }).oneLiners).toBeDefined();
+    expect(errorsOf({ ...VALID, oneLiners: ["a".repeat(81)] }).oneLiners).toBeDefined();
+    expect(lineErrors(["ok", "see zara.xyz", "a".repeat(81)])).toEqual([
+      undefined,
+      expect.stringMatching(/Links/),
+      expect.stringMatching(/80/),
+    ]);
   });
 
   it("requires consent", () => {
     expect(Object.keys(errorsOf({ ...VALID, consent: false }))).toEqual(["consent"]);
+  });
+});
+
+describe("one-liner inputs", () => {
+  it("adds inputs up to three and always keeps at least one", () => {
+    expect(addLine(["a"])).toEqual(["a", ""]);
+    expect(addLine(["a", "b", "c"])).toEqual(["a", "b", "c"]);
+    expect(removeLine(["a", "b"], 0)).toEqual(["b"]);
+    expect(removeLine(["a"], 0)).toEqual([""]);
   });
 });
 
@@ -100,7 +123,7 @@ describe("draftFrom", () => {
     x: null,
     topics: ["ai"],
     intent: [],
-    oneLiner: null,
+    oneLiners: [],
     avatar: AVATAR,
     telegramVerified: false,
     ticketVerified: false,
@@ -118,7 +141,7 @@ describe("draftFrom", () => {
       x: "",
       topics: ["defi"],
       intent: [],
-      oneLiner: "",
+      oneLiners: [""],
       avatar: fresh,
       consent: false,
     });

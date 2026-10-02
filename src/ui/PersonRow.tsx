@@ -57,7 +57,9 @@ export const PersonRow = memo(function PersonRow({ person, omitTopic, onPick }: 
               ))}
             </span>
           </span>
-          {person.oneLiner ? <span className="person-row__line">{person.oneLiner}</span> : null}
+          {person.oneLiners[0] ? (
+            <span className="person-row__line">{person.oneLiners[0]}</span>
+          ) : null}
         </span>
         <span className="person-row__go">
           <Glyph name="pin" size={20} />

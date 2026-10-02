@@ -17,7 +17,7 @@ const searchCache = new WeakMap<Person, string>();
 function searchText(person: Person): string {
   let text = searchCache.get(person);
   if (text === undefined) {
-    text = [person.name, person.telegram ?? "", person.x ?? "", person.oneLiner ?? ""]
+    text = [person.name, person.telegram ?? "", person.x ?? "", ...person.oneLiners]
       .join("\n")
       .toLowerCase();
     searchCache.set(person, text);

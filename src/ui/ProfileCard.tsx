@@ -6,7 +6,7 @@ import { topicById } from "@/data/topics";
 import type { Person } from "@/data/types";
 import { BeanAvatar } from "@/ui/BeanAvatar";
 import { Glyph, Icon } from "@/ui/Icon";
-import { Awning, IntentChips, PanelNav, TopicChips, topicVars } from "@/ui/PanelChrome";
+import { Awning, IntentChips, OneLiners, PanelNav, TopicChips, topicVars } from "@/ui/PanelChrome";
 import type { PanelChrome } from "@/ui/PanelChrome";
 import { WaveButton } from "@/ui/WaveButton";
 
@@ -126,7 +126,7 @@ export function ProfileCard({
         <IntentChips intents={person.intent} />
       </header>
       <div className="panel__scroll profile__body">
-        {person.oneLiner ? <p className="bubble">{person.oneLiner}</p> : null}
+        <OneLiners lines={person.oneLiners} />
         <OthersActions person={person} />
         <p className="safety">
           <Icon id="shield" size={18} />

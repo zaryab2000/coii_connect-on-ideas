@@ -99,7 +99,7 @@ test("joining puts you in the venue and you are still there after a reload", asy
         x: null,
         topics: ["privacy", "core"],
         intent: [],
-        oneLiner: "testing coii",
+        oneLiners: ["testing coii"],
         avatar: { skin: 2, hair: 0, hairColor: 0, accessory: 0 },
       }).id,
   );
@@ -193,7 +193,7 @@ async function joinQuickly(page: Page): Promise<void> {
       x: null,
       topics: ["privacy", "ai"],
       intent: ["building"],
-      oneLiner: "testing the daily picks",
+      oneLiners: ["testing the daily picks"],
       avatar: { skin: 1, hair: 2, hairColor: 0, accessory: 0 },
     }),
   );

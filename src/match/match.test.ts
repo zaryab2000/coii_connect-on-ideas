@@ -29,7 +29,7 @@ function person(
   id: string,
   topics: TopicId[],
   intent: IntentId[] = [],
-  oneLiner: string | null = null,
+  oneLiners: readonly string[] = [],
 ): Person {
   return {
     id,
@@ -38,7 +38,7 @@ function person(
     x: null,
     topics,
     intent,
-    oneLiner,
+    oneLiners,
     avatar: { skin: 0, hair: 0, hairColor: 0, accessory: 0 },
     telegramVerified: false,
     ticketVerified: false,
@@ -51,7 +51,7 @@ function person(
 
 const CROWD = generateDemo({ seed: 99, count: 600, reserve: 0, now: NOW }).people;
 const VIEWER: Person = {
-  ...person("me", ["privacy", "core"], ["job_hunting"], "building private payments"),
+  ...person("me", ["privacy", "core"], ["job_hunting"], ["building private payments"]),
   isDemo: false,
   isYou: true,
 };
@@ -103,10 +103,10 @@ describe("scoring", () => {
   });
 
   it("finds a shared meaningful word but ignores filler", () => {
-    const a = person("a", ["ai"], [], "building UPI rails for agents");
-    const b = person("b", ["ai"], [], "agents that pay over UPI");
+    const a = person("a", ["ai"], [], ["building UPI rails", "for agents"]);
+    const b = person("b", ["ai"], [], ["agents that pay over UPI"]);
     expect(keywordOverlap(a, b).word).toMatch(/agents|upi/);
-    expect(keywordOverlap(person("c", ["ai"], [], "the and for"), b).value).toBe(0);
+    expect(keywordOverlap(person("c", ["ai"], [], ["the and for"]), b).value).toBe(0);
   });
 
   it("keeps every part within 0..1", () => {

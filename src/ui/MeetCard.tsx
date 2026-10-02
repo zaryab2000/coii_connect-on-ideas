@@ -14,7 +14,7 @@ import { Glyph, Icon } from "@/ui/Icon";
 import { cardState } from "@/ui/meet";
 import type { CardState } from "@/ui/meet";
 import { useOpenChai, useReducedMotion, useWave } from "@/ui/meetHooks";
-import { IntentChips, topicVars } from "@/ui/PanelChrome";
+import { IntentChips, OneLiners, topicVars } from "@/ui/PanelChrome";
 
 /** The back turns edge-on in this long; then the front springs in. Matches meet.css. */
 const FLIP_OUT_MS = 160;
@@ -221,7 +221,7 @@ function CardFront({ card, person, you, state, label, entering }: FrontProps) {
       <div className="meet-card__body">
         <IntentChips intents={person.intent} />
         <CardTopics person={person} you={you} />
-        {person.oneLiner ? <p className="bubble meet-card__line">{person.oneLiner}</p> : null}
+        <OneLiners lines={person.oneLiners} className="meet-card__lines" />
         <Reasons reasons={card.reasons} />
         <CardActions state={state} person={person} />
       </div>

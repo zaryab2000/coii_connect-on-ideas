@@ -14,7 +14,7 @@ export interface JoinInput {
   readonly x: string | null;
   readonly topics: readonly TopicId[];
   readonly intent: readonly IntentId[];
-  readonly oneLiner: string | null;
+  readonly oneLiners: readonly string[];
   readonly avatar: Avatar;
 }
 
@@ -69,7 +69,7 @@ function personFromJoin(input: JoinInput): Person {
     x: input.x,
     topics: [...input.topics],
     intent: [...input.intent],
-    oneLiner: input.oneLiner,
+    oneLiners: [...input.oneLiners],
     avatar: input.avatar,
     telegramVerified: false,
     ticketVerified: false,

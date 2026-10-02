@@ -411,9 +411,9 @@ fieldset.q-card > .q-card__title + * {
   justify-content: center;
 }
 
-.studio__preview .bubble {
+.studio__preview .one-liners {
   align-self: stretch;
-  margin: 4px 0 0;
+  margin: 12px 0 0;
   text-align: left;
 }
 
@@ -632,7 +632,7 @@ fieldset.q-card > .q-card__title + * {
   margin-top: 10px;
 }
 
-.you-card .bubble {
+.you-card .one-liners {
   align-self: stretch;
   margin-bottom: 4px;
   text-align: left;

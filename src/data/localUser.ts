@@ -1,4 +1,5 @@
-import { isIntentId } from "@/data/intents";
+import { INTENTS_MAX, isIntentId } from "@/data/intents";
+import { ONE_LINERS_MAX } from "@/data/oneLinerRules";
 import { isTopicId } from "@/data/topics";
 import type { Person } from "@/data/types";
 
@@ -21,11 +22,16 @@ function isPerson(value: unknown): value is Person {
   );
 }
 
-/** Profiles saved before intents existed load with none; unknown ids are dropped. */
-function withIntent(person: Person): Person {
-  const raw: unknown = (person as { intent?: unknown }).intent;
-  const intent = Array.isArray(raw) ? raw.filter(isIntentId).slice(0, 2) : [];
-  return { ...person, intent };
+function strings(raw: unknown): string[] {
+  return Array.isArray(raw) ? raw.filter((item): item is string => typeof item === "string") : [];
+}
+
+/** Keeps only well-formed intents and one-liners, so a hand-edited save can't break the app. */
+function sanitized(person: Person): Person {
+  const raw = person as { intent?: unknown; oneLiners?: unknown };
+  const intent = strings(raw.intent).filter(isIntentId).slice(0, INTENTS_MAX);
+  const oneLiners = strings(raw.oneLiners).slice(0, ONE_LINERS_MAX);
+  return { ...person, intent, oneLiners };
 }
 
 /** Your own profile from this browser, if you joined before. Storage may be unavailable. */
@@ -34,7 +40,7 @@ export function loadYou(): Person | null {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
-    return isPerson(parsed) ? withIntent(parsed) : null;
+    return isPerson(parsed) ? sanitized(parsed) : null;
   } catch {
     return null;
   }

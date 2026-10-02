@@ -14,7 +14,7 @@ function person(id: string, topics: TopicId[], overrides: Partial<Person> = {}):
     x: null,
     topics,
     intent: [],
-    oneLiner: null,
+    oneLiners: [],
     avatar: { skin: 0, hair: 0, hairColor: 0, accessory: 0 },
     telegramVerified: false,
     ticketVerified: false,
@@ -34,7 +34,7 @@ const JOIN: JoinInput = {
   x: null,
   topics: ["wallets", "ai"],
   intent: ["building"],
-  oneLiner: null,
+  oneLiners: [],
   avatar: { skin: 1, hair: 2, hairColor: 3, accessory: 0 },
 };
 

@@ -60,7 +60,7 @@ const JOIN: JoinInput = {
   x: null,
   topics: ["privacy", "core"],
   intent: ["job_hunting"],
-  oneLiner: "private payments",
+  oneLiners: ["private payments"],
   avatar: { skin: 1, hair: 0, hairColor: 0, accessory: 0 },
 };
 

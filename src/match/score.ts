@@ -101,9 +101,12 @@ const STOPWORDS = new Set(
   ).split(" "),
 );
 
-function keywords(text: string | null): Set<string> {
-  if (!text) return new Set();
-  const words = text.toLowerCase().match(/[a-z][a-z0-9]{2,}/g) ?? [];
+function keywords(lines: readonly string[]): Set<string> {
+  const words =
+    lines
+      .join(" ")
+      .toLowerCase()
+      .match(/[a-z][a-z0-9]{2,}/g) ?? [];
   return new Set(words.filter((w) => !STOPWORDS.has(w)));
 }
 
@@ -112,8 +115,8 @@ export function keywordOverlap(
   viewer: Person,
   candidate: Person,
 ): { value: number; word: string | null } {
-  const a = keywords(viewer.oneLiner);
-  const b = keywords(candidate.oneLiner);
+  const a = keywords(viewer.oneLiners);
+  const b = keywords(candidate.oneLiners);
   let word: string | null = null;
   let shared = 0;
   for (const w of a) {

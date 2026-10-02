@@ -97,6 +97,26 @@ export function IntentChips({ intents }: { readonly intents: readonly IntentId[]
   );
 }
 
+/** Someone's one-liners as a stack of speech bubbles; only the first has a tail. */
+export function OneLiners({
+  lines,
+  className,
+}: {
+  readonly lines: readonly string[];
+  readonly className?: string;
+}) {
+  if (lines.length === 0) return null;
+  return (
+    <ul className={className ? `one-liners ${className}` : "one-liners"} aria-label="One-liners">
+      {lines.map((line) => (
+        <li key={line} className="bubble">
+          {line}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** "Leave coii" with an inline confirm step. */
 export function LeaveButton() {
   const actions = useActions();

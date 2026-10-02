@@ -254,6 +254,24 @@
   background: var(--cream);
 }
 
+/* Up to three one-liners stacked; the tail only points from the first. */
+.one-liners {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.one-liners .bubble {
+  margin: 0;
+}
+
+.one-liners .bubble + .bubble::before,
+.one-liners .bubble + .bubble::after {
+  display: none;
+}
+
 /* Cream disc with topic-coloured polka dots, like the rangoli plaza on the map. */
 .rangoli-disc {
   display: grid;

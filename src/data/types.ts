@@ -84,7 +84,8 @@ export interface Person {
   readonly topics: readonly TopicId[];
   /** Up to two intents, most important first. */
   readonly intent: readonly IntentId[];
-  readonly oneLiner: string | null;
+  /** Up to three catchy lines (each ≤ 80 characters, no links) that pop up over their bean. */
+  readonly oneLiners: readonly string[];
   readonly avatar: Avatar;
   readonly telegramVerified: boolean;
   readonly ticketVerified: boolean;

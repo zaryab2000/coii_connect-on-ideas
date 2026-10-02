@@ -3,16 +3,20 @@ import type { CSSProperties, FormEvent, ReactNode } from "react";
 
 import { useActions } from "@/app/context";
 import { INTENTS, INTENTS_MAX } from "@/data/intents";
+import { ONE_LINER_MAX, ONE_LINERS_MAX } from "@/data/oneLinerRules";
 import { TOPICS } from "@/data/topics";
 import type { Person, TopicId } from "@/data/types";
 import { randomAvatar } from "@/ui/avatar";
 import { CharacterStudio } from "@/ui/CharacterStudio";
 import { Glyph, Icon } from "@/ui/Icon";
 import {
+  addLine,
   draftFrom,
   JOIN_FIELDS,
+  lineErrors,
   NAME_MAX,
-  ONE_LINER_MAX,
+  removeLine,
+  setLine,
   toggleIntent,
   toggleTopic,
   TOPICS_MAX,
@@ -270,12 +274,12 @@ function useJoinIds(): Record<JoinField, string> {
     telegram: `${base}-telegram`,
     x: `${base}-x`,
     topics: `${base}-topics`,
-    oneLiner: `${base}-oneliner`,
+    oneLiners: `${base}-line`,
     consent: `${base}-consent`,
   };
 }
 
-/** Shows an error once the field was left or the form was submitted (links: right away). */
+/** Shows an error once the field was left or the form was submitted. */
 function visibleErrors(
   errors: JoinErrors,
   touched: ReadonlySet<JoinField>,
@@ -285,7 +289,7 @@ function visibleErrors(
   const shown: JoinErrors = {};
   for (const field of JOIN_FIELDS) {
     const message = errors[field];
-    if (message && (touched.has(field) || field === "oneLiner")) shown[field] = message;
+    if (message && touched.has(field)) shown[field] = message;
   }
   return shown;
 }
@@ -331,25 +335,103 @@ function NameQuestion({ ids, draft, errors, update, touch }: FieldsProps) {
   );
 }
 
-function OneLinerQuestion({ ids, draft, errors, update }: Omit<FieldsProps, "touch">) {
+const LINE_PLACEHOLDERS = [
+  "shipping agent wallets. ask me about passkeys",
+  "first Devcon! here for zk and cutting chai",
+  "hiring 2 Rust devs, chai on me",
+];
+
+interface LineInputProps {
+  readonly id: string;
+  readonly index: number;
+  readonly value: string;
+  readonly error: string | undefined;
+  readonly onChange: (value: string) => void;
+  readonly onRemove: (() => void) | null;
+}
+
+function LineInput({ id, index, value, error, onChange, onRemove }: LineInputProps) {
+  const long = value.length > ONE_LINER_MAX - 20;
+  return (
+    <div className="line-field">
+      <label className="visually-hidden" htmlFor={id}>
+        One-liner {index + 1}
+      </label>
+      <div className="line-field__row">
+        <span className="line-field__num" aria-hidden="true">
+          {index + 1}
+        </span>
+        <input
+          {...fieldProps(id, error)}
+          className="input"
+          value={value}
+          maxLength={ONE_LINER_MAX}
+          placeholder={LINE_PLACEHOLDERS[index] ?? ""}
+          autoComplete="off"
+          onChange={(e) => onChange(e.target.value)}
+        />
+        {onRemove ? (
+          <button
+            type="button"
+            className="nav-btn nav-btn--close line-field__remove"
+            aria-label={`Remove one-liner ${index + 1}`}
+            onClick={onRemove}
+          >
+            <Glyph name="close" size={16} />
+          </button>
+        ) : null}
+      </div>
+      {long ? (
+        <p className="line-field__count">
+          {value.length}/{ONE_LINER_MAX}
+        </p>
+      ) : null}
+      {error ? (
+        <p className="q-card__error" id={`${id}-error`}>
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function OneLinersQuestion({ ids, draft, update }: Pick<FieldsProps, "ids" | "draft" | "update">) {
+  const lines = draft.oneLiners;
+  const errors = lineErrors(lines);
+  const written = lines.filter((line) => line.trim().length > 0).length;
   return (
     <Question
-      title="Your one-liner"
-      hint="Optional. What you're building or want to talk about."
-      htmlFor={ids.oneLiner}
-      counter={`${draft.oneLiner.length}/${ONE_LINER_MAX}`}
-      error={errors.oneLiner}
-      errorId={`${ids.oneLiner}-error`}
+      title="Your catchy one-liners"
+      hint={`Optional, up to ${ONE_LINERS_MAX}. They pop up over your bean on the map, so make people curious enough to wave.`}
+      counter={`${written}/${ONE_LINERS_MAX}`}
+      group
     >
-      <textarea
-        {...fieldProps(ids.oneLiner, errors.oneLiner)}
-        className="input input--area"
-        rows={2}
-        maxLength={ONE_LINER_MAX}
-        value={draft.oneLiner}
-        placeholder="Shipping agent wallets. Ask me about passkeys."
-        onChange={(e) => update({ oneLiner: e.target.value.replace(/\n/g, " ") })}
-      />
+      <div className="line-fields">
+        {lines.map((line, index) => (
+          <LineInput
+            // The inputs are positional (line 1, 2, 3); the index is their identity.
+            // oxlint-disable-next-line react/no-array-index-key
+            key={index}
+            id={`${ids.oneLiners}-${index}`}
+            index={index}
+            value={line}
+            error={errors[index]}
+            onChange={(value) => update({ oneLiners: setLine(lines, index, value) })}
+            onRemove={
+              lines.length > 1 ? () => update({ oneLiners: removeLine(lines, index) }) : null
+            }
+          />
+        ))}
+        {lines.length < ONE_LINERS_MAX ? (
+          <button
+            type="button"
+            className="btn btn--quiet line-fields__add"
+            onClick={() => update({ oneLiners: addLine(lines) })}
+          >
+            + Add another one-liner
+          </button>
+        ) : null}
+      </div>
     </Question>
   );
 }
@@ -383,6 +465,14 @@ function ConsentCard({ ids, draft, errors, update }: Omit<FieldsProps, "touch">)
   );
 }
 
+/** The input to focus for a field's error: handles → Telegram, one-liners → the first bad line. */
+function focusTarget(field: JoinField, ids: Record<JoinField, string>, draft: JoinDraft): string {
+  if (field === "handles") return ids.telegram;
+  if (field !== "oneLiners") return ids[field];
+  const bad = lineErrors(draft.oneLiners).findIndex(Boolean);
+  return `${ids.oneLiners}-${Math.max(0, bad)}`;
+}
+
 interface JoinFormProps {
   readonly you: Person | null;
   readonly presetTopic: TopicId | null;
@@ -408,7 +498,7 @@ export function JoinForm({ you, presetTopic, onDone, onCancel }: JoinFormProps) 
     setSubmitted(true);
     if (!result.ok) {
       const first = JOIN_FIELDS.find((field) => result.errors[field]);
-      if (first) document.getElementById(ids[first === "handles" ? "telegram" : first])?.focus();
+      if (first) document.getElementById(focusTarget(first, ids, draft))?.focus();
       return;
     }
     actions.join(result.input);
@@ -423,7 +513,7 @@ export function JoinForm({ you, presetTopic, onDone, onCancel }: JoinFormProps) 
         <HandlesQuestion {...fields} touch={touch} />
         <TopicsQuestion {...fields} />
         <IntentQuestion draft={draft} update={update} />
-        <OneLinerQuestion {...fields} />
+        <OneLinersQuestion ids={ids} draft={draft} update={update} />
       </div>
       <CharacterStudio draft={draft} update={update} />
       <div className="join-form__finish">

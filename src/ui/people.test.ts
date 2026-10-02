@@ -14,7 +14,7 @@ function person(id: string, topics: TopicId[], overrides: Partial<Person> = {}):
     x: null,
     topics,
     intent: [],
-    oneLiner: null,
+    oneLiners: [],
     avatar: { skin: 0, hair: 0, hairColor: 0, accessory: 0 },
     telegramVerified: false,
     ticketVerified: false,
@@ -31,7 +31,7 @@ const ALL: PeopleQuery = { search: "", topics: [], match: "any", intents: [], so
 const priya = person("1", ["ai", "defi"], {
   name: "Priya Shah",
   telegram: "priya_builds",
-  oneLiner: "Agent wallets for chai stalls",
+  oneLiners: ["Agent wallets for chai stalls"],
   joinedAt: 30,
 });
 const omar = person("2", ["defi"], {

@@ -8,7 +8,14 @@ import { BeanAvatar } from "@/ui/BeanAvatar";
 import { Glyph, Icon } from "@/ui/Icon";
 import { JoinForm } from "@/ui/JoinForm";
 import { CloseButton, Overlay } from "@/ui/Overlay";
-import { Awning, IntentChips, LeaveButton, TopicChips, topicVars } from "@/ui/PanelChrome";
+import {
+  Awning,
+  IntentChips,
+  LeaveButton,
+  OneLiners,
+  TopicChips,
+  topicVars,
+} from "@/ui/PanelChrome";
 
 function YouCard({ you }: { readonly you: Person }) {
   const handles = [you.telegram ? `@${you.telegram}` : null, you.x ? `X @${you.x}` : null]
@@ -23,7 +30,7 @@ function YouCard({ you }: { readonly you: Person }) {
       {handles ? <p className="you-card__handles">{handles}</p> : null}
       <TopicChips topics={you.topics} />
       <IntentChips intents={you.intent} />
-      {you.oneLiner ? <p className="bubble">{you.oneLiner}</p> : null}
+      <OneLiners lines={you.oneLiners} />
     </div>
   );
 }

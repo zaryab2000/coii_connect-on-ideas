@@ -18,7 +18,7 @@ import { randomAvatar } from "@/ui/avatar";
 import { BeanAvatar } from "@/ui/BeanAvatar";
 import { Glyph, Icon } from "@/ui/Icon";
 import type { JoinDraft } from "@/ui/joinDraft";
-import { IntentChips, topicVars } from "@/ui/PanelChrome";
+import { IntentChips, OneLiners, topicVars } from "@/ui/PanelChrome";
 
 const HAIR_NAMES: Readonly<Record<HairStyle, string>> = {
   short: "Short",
@@ -72,6 +72,11 @@ function handlesOf(draft: JoinDraft): string {
     .join(" · ");
 }
 
+/** The lines typed so far, without blanks or repeats (a repeat would reuse a React key). */
+function previewLines(lines: readonly string[]): string[] {
+  return [...new Set(lines.map((line) => line.trim()).filter((line) => line.length > 0))];
+}
+
 /** Live preview of your profile card, exactly as people will see it on the map. */
 function Preview({ draft }: { readonly draft: JoinDraft }) {
   const primary: TopicId = draft.topics[0] ?? "ai";
@@ -88,7 +93,7 @@ function Preview({ draft }: { readonly draft: JoinDraft }) {
       {handles ? <p className="studio__handles">{handles}</p> : null}
       <PreviewTopics topics={draft.topics} />
       <IntentChips intents={draft.intent} />
-      {draft.oneLiner.trim() ? <p className="bubble">{draft.oneLiner.trim()}</p> : null}
+      <OneLiners lines={previewLines(draft.oneLiners)} />
     </div>
   );
 }

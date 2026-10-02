@@ -1,10 +1,10 @@
 import type { JoinInput } from "@/app/controller";
-import { containsLink, normalizeTelegram, normalizeX } from "@/data/handles";
+import { normalizeTelegram, normalizeX } from "@/data/handles";
 import { INTENTS_MAX } from "@/data/intents";
+import { oneLinerError, ONE_LINERS_MAX } from "@/data/oneLinerRules";
 import type { Avatar, IntentId, Person, TopicId } from "@/data/types";
 
 export const NAME_MAX = 40;
-export const ONE_LINER_MAX = 80;
 export const TOPICS_MAX = 3;
 
 /** What the join form holds while you type. */
@@ -14,12 +14,13 @@ export interface JoinDraft {
   readonly x: string;
   readonly topics: readonly TopicId[];
   readonly intent: readonly IntentId[];
-  readonly oneLiner: string;
+  /** One input per line, 1 to 3 of them; blank lines are dropped on submit. */
+  readonly oneLiners: readonly string[];
   readonly avatar: Avatar;
   readonly consent: boolean;
 }
 
-export type JoinField = "name" | "handles" | "telegram" | "x" | "topics" | "oneLiner" | "consent";
+export type JoinField = "name" | "handles" | "telegram" | "x" | "topics" | "oneLiners" | "consent";
 
 export type JoinErrors = Partial<Record<JoinField, string>>;
 
@@ -34,7 +35,7 @@ export const JOIN_FIELDS: readonly JoinField[] = [
   "x",
   "handles",
   "topics",
-  "oneLiner",
+  "oneLiners",
   "consent",
 ];
 
@@ -50,10 +51,23 @@ function checkTopics(topics: readonly TopicId[]): string | undefined {
   return undefined;
 }
 
-function checkOneLiner(oneLiner: string): string | undefined {
-  if (oneLiner.length > ONE_LINER_MAX) return `Keep it to ${ONE_LINER_MAX} characters.`;
-  if (containsLink(oneLiner)) return "Links aren't allowed here. Add your handles above instead.";
-  return undefined;
+/** One message per one-liner input (undefined where the line is fine or blank). */
+export function lineErrors(lines: readonly string[]): (string | undefined)[] {
+  return lines.map((line) => oneLinerError(line.trim()));
+}
+
+/** The lines you actually wrote: trimmed, blanks and repeats dropped, at most three. */
+function cleanLines(lines: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const kept: string[] = [];
+  for (const raw of lines) {
+    const line = raw.trim().replace(/\s+/g, " ");
+    const key = line.toLowerCase();
+    if (line.length === 0 || seen.has(key)) continue;
+    seen.add(key);
+    kept.push(line);
+  }
+  return kept.slice(0, ONE_LINERS_MAX);
 }
 
 function checkName(name: string): string | undefined {
@@ -73,14 +87,14 @@ function handleErrors(telegram: Handle, x: Handle): JoinErrors {
   return errors;
 }
 
-function fieldErrors(name: string, oneLiner: string, draft: JoinDraft): JoinErrors {
+function fieldErrors(name: string, draft: JoinDraft): JoinErrors {
   const errors: JoinErrors = {};
   const nameError = checkName(name);
   if (nameError) errors.name = nameError;
   const topicError = checkTopics(draft.topics);
   if (topicError) errors.topics = topicError;
-  const oneLinerError = checkOneLiner(oneLiner);
-  if (oneLinerError) errors.oneLiner = oneLinerError;
+  if (lineErrors(draft.oneLiners).some(Boolean))
+    errors.oneLiners = "Fix the one-liner marked below.";
   if (!draft.consent) errors.consent = "Tick this so people can see your bean.";
   return errors;
 }
@@ -91,11 +105,10 @@ function fieldErrors(name: string, oneLiner: string, draft: JoinDraft): JoinErro
  */
 export function validateJoin(draft: JoinDraft): JoinResult {
   const name = draft.name.trim().replace(/\s+/g, " ");
-  const oneLiner = draft.oneLiner.trim();
   const telegram = handle(draft.telegram, normalizeTelegram);
   const x = handle(draft.x, normalizeX);
   const errors: JoinErrors = {
-    ...fieldErrors(name, oneLiner, draft),
+    ...fieldErrors(name, draft),
     ...handleErrors(telegram, x),
   };
   if (Object.keys(errors).length > 0 || telegram instanceof Error || x instanceof Error) {
@@ -109,10 +122,26 @@ export function validateJoin(draft: JoinDraft): JoinResult {
       x,
       topics: [...draft.topics],
       intent: draft.intent.slice(0, INTENTS_MAX),
-      oneLiner: oneLiner.length > 0 ? oneLiner : null,
+      oneLiners: cleanLines(draft.oneLiners),
       avatar: draft.avatar,
     },
   };
+}
+
+/** A copy of the one-liner inputs with line `index` set to `value` (newlines become spaces). */
+export function setLine(lines: readonly string[], index: number, value: string): string[] {
+  return lines.map((line, i) => (i === index ? value.replace(/\n/g, " ") : line));
+}
+
+/** Adds an empty one-liner input, up to the maximum. */
+export function addLine(lines: readonly string[]): readonly string[] {
+  return lines.length >= ONE_LINERS_MAX ? lines : [...lines, ""];
+}
+
+/** Removes one-liner input `index`, always leaving at least one input. */
+export function removeLine(lines: readonly string[], index: number): readonly string[] {
+  const rest = lines.filter((_, i) => i !== index);
+  return rest.length > 0 ? rest : [""];
 }
 
 /** Adds `intent` as the newest pick, or removes it when already picked. Never exceeds two. */
@@ -147,7 +176,7 @@ function draftOf(you: Person): JoinDraft {
     x: you.x ?? "",
     topics: you.topics,
     intent: you.intent,
-    oneLiner: you.oneLiner ?? "",
+    oneLiners: you.oneLiners.length > 0 ? [...you.oneLiners] : [""],
     avatar: you.avatar,
     consent: true,
   };
@@ -160,7 +189,7 @@ function emptyDraft(avatar: Avatar): JoinDraft {
     x: "",
     topics: [],
     intent: [],
-    oneLiner: "",
+    oneLiners: [""],
     avatar,
     consent: false,
   };
