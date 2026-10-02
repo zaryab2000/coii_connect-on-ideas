@@ -17,8 +17,10 @@ import { buildPool, buildPoolSign, poolRect, RobotCrew, Ticker } from "@/engine/
 import { Gestures } from "@/engine/gestures";
 import type { GestureTarget } from "@/engine/gestures";
 import { loadIconTextures } from "@/engine/icons";
-import { BoothLabels, LabelLayer } from "@/engine/labels";
+import { BoothLabels, LabelLayer, QuoteBubbles } from "@/engine/labels";
 import { bgr, FLOOR } from "@/engine/palette";
+import { bubbleBox, QUOTE_ZOOM, QuoteDirector, quoteCap } from "@/engine/quotes";
+import type { QuoteSpot } from "@/engine/quotes";
 import type { EngineApi, EngineEvents, EngineStats } from "@/engine/types";
 import { buildChaiStall, buildFloor, buildGarlands, buildGate } from "@/engine/venue";
 import { zoneCapacities } from "@/sim/capacity";
@@ -44,6 +46,7 @@ interface Scene {
   readonly effects: EffectPool;
   readonly labels: LabelLayer;
   readonly boothLabels: BoothLabels;
+  readonly quotes: QuoteBubbles;
   readonly atlas: CrowdAtlas;
   readonly worldLayer: Container;
   readonly robots: RobotCrew | null;
@@ -56,6 +59,19 @@ function intentPropFor(atlas: CrowdAtlas, person: Person): Frame | null {
   const main = person.intent[0];
   return main ? (atlas.icons.get(intentById(main).icon) ?? null) : null;
 }
+
+/** States in which a bean is too busy (or flying) to say a one-liner. */
+const QUIET_STATES: ReadonlySet<number> = new Set([
+  State.Arriving,
+  State.Held,
+  State.Grabbed,
+  State.Thrown,
+  State.Dizzy,
+  State.RunningHome,
+]);
+
+/** Bubble anchor above a bean's head, in world units. */
+const QUOTE_LIFT = 62;
 
 function seedOf(id: string): number {
   let hash = 2166136261;
@@ -178,6 +194,9 @@ export class CoiiEngine implements EngineApi {
   private readonly perf = { fps: 60, frameMs: 0, simMs: 0 };
   private debugEl: HTMLDivElement | null = null;
   private bubbleCount = 0;
+  private readonly director = new QuoteDirector(Math.random);
+  /** Beans with at least one one-liner. */
+  private readonly quoteable = new Set<number>();
 
   constructor() {
     this.root = document.createElement("div");
@@ -238,6 +257,9 @@ export class CoiiEngine implements EngineApi {
       scene.world.remove(index);
       scene.crowd.forget(index);
       scene.effects.clearFollowing(index);
+      this.quoteable.delete(index);
+      this.director.forget(index);
+      scene.quotes.hide(index);
       if (scene.crowd.selected === index) scene.crowd.selected = -1;
       if (this.follow === index) this.follow = -1;
       if (this.youIndex === index) this.youIndex = -1;
@@ -451,7 +473,10 @@ export class CoiiEngine implements EngineApi {
         if (id) this.tapBooth(id);
       },
     );
-    this.root.append(labels.el, boothLabels.el);
+    const quotes = new QuoteBubbles((agent) => {
+      if (this.scene) this.tapBean(this.scene, agent);
+    });
+    this.root.append(labels.el, boothLabels.el, quotes.el);
     const scene: Scene = {
       app,
       world,
@@ -459,6 +484,7 @@ export class CoiiEngine implements EngineApi {
       camera,
       labels,
       boothLabels,
+      quotes,
       atlas,
       ...venue,
       effects: new EffectPool(),
@@ -533,6 +559,7 @@ export class CoiiEngine implements EngineApi {
     scene.crowd.render(alpha, camera.view(), scene.world.time + alpha * STEP, dt, scene.effects);
     this.updateLabels(scene, alpha);
     this.positionBoothLabels(scene);
+    this.updateQuotes(scene, alpha);
     const end = performance.now();
     this.perf.fps = this.perf.fps * 0.95 + (1 / Math.max(dt, 0.001)) * 0.05;
     this.perf.frameMs = this.perf.frameMs * 0.9 + (end - start) * 0.1;
@@ -587,6 +614,91 @@ export class CoiiEngine implements EngineApi {
     const a = scene.world.agents[index];
     const person = this.personAt[index];
     return a?.active && person ? { a, person } : null;
+  }
+
+  // ---- one-liner bubbles -------------------------------------------------------------------
+
+  /** Screen point just above a bean's head, where a bubble's tail points. */
+  private quoteAnchor(scene: Scene, a: Agent, alpha: number): { x: number; y: number } {
+    const x = a.px + (a.x - a.px) * alpha;
+    const y = a.py + (a.y - a.py) * alpha - a.z - QUOTE_LIFT;
+    return scene.camera.worldToScreen(x, y);
+  }
+
+  /** Inside the map, below the HUD and with room for a bubble above the anchor. */
+  private quoteFits(scene: Scene, p: { x: number; y: number }): boolean {
+    const { viewW, viewH } = scene.camera;
+    return p.x > 20 && p.x < viewW - 20 && p.y > this.insetTop + 96 && p.y < viewH - 16;
+  }
+
+  /** With booth highlights on, only people at those booths speak. */
+  private matchesHighlight(scene: Scene, index: number): boolean {
+    const { highlight } = scene.crowd;
+    if (highlight.size === 0) return true;
+    return (this.personAt[index]?.topics ?? []).some((t) => highlight.has(topicIndex(t)));
+  }
+
+  private canSpeak(scene: Scene, index: number): boolean {
+    const a = scene.world.agents[index];
+    if (!a?.active || QUIET_STATES.has(a.state)) return false;
+    if (index === scene.crowd.selected || index === this.youIndex) return false;
+    return this.matchesHighlight(scene, index);
+  }
+
+  /** Beans that could say a line right now, favouring ones standing still (easier to read). */
+  private quoteSpots(scene: Scene, alpha: number): QuoteSpot[] {
+    const spots: QuoteSpot[] = [];
+    const tribe = scene.crowd.highlightIds;
+    for (const index of this.quoteable) {
+      const a = scene.world.agents[index];
+      if (!a || !this.canSpeak(scene, index)) continue;
+      const p = this.quoteAnchor(scene, a, alpha);
+      if (!this.quoteFits(scene, p)) continue;
+      const still = a.state === State.Idle || a.state === State.Chatting;
+      const weight = (still ? 3 : 1) * (tribe.has(index) ? 2 : 1);
+      spots.push({ agent: index, x: p.x, y: p.y, weight });
+    }
+    return spots;
+  }
+
+  /** Moves showing bubbles with their beans and ends any that can't stay up. */
+  private moveQuotes(scene: Scene, alpha: number): void {
+    const ended: number[] = [];
+    for (const quote of this.director.active) {
+      const a = scene.world.agents[quote.agent];
+      const p = a ? this.quoteAnchor(scene, a, alpha) : null;
+      if (!p || !this.canSpeak(scene, quote.agent) || !this.quoteFits(scene, p)) {
+        ended.push(quote.agent);
+        continue;
+      }
+      quote.box = bubbleBox(p.x, p.y, quote.line);
+      scene.quotes.move(quote.agent, p.x, p.y, scene.camera.viewW);
+    }
+    for (const agent of ended) {
+      this.director.end(agent);
+      scene.quotes.hide(agent);
+    }
+  }
+
+  /** Lets the next bean say a line, if one is due and someone suitable is on screen. */
+  private startQuote(scene: Scene, now: number, cap: number, alpha: number): void {
+    const linesOf = (agent: number): readonly string[] => this.personAt[agent]?.oneLiners ?? [];
+    const spots = this.quoteSpots(scene, alpha);
+    const quote = this.director.tryStart(now, cap, spots, linesOf, scene.boothLabels.boxes());
+    const person = quote ? this.personAt[quote.agent] : undefined;
+    const topic = person ? TOPICS[topicIndex(person.topics[0] ?? "ai")] : undefined;
+    if (!quote || !person || !topic) return;
+    const name = person.name.split(" ")[0] ?? person.name;
+    scene.quotes.show(quote.agent, { name, topic, line: quote.line });
+  }
+
+  private updateQuotes(scene: Scene, alpha: number): void {
+    const now = scene.world.time;
+    const cap = quoteCap(scene.camera.zoom, scene.camera.viewW);
+    for (const q of this.director.expire(now)) scene.quotes.hide(q.agent);
+    for (const q of this.director.trim(cap)) scene.quotes.hide(q.agent);
+    if (this.director.wantsSpeaker(now, cap)) this.startQuote(scene, now, cap, alpha);
+    this.moveQuotes(scene, alpha);
   }
 
   private readonly eventHandlers: Readonly<
@@ -681,12 +793,10 @@ export class CoiiEngine implements EngineApi {
   }
 
   private chatBubble(scene: Scene, agent: number, x: number, y: number): void {
-    if (
-      this.bubbleCount >= MAX_BUBBLES ||
-      !this.inView(scene, x, y) ||
-      scene.camera.zoom < LOD_ZOOM
-    )
-      return;
+    // Emoji chatter is the zoomed-out ambience; up close the one-liners do the talking.
+    const zoom = scene.camera.zoom;
+    if (this.bubbleCount >= MAX_BUBBLES || zoom < LOD_ZOOM || zoom >= QUOTE_ZOOM) return;
+    if (!this.inView(scene, x, y)) return;
     const iconId = BUBBLE_ICONS[Math.floor(Math.random() * BUBBLE_ICONS.length)] ?? "light_bulb";
     this.bubbleAt(scene, agent, iconId, 1.7);
   }
@@ -719,6 +829,8 @@ export class CoiiEngine implements EngineApi {
     scene.crowd.setLook(index, this.lookFor(scene.atlas, person, topics[0] ?? 0));
     this.agentOf.set(person.id, index);
     this.personAt[index] = person;
+    if (person.oneLiners.length > 0) this.quoteable.add(index);
+    else this.quoteable.delete(index);
     if (person.isYou) this.youIndex = index;
     for (const topic of topics) this.bumpInterest(scene, topic, 1);
     return index;

@@ -1,4 +1,5 @@
 import type { Topic } from "@/data/types";
+import type { QuoteBox } from "@/engine/quotes";
 
 /** Crisp DOM name tags that follow beans in screen space (selected person and you). */
 export class LabelLayer {
@@ -90,6 +91,20 @@ export class BoothLabels {
     );
   }
 
+  /** Where the booth signs are on screen, relative to the map. */
+  boxes(): QuoteBox[] {
+    const origin = this.el.getBoundingClientRect();
+    return this.buttons.map((button) => {
+      const r = button.getBoundingClientRect();
+      return {
+        x0: r.left - origin.left,
+        y0: r.top - origin.top,
+        x1: r.right - origin.left,
+        y1: r.bottom - origin.top,
+      };
+    });
+  }
+
   setDimmed(index: number, dimmed: boolean): void {
     this.buttons[index]?.classList.toggle("is-dimmed", dimmed);
   }
@@ -112,5 +127,72 @@ export class BoothLabels {
     if (this.last[index] === transform) return;
     this.last[index] = transform;
     button.style.transform = transform;
+  }
+}
+
+export interface QuoteContent {
+  readonly name: string;
+  readonly topic: Topic;
+  readonly line: string;
+}
+
+const QUOTE_FADE_MS = 220;
+
+/**
+ * One-liner speech bubbles over beans, as DOM so the text stays crisp and readable at any zoom.
+ * There are only ever a handful; tapping one opens that person's profile.
+ */
+export class QuoteBubbles {
+  readonly el: HTMLDivElement;
+  private readonly bubbles = new Map<number, { el: HTMLDivElement; half: number }>();
+
+  constructor(private readonly onTap: (agent: number) => void) {
+    this.el = document.createElement("div");
+    this.el.className = "map-quotes";
+    this.el.setAttribute("aria-hidden", "true");
+  }
+
+  show(agent: number, content: QuoteContent): void {
+    this.hide(agent);
+    const el = document.createElement("div");
+    el.className = "quote";
+    el.style.setProperty("--topic", content.topic.css);
+    const card = document.createElement("div");
+    card.className = "quote__card";
+    const who = document.createElement("span");
+    who.className = "quote__who";
+    who.textContent = `${content.name} · ${content.topic.short}`;
+    const line = document.createElement("span");
+    line.className = "quote__line";
+    line.textContent = content.line;
+    card.append(who, line);
+    el.append(card);
+    el.addEventListener("click", () => this.onTap(agent));
+    this.el.append(el);
+    this.bubbles.set(agent, { el, half: 0 });
+  }
+
+  /**
+   * Anchors a bubble's tail at (x, y). The bubble slides sideways to stay on screen while the
+   * tail keeps pointing at the bean.
+   */
+  move(agent: number, x: number, y: number, viewW: number): void {
+    const bubble = this.bubbles.get(agent);
+    if (!bubble) return;
+    if (bubble.half === 0) bubble.half = bubble.el.offsetWidth / 2;
+    const margin = bubble.half + 8;
+    const cx = viewW > margin * 2 ? Math.min(viewW - margin, Math.max(margin, x)) : x;
+    bubble.el.style.transform = `translate3d(${cx.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, -100%)`;
+    const reach = Math.max(0, bubble.half - 18);
+    const tail = Math.min(reach, Math.max(-reach, x - cx));
+    bubble.el.style.setProperty("--tail", `${tail.toFixed(1)}px`);
+  }
+
+  hide(agent: number): void {
+    const bubble = this.bubbles.get(agent);
+    if (!bubble) return;
+    this.bubbles.delete(agent);
+    bubble.el.classList.add("is-leaving");
+    window.setTimeout(() => bubble.el.remove(), QUOTE_FADE_MS);
   }
 }

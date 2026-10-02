@@ -88,6 +88,38 @@ test("tapping a person on the map selects them", async ({ page }) => {
   expect(selected).not.toBeNull();
 });
 
+test("up close, a few one-liners pop up at a time and tapping one opens that person", async ({
+  page,
+}) => {
+  await page.goto("/?still");
+  await waitForCrowd(page);
+  await page.waitForTimeout(2500);
+  await page.evaluate(() => window.__coii?.engine.focusBooth("stablecoins"));
+  const bubbles = page.locator(".quote:not(.is-leaving)");
+  // The most bubbles showing at any moment over eight seconds, sampled in the page.
+  const most = await page.evaluate(
+    () =>
+      new Promise<number>((resolve) => {
+        let max = 0;
+        let samples = 0;
+        const timer = window.setInterval(() => {
+          max = Math.max(max, document.querySelectorAll(".quote:not(.is-leaving)").length);
+          samples += 1;
+          if (samples < 16) return;
+          window.clearInterval(timer);
+          resolve(max);
+        }, 500);
+      }),
+  );
+  expect(most).toBeGreaterThanOrEqual(1);
+  expect(most).toBeLessThanOrEqual(3);
+  await expect(bubbles.first()).toBeVisible();
+  await bubbles.first().dispatchEvent("click");
+  await expect
+    .poll(() => page.evaluate(() => window.__coii?.controller.store.get().selectedId ?? null))
+    .not.toBeNull();
+});
+
 test("joining puts you in the venue and you are still there after a reload", async ({ page }) => {
   await page.goto("/?still");
   await waitForCrowd(page);
