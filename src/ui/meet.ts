@@ -27,7 +27,7 @@ export function wavesLeftText(left: number): string {
 /** The hidden-waves teaser. A count only: it never says who. */
 export function inboundText(count: number): string {
   const who = count === 1 ? "1 person" : `${count} people`;
-  return `${who} waved at you. They may show up in your next Adda 3.`;
+  return `${who} waved at you. They may show up in your next picks.`;
 }
 
 export const QUOTA_TEXT = `You've used today's ${WAVES_PER_DAY} waves. They refill at 06:00.`;
@@ -91,7 +91,7 @@ export function waveToast(result: WaveResult, name: string, firstWave: boolean):
       return { text: QUOTA_TEXT, icon: "hot_beverage", tone: "info" };
     case "unavailable":
       return {
-        text: `Couldn't wave at ${first}. They may have left the adda.`,
+        text: `Couldn't wave at ${first}. They may have left the venue.`,
         icon: "waving_hand",
         tone: "info",
       };

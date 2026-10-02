@@ -149,7 +149,7 @@ export function App({ engine }: { readonly engine: EngineApi }) {
           </div>
           {ready ? null : (
             <p className="map-loading" role="status">
-              Opening the adda…
+              Opening the venue…
             </p>
           )}
           <Hud ref={hudRef} />

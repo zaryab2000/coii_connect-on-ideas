@@ -2,7 +2,7 @@ const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
 /** India Standard Time is UTC+5:30 all year (no daylight saving). */
 const IST_OFFSET_MS = 5.5 * HOUR_MS;
-/** A new Adda 3 is dealt at 06:00 IST, before the first talks. */
+/** A new set of 3 picks is dealt at 06:00 IST, before the first talks. */
 const RESET_HOUR = 6;
 
 /** The Meet day containing `now`, as `YYYY-MM-DD`. Days run 06:00–06:00 IST. */

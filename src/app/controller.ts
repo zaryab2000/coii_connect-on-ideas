@@ -211,7 +211,7 @@ function youActions(
     leave() {
       if (!removeYou(engine, store)) return;
       meet.forget();
-      toasts.pushToast("You left the adda. Come back anytime.", "waving_hand", "info");
+      toasts.pushToast("You left coii. Come back anytime.", "waving_hand", "info");
     },
   };
 }

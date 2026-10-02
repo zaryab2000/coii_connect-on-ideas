@@ -2,7 +2,7 @@ import { isIntentId } from "@/data/intents";
 import { isTopicId } from "@/data/topics";
 import type { Person } from "@/data/types";
 
-const KEY = "adda:you:v1";
+const KEY = "coii:you:v1";
 
 function hasValidTopics(topics: unknown): boolean {
   return (

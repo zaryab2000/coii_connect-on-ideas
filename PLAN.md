@@ -1,10 +1,10 @@
-# Adda — Plan
+# coii — Plan
 
-> _adda_ (Hindi/Urdu): the spot where friends gather and talk for hours.
+> **coii**: connect on ideas & interests.
 > Find your people at Devcon by **ideas**, not logos.
 
-Name: **Adda** (final). On-site wordmark: "gm adda". Free web address: `gmadda.pages.dev`
-(`adda.pages.dev` is taken). The repo folder is still `conDevCon`; renaming it is optional.
+Name: **coii**, short for "connect on ideas & interests" (final). On-site wordmark: "gm coii".
+Free web address: `coii.pages.dev` (unclaimed on 2 Oct 2026). The repo folder is still `conDevCon`; renaming it is optional.
 
 A playful live map of a cartoon venue. Every booth is a topic (AI Agents, Prediction Markets,
 DeFi, …). Every registered attendee is a tiny "bean" human hanging around the booths they care
@@ -31,7 +31,7 @@ for how to run it.
 
 **Meet (Who should I meet), Phase 0 built (2 Oct 2026):**
 
-- Daily Adda 3 with card reveal, hidden waves (20/day), demo replies, "Chai's on!" with a
+- Daily 3 with card reveal, hidden waves (20/day), demo replies, "Chai's on!" with a
   Telegram opener, We met + bonus cards, Unmatch
 - Intent field and props, My tribe glow, pick sparkles
 - Spec: `docs/prd/who-should-i-meet.md`. Phase 1 needs the backend (real waves, 18+ gate);
@@ -41,7 +41,7 @@ for how to run it.
 
 1. Owner phone test on the LAN URL (`pnpm dev`, then `http://<mac-ip>:5173/?debug`): FPS +
    gestures
-2. Weekend launch, static: `pnpm build`, then `npx wrangler pages deploy dist --project-name gmadda`
+2. Weekend launch, static: `pnpm build`, then `npx wrangler pages deploy dist --project-name coii`
    after `npx wrangler login`. Needs the owner's free Cloudflare account and an explicit OK. The
    link-preview image and headers are already in `public/`
 3. Real sign-ups (Stage B): Supabase + Telegram Login behind the `PeopleSource` seam in
@@ -378,13 +378,13 @@ Label it "unofficial community project" until then.
 
 ### Stage B: go live (after the demo is approved)
 
-| Target  | Milestone                                                                                                    |
-| ------- | ------------------------------------------------------------------------------------------------------------ |
-| ~Oct 8  | Free accounts ready: GitHub, Supabase, Cloudflare, Telegram bot                                              |
-| ~Oct 12 | Real sign-ups (Telegram ✓ + form), moderation, deploy to `gmadda.pages.dev`, soft launch to friends/speakers |
-| ~Oct 19 | P2 delighters + **public launch** (Devcon 8 India Telegram group, X)                                         |
-| ~Oct 30 | P3 done, load-tested, **feature freeze**                                                                     |
-| Nov 3–6 | Event: monitor, moderate, kiosk mode on screens                                                              |
+| Target  | Milestone                                                                                                  |
+| ------- | ---------------------------------------------------------------------------------------------------------- |
+| ~Oct 8  | Free accounts ready: GitHub, Supabase, Cloudflare, Telegram bot                                            |
+| ~Oct 12 | Real sign-ups (Telegram ✓ + form), moderation, deploy to `coii.pages.dev`, soft launch to friends/speakers |
+| ~Oct 19 | P2 delighters + **public launch** (Devcon 8 India Telegram group, X)                                       |
+| ~Oct 30 | P3 done, load-tested, **feature freeze**                                                                   |
+| Nov 3–6 | Event: monitor, moderate, kiosk mode on screens                                                            |
 
 **In parallel (owner, any time):** the organizer conversation (§14).
 
@@ -409,7 +409,7 @@ Never cut: map, profile card, list, Telegram sign-up, moderation.
 ## 13. Repo layout & tooling
 
 ```
-conDevCon/            (package name: adda)
+conDevCon/            (package name: coii)
   .claude/skills/     project skills (PixiJS, mobile-native, animate, game feel, playwright-cli)
   src/
     engine/      PixiJS venue, rendering, camera
@@ -433,7 +433,7 @@ list filters), prek hooks, GitHub Actions with SHA-pinned actions + zizmor.
 
 **Decided:**
 
-- Name: Adda
+- Name: coii (connect on ideas & interests)
 - Sign-up: Telegram ✓ plus an on-site form
 - Responsive web only
 - No X API
@@ -455,7 +455,7 @@ list filters), prek hooks, GitHub Actions with SHA-pinned actions + zizmor.
 4. Ticket verification (see §5a):
    - Will Devcon 8 tickets be in Zupass? If so, what are the event ID and signer key?
    - Will there be a ticket-gated attendee Telegram chat? Can our bot be added as a read-only admin?
-   - Failing both: can an Adda invite code go into a pre-event email?
+   - Failing both: can a coii invite code go into a pre-event email?
 5. Do they want the stats page (topic popularity, top combos) for their own planning?
 
-**Optional:** a custom domain (~$10/yr); otherwise `gmadda.pages.dev`.
+**Optional:** a custom domain (~$10/yr); otherwise `coii.pages.dev`.

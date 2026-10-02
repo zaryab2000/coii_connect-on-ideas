@@ -63,7 +63,7 @@ function firstName(person: Person): string {
 export function openerText(you: Person, them: Person, spot: string, time: string): string {
   const shared = you.topics.filter((t) => them.topics.includes(t)).map((t) => topicById(t).short);
   const about = shared.length > 0 ? `we both like ${shared.join(" + ")}` : "we should meet";
-  return `gm ${firstName(them)}! Adda says ${about}. Chai at ${spot} ${time}?`;
+  return `gm ${firstName(them)}! Found you on coii: ${about}. Chai at ${spot} ${time}?`;
 }
 
 /** Opens their Telegram chat with the opener as an unsent draft (`t.me/<user>?text=`). */

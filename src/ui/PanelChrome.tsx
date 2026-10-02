@@ -97,7 +97,7 @@ export function IntentChips({ intents }: { readonly intents: readonly IntentId[]
   );
 }
 
-/** "Leave adda" with an inline confirm step. */
+/** "Leave coii" with an inline confirm step. */
 export function LeaveButton() {
   const actions = useActions();
   const [confirming, setConfirming] = useState(false);
@@ -108,14 +108,14 @@ export function LeaveButton() {
   if (!confirming) {
     return (
       <button type="button" className="btn btn--quiet" onClick={() => setConfirming(true)}>
-        Leave adda
+        Leave coii
       </button>
     );
   }
   return (
     <div className="confirm" role="group" aria-labelledby="leave-question">
       <p id="leave-question" className="confirm__text">
-        Leave the adda? Your bean walks out and this browser forgets your profile.
+        Leave coii? Your bean walks out and this browser forgets your profile.
       </p>
       <div className="confirm__actions">
         <button type="button" className="btn btn--danger" onClick={() => actions.leave()}>

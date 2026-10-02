@@ -1,8 +1,8 @@
 {
-  "name": "adda",
+  "name": "coii",
   "version": "0.1.0",
   "private": true,
-  "description": "Find your people at Devcon by ideas: a live cartoon venue of topic booths and tiny humans.",
+  "description": "coii: connect on ideas and interests. A live cartoon venue of topic booths and tiny humans, built for Devcon 8.",
   "type": "module",
   "scripts": {
     "dev": "vite --host",

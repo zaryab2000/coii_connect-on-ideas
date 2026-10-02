@@ -19,7 +19,7 @@ export interface MeetView {
   readonly day: string;
   /** When the next hand is dealt (epoch ms). */
   readonly resetAt: number;
-  /** Today's Adda 3 (more with bonus cards for in-person meetings). */
+  /** Today's 3 picks (more with bonus cards for in-person meetings). */
   readonly hand: readonly Card[];
   /** People whose card you flipped today. */
   readonly revealed: readonly string[];

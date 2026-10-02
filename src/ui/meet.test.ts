@@ -85,7 +85,7 @@ describe("copy", () => {
   });
 
   it("teases inbound waves without naming anyone", () => {
-    expect(inboundText(2)).toBe("2 people waved at you. They may show up in your next Adda 3.");
+    expect(inboundText(2)).toBe("2 people waved at you. They may show up in your next picks.");
     expect(inboundText(1)).toMatch(/^1 person waved/);
   });
 

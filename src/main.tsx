@@ -29,7 +29,7 @@ if (!params.has("still"))
   controller.startArrivals(demoSource(crowd.reserve, { minDelayMs: 6000, maxDelayMs: 14000 }));
 
 if (import.meta.env.DEV || params.has("debug")) {
-  Object.assign(window, { __adda: { engine, controller } });
+  Object.assign(window, { __coii: { engine, controller } });
 }
 
 const rootEl = document.getElementById("root");

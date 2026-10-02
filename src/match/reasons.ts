@@ -26,7 +26,7 @@ function intentReason(viewer: Person, candidate: Person): string | null {
 /** "Wildcard: DeFi is next door to Prediction" for a neighbouring-topic pick. */
 export function wildcardReason(viewer: Person, candidate: Person): string {
   const theirs = candidate.topics[0];
-  if (!theirs) return "Wildcard: someone from another corner of the adda";
+  if (!theirs) return "Wildcard: someone from another corner of the venue";
   const next = viewer.topics.find((t) => adjacentTopics(t).includes(theirs)) ?? viewer.topics[0];
   const theirName = topicById(theirs).short;
   return next
@@ -60,7 +60,7 @@ export function reasonsFor(
   if (reasons.length === 0) {
     const booth = candidate.topics[0];
     reasons.push(
-      booth ? `Hangs out at the ${topicById(booth).short} booth` : "New face in the adda",
+      booth ? `Hangs out at the ${topicById(booth).short} booth` : "New face on the map",
     );
   }
   return reasons.slice(0, 2);

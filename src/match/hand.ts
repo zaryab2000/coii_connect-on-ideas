@@ -4,7 +4,7 @@ import { reasonsFor } from "@/match/reasons";
 import { isEligible, scoreParts, totalScore } from "@/match/score";
 import type { Eligibility, ScoreContext, ScoreParts } from "@/match/score";
 
-/** One face of today's Adda 3. */
+/** One card in today's 3 picks. */
 export interface Card {
   readonly personId: string;
   readonly wildcard: boolean;
@@ -135,7 +135,7 @@ function toCard(viewer: Person, s: Scored, wildcard: boolean): Card {
 }
 
 /**
- * Today's Adda 3 (PRD §6.2): the best two people plus one wildcard from an adjacent topic,
+ * Today's 3 picks (PRD §6.2): the best two people plus one wildcard from an adjacent topic,
  * deterministic for (viewer, day). Fewer cards only when fewer people are eligible.
  */
 export function buildHand(req: HandRequest): Card[] {

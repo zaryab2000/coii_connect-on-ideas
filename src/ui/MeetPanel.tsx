@@ -43,7 +43,7 @@ function MeetHeader({
       <Awning color="var(--marigold)" />
       <PanelNav chrome={chrome} />
       <h2 id={titleId} className="meet__title">
-        Your Adda 3
+        Today's 3
       </h2>
       {meet ? (
         <div className="meet__stats">
@@ -112,7 +112,7 @@ function HandDone({ meet }: { readonly meet: MeetView }) {
   return (
     <div className="meet-done" role="status">
       <Icon id="sparkles" size={44} />
-      <p className="meet-done__title">That's today's Adda 3</p>
+      <p className="meet-done__title">That's today's 3</p>
       <p className="meet-done__hint">
         New picks in <Countdown to={meet.resetAt} />. Till then, see who shares your topics on the
         map.
@@ -224,7 +224,7 @@ function MeetBody({ meet, you }: { readonly meet: MeetView; readonly you: Person
   );
 }
 
-/** Meet tab: today's Adda 3 (flip, wave, skip), the hidden-wave teaser and your chais. */
+/** Meet tab: today's 3 (flip, wave, skip), the hidden-wave teaser and your chais. */
 export function MeetPanel({ chrome }: { readonly chrome: PanelChrome }) {
   const meet = useApp((s) => s.meet);
   const you = useApp((s) => s.you);

@@ -41,7 +41,7 @@ export function RangoliMark({ size }: { readonly size: number }) {
   );
 }
 
-/** The marigold back of an Adda 3 card, numbered in the corner like a playing card. */
+/** The marigold back of a daily pick card, numbered in the corner like a playing card. */
 export function CardFace({
   index,
   locked,

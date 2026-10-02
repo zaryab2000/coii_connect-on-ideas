@@ -21,10 +21,9 @@
 
 .wordmark {
   position: relative;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 5px;
-  margin: 0 8px 0 0;
+  display: inline-grid;
+  justify-items: start;
+  margin: 0 26px 0 0;
   padding: 7px 14px 2px;
   border: var(--line);
   border-radius: 16px;
@@ -43,10 +42,21 @@
   color: var(--rani);
 }
 
+/* The tagline only fits beside the map on wider screens; the About overlay spells it out. */
+.wordmark__sub {
+  display: none;
+  margin: 1px 0 3px;
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
 .wordmark__tag {
   position: absolute;
-  top: -11px;
-  right: -16px;
+  top: -14px;
+  right: -34px;
   padding: 3px 7px 0;
   border: var(--line-thin);
   border-radius: var(--radius-pill);
@@ -258,6 +268,10 @@
 
   .wordmark {
     font-size: 1.75rem;
+  }
+
+  .wordmark__sub {
+    display: block;
   }
 
   .hud__chips-row {

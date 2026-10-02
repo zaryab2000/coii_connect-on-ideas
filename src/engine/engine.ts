@@ -153,7 +153,7 @@ function iconOf(icons: Map<IconId, Texture>, id: IconId): Texture {
   return icon;
 }
 
-export class AddaEngine implements EngineApi {
+export class CoiiEngine implements EngineApi {
   private people: Person[] = [];
   private readonly agentOf = new Map<string, number>();
   private readonly personAt: (Person | undefined)[] = [];
@@ -492,7 +492,7 @@ export class AddaEngine implements EngineApi {
 
   private showFailure(error: unknown): void {
     this.starting = false;
-    console.error("Adda venue map failed to start", error);
+    console.error("coii venue map failed to start", error);
     const message = document.createElement("p");
     message.className = "map-error";
     message.textContent =

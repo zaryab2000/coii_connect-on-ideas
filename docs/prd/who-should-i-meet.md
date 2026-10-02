@@ -1,11 +1,11 @@
 # PRD: Who should I meet? (matchmaking as a game)
 
-|               |                                                                                          |
-| ------------- | ---------------------------------------------------------------------------------------- |
-| Status        | Draft for owner review · 2 Oct 2026                                                      |
-| Tracker items | M1 Today's Adda 3 · M2 Waves & matches · M3 Find my tribe · M4 Intent · M5 Meetup flares |
-| Depends on    | L2 real sign-ups, L4 moderation; C3 handshake QR for verified "we met"                   |
-| Event         | Devcon 8, Jio World Centre, Mumbai, 3–6 Nov 2026                                         |
+|               |                                                                                     |
+| ------------- | ----------------------------------------------------------------------------------- |
+| Status        | Draft for owner review · 2 Oct 2026                                                 |
+| Tracker items | M1 Today's 3 · M2 Waves & matches · M3 Find my tribe · M4 Intent · M5 Meetup flares |
+| Depends on    | L2 real sign-ups, L4 moderation; C3 handshake QR for verified "we met"              |
+| Event         | Devcon 8, Jio World Centre, Mumbai, 3–6 Nov 2026                                    |
 
 ---
 
@@ -24,7 +24,7 @@ three hard parts remain:
 
 ## 2. Solution in one paragraph
 
-Each day you get a small hand of **three people worth meeting** (the "Adda 3"), flipped over
+Each day you get a small hand of **three people worth meeting** (the "daily 3"), flipped over
 like trading cards, each with the reason you two should talk. You **wave** at the ones you like.
 Waves are private until they're mutual. When both of you wave, **"Chai's on!"**: your beans run
 to each other on the map and clink chai cups. You get a suggested venue spot and a one-tap
@@ -36,15 +36,15 @@ not to time spent in the app.
 
 Use these words consistently in UI and code.
 
-| Concept                         | UI name         | Notes                                               |
-| ------------------------------- | --------------- | --------------------------------------------------- |
-| The feature / tab               | **Meet**        | Tab on phone, side-panel tab on desktop             |
-| Daily suggestions               | **Your Adda 3** | 3 cards, reset 06:00 IST                            |
-| Interest signal                 | **Wave** 👋     | Private until mutual                                |
-| Mutual interest                 | **Chai's on!**  | Deliberately non-romantic; never "match" in UI copy |
-| What you're here for            | **Intent**      | 1–2 chips on your profile                           |
-| Map highlight of similar people | **My tribe**    | Map mode toggle                                     |
-| Group meetup beacon             | **Flare**       | Time-boxed, tied to a booth                         |
+| Concept                         | UI name        | Notes                                               |
+| ------------------------------- | -------------- | --------------------------------------------------- |
+| The feature / tab               | **Meet**       | Tab on phone, side-panel tab on desktop             |
+| Daily suggestions               | **Today's 3**  | 3 cards, reset 06:00 IST                            |
+| Interest signal                 | **Wave** 👋    | Private until mutual                                |
+| Mutual interest                 | **Chai's on!** | Deliberately non-romantic; never "match" in UI copy |
+| What you're here for            | **Intent**     | 1–2 chips on your profile                           |
+| Map highlight of similar people | **My tribe**   | Map mode toggle                                     |
+| Group meetup beacon             | **Flare**      | Time-boxed, tied to a booth                         |
 
 ## 3. Goals, non-goals, success metrics
 
@@ -65,14 +65,14 @@ Use these words consistently in UI and code.
 
 **Metrics** (aggregate, privacy-friendly; targets for event week)
 
-| Metric                                               | Target                                                             |
-| ---------------------------------------------------- | ------------------------------------------------------------------ |
-| Joined people who reveal their Adda 3 on a given day | ≥ 60%                                                              |
-| Wave rate per revealed card                          | 20–35% (outside this range means picks are too weak or too strong) |
-| Waves that become "Chai's on!"                       | ≥ 15%                                                              |
-| Matches confirmed "we met" (button or handshake QR)  | ≥ 30%                                                              |
-| People returning on a second event day               | ≥ 40%                                                              |
-| Flares with ≥ 3 joiners                              | ≥ 50%                                                              |
+| Metric                                                | Target                                                             |
+| ----------------------------------------------------- | ------------------------------------------------------------------ |
+| Joined people who reveal their daily 3 on a given day | ≥ 60%                                                              |
+| Wave rate per revealed card                           | 20–35% (outside this range means picks are too weak or too strong) |
+| Waves that become "Chai's on!"                        | ≥ 15%                                                              |
+| Matches confirmed "we met" (button or handshake QR)   | ≥ 30%                                                              |
+| People returning on a second event day                | ≥ 40%                                                              |
+| Flares with ≥ 3 joiners                               | ≥ 50%                                                              |
 
 **Guardrails**
 
@@ -96,11 +96,11 @@ default chat app, English plus Indian languages.
 
 ## 5. Scope and phasing
 
-| Phase                                 | Ships                                                                                                                                                                                | Needs       |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
-| **0: Demo (pre-launch, client-only)** | Intent field + map props (M4), scoring library, Adda 3 UI with reveal, waves to demo people with **simulated** "Chai's on!" (labelled demo), My tribe (M3), pick sparkles on the map | Nothing new |
-| **1: Launch**                         | Server-side hands, real hidden waves, matches, block, pause, 18+ gate, match screen with Telegram opener, matches list, rate limits                                                  | L2, L4      |
-| **2: Event week**                     | Flares (M5), "we met" + handshake QR (C3), rewards and titles, Adda streak, bonus cards for in-person meetups                                                                        | C3          |
+| Phase                                 | Ships                                                                                                                                                                                 | Needs       |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| **0: Demo (pre-launch, client-only)** | Intent field + map props (M4), scoring library, Daily 3 UI with reveal, waves to demo people with **simulated** "Chai's on!" (labelled demo), My tribe (M3), pick sparkles on the map | Nothing new |
+| **1: Launch**                         | Server-side hands, real hidden waves, matches, block, pause, 18+ gate, match screen with Telegram opener, matches list, rate limits                                                   | L2, L4      |
+| **2: Event week**                     | Flares (M5), "we met" + handshake QR (C3), rewards and titles, Daily streak, bonus cards for in-person meetups                                                                        | C3          |
 
 ---
 
@@ -133,7 +133,7 @@ Existing fields: name, handles, topics (1–3, first = primary), one-liner, avat
 
 Intent is public on your profile and the map. The join form says so next to the field.
 
-### 6.2 Today's Adda 3 (M1)
+### 6.2 Today's 3 (M1)
 
 **Hand rules**
 
@@ -166,7 +166,7 @@ Intent is public on your profile and the map. The join form says so next to the 
 - Actions: **Wave 👋** (primary), **Skip**, **Show on map** (flies the camera, their bean waves).
 - Swipe right = wave, swipe left = skip. Buttons are always there; never gesture-only.
 
-**After the last card:** "That's today's Adda 3", a countdown to 06:00, a nudge toward My tribe
+**After the last card:** "That's today's 3", a countdown to 06:00, a nudge toward My tribe
 and flares, and the share card (G1).
 
 **On the map:** today's picks get a small sparkle above their bean, visible only to you, so you
@@ -265,12 +265,12 @@ enforced server-side) keep attention spread out. This is checked in simulation (
 protects first-timers from rejection, makes waves useless for spam, and makes the mutual moment
 a surprise.
 
-- **Where you can wave:** an Adda 3 card, any profile card (map or People list), the booth list.
+- **Where you can wave:** a daily 3 card, any profile card (map or People list), the booth list.
 - **Limits:**
   - 20 waves per day, shown as "14 waves left today"
   - you can un-wave before it's mutual
   - waves last until 6 Nov 23:59 IST
-- **Teaser for recipients:** "🔒 2 people waved at you. They may show up in your next Adda 3."
+- **Teaser for recipients:** "🔒 2 people waved at you. They may show up in your next picks."
   This is a count only; identities are never sent to the client.
 - **Wave feedback for the sender:** the card stamps "Waved 👋" and, on the map, the other person's
   bean briefly waves toward the camera. This is local and the other person doesn't see it.
@@ -289,7 +289,7 @@ a surprise.
     schedule is available)
   - **Message on Telegram**, which opens `https://t.me/{handle}?text={opener}`. Telegram supports
     prefilled draft text on username links, and the user still presses send. Example opener:
-    "gm Asha! Adda says we both like Privacy + Core. Chai at Hall 1 food court around 4?"
+    "gm Asha! Found you on coii: we both like Privacy + Core. Chai at Hall 1 food court around 4?"
   - **X**, when the person has no Telegram: opens their profile and copies the opener to the
     clipboard
   - **Show on map**, **We met ✓**, **Unmatch**
@@ -299,7 +299,7 @@ a surprise.
 both. Rewards:
 
 - the booth stamp for their primary topic (C2)
-- a bonus Adda 3 card tomorrow
+- a bonus card in the daily 3 tomorrow
 - an optional public "friendship string" between your beans, off by default
 
 ### 6.6 My tribe (M3)
@@ -356,7 +356,7 @@ A flare is a time-boxed group meetup that anyone who has joined can light.
 | Mechanic     | Rule                                                                                             | Why                                                                         |
 | ------------ | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
 | Daily reveal | Face-down cards at 06:00 IST                                                                     | A ritual and a reason to return, like FrogCrypto's 15-minute swamp searches |
-| Adda streak  | Flame on your bean for consecutive days you revealed your hand; never punished, just shown       | Light return habit                                                          |
+| Daily streak | Flame on your bean for consecutive days you revealed your hand; never punished, just shown       | Light return habit                                                          |
 | Bonus cards  | +1 per in-person meeting (max +3/day)                                                            | Rewards real conversations, not screen time                                 |
 | Titles       | "Connector" (5 chais), "Chai Champion" (10 met), "Flare Starter" (host a flare with ≥ 3 joiners) | Status you can show on your bean                                            |
 | Unlocks      | Cosmetics and pets (F1/F4) from meetings                                                         | Ties into the bean you care about                                           |
@@ -372,7 +372,7 @@ No public leaderboard of people, so there's nothing to rank humans by.
 
 1. Join form, with the new intent step.
 2. Your bean walks in.
-3. Toast: "Your Adda 3 is ready".
+3. Toast: "Today's 3 is ready".
 4. The Meet tab pulses.
 5. Reveal.
 6. Wave or skip.
@@ -405,7 +405,7 @@ No public leaderboard of people, so there's nothing to rank humans by.
 ```
 Phone · Meet tab (before reveal)      Phone · card                       Phone · Chai's on!
 ┌───────────────────────────┐         ┌───────────────────────────┐      ┌───────────────────────────┐
-│ Your Adda 3   resets 06:00│         │ ◀ 2 of 3            Skip ▸│      │      ☕  CHAI'S ON!  ☕     │
+│ Today's 3     resets 06:00│         │ ◀ 2 of 3            Skip ▸│      │      ☕  CHAI'S ON!  ☕     │
 │                           │         │   (bean waving)           │      │  [you bean]  clink  [Asha] │
 │  ┌────┐ ┌────┐ ┌────┐     │         │ Asha Rao ✓   📄 Looking   │      │  You both waved 👋👋       │
 │  │ ✿  │ │ ✿  │ │ ✿  │     │         │ ● Privacy  ● Core         │      │  You both: Privacy · Core │
@@ -532,7 +532,7 @@ create table flare_joins (flare_id uuid references flares on delete cascade, per
 - **Hidden waves:** identities of inbound waves never leave the server; the teaser is a count.
 - **18+ gate for Meet.** Devcon sells tickets to under-18s, who can browse the map but not wave
   or match.
-- **Pause Meet** at any time; leaving Adda deletes waves, chais and flares.
+- **Pause Meet** at any time; leaving coii deletes waves, chais and flares.
 - **Block and report** from every card, profile and chai. Blocked people are excluded both ways.
 - **Telegram hand-off only.** No DMs hosted. Every chai card carries a safety line: "Meet in
   public areas of the venue. Nobody legit asks for seed phrases or funds."

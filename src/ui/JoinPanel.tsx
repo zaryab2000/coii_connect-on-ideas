@@ -51,7 +51,7 @@ function YouSummary({ you, onEdit }: { readonly you: Person; readonly onEdit: ()
 function joinCopy(you: Person | null, editing: boolean): { title: string; blurb: string } {
   if (you === null) {
     return {
-      title: "Join the adda",
+      title: "Join coii",
       blurb: "Put your bean on the map so people into the same ideas can find you.",
     };
   }

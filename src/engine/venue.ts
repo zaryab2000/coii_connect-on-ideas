@@ -174,7 +174,7 @@ export function buildGate(layout: VenueLayout, displayFont: string): Container {
   garlandDots(garland, -168, -178, 168, -178);
   gate.addChild(garland);
   const title = new Text({
-    text: "gm adda",
+    text: "gm coii",
     style: { fontFamily: displayFont, fontWeight: "800", fontSize: 44, fill: WHITE },
     anchor: 0.5,
     x: 0,

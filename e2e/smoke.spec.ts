@@ -25,7 +25,7 @@ interface DebugHook {
 
 declare global {
   interface Window {
-    __adda?: DebugHook;
+    __coii?: DebugHook;
   }
 }
 
@@ -39,7 +39,7 @@ function collectErrors(page: Page): string[] {
 }
 
 async function waitForCrowd(page: Page): Promise<void> {
-  await page.waitForFunction(() => (window.__adda?.engine.stats().beans ?? 0) >= 1500, undefined, {
+  await page.waitForFunction(() => (window.__coii?.engine.stats().beans ?? 0) >= 1500, undefined, {
     timeout: 20_000,
   });
 }
@@ -57,10 +57,10 @@ test("tapping a person on the map selects them", async ({ page }) => {
   await page.goto("/?still");
   await waitForCrowd(page);
   await page.waitForTimeout(3000); // let the phone intro camera settle
-  await page.evaluate(() => window.__adda?.engine.focusBooth("ai"));
+  await page.evaluate(() => window.__coii?.engine.focusBooth("ai"));
   await page.waitForTimeout(1200);
   const target = await page.evaluate(() => {
-    const hook = window.__adda;
+    const hook = window.__coii;
     if (!hook) return null;
     hook.engine.pause();
     const width = window.innerWidth;
@@ -83,7 +83,7 @@ test("tapping a person on the map selects them", async ({ page }) => {
   if (!target) return;
   await page.mouse.click(target.x, target.y);
   const selected = await page.evaluate(
-    () => window.__adda?.controller.store.get().selectedId ?? null,
+    () => window.__coii?.controller.store.get().selectedId ?? null,
   );
   expect(selected).not.toBeNull();
 });
@@ -93,22 +93,22 @@ test("joining puts you in the venue and you are still there after a reload", asy
   await waitForCrowd(page);
   const id = await page.evaluate(
     () =>
-      window.__adda?.controller.actions.join({
+      window.__coii?.controller.actions.join({
         name: "Test Person",
         telegram: "test_person",
         x: null,
         topics: ["privacy", "core"],
         intent: [],
-        oneLiner: "testing the adda",
+        oneLiner: "testing coii",
         avatar: { skin: 2, hair: 0, hairColor: 0, accessory: 0 },
       }).id,
   );
   expect(id).toBeTruthy();
   await page.reload();
-  await page.waitForFunction(() => (window.__adda?.engine.stats().beans ?? 0) >= 1501, undefined, {
+  await page.waitForFunction(() => (window.__coii?.engine.stats().beans ?? 0) >= 1501, undefined, {
     timeout: 20_000,
   });
-  const you = await page.evaluate(() => window.__adda?.controller.store.get().you?.id ?? null);
+  const you = await page.evaluate(() => window.__coii?.controller.store.get().you?.id ?? null);
   expect(you).toBe(id);
   await expect(page.locator(".map-tag--you")).toHaveCount(1);
 });
@@ -123,21 +123,21 @@ test("filling in the join form walks your bean into the venue", async ({ page })
   await form.getByRole("button", { name: /Privacy/ }).click();
   await form.getByRole("button", { name: /Core/ }).click();
   await form.getByRole("checkbox").check({ force: true });
-  await form.getByRole("button", { name: "Walk into the adda" }).click();
+  await form.getByRole("button", { name: "Walk into coii" }).click();
   await expect(page.locator(".map-tag--you")).toContainText("Asha", { timeout: 15_000 });
-  const you = await page.evaluate(() => window.__adda?.controller.store.get().you?.id ?? null);
+  const you = await page.evaluate(() => window.__coii?.controller.store.get().you?.id ?? null);
   expect(you).not.toBeNull();
 });
 
 async function joinQuickly(page: Page): Promise<void> {
   await page.evaluate(() =>
-    window.__adda?.controller.actions.join({
+    window.__coii?.controller.actions.join({
       name: "Meet Tester",
       telegram: "meet_tester",
       x: null,
       topics: ["privacy", "ai"],
       intent: ["building"],
-      oneLiner: "testing the Adda 3",
+      oneLiner: "testing the daily picks",
       avatar: { skin: 1, hair: 2, hairColor: 0, accessory: 0 },
     }),
   );
@@ -152,22 +152,22 @@ async function revealCard(page: Page, n: number): Promise<void> {
 /** A card whose person has not secretly waved at you already, so a wave stays a plain wave. */
 async function plainCardIndex(page: Page): Promise<number> {
   return page.evaluate(() => {
-    const saved = JSON.parse(localStorage.getItem("adda:meet:v1") ?? "{}") as {
+    const saved = JSON.parse(localStorage.getItem("coii:meet:v1") ?? "{}") as {
       inbound?: string[];
     };
-    const hand = window.__adda?.controller.store.get().meet?.hand ?? [];
+    const hand = window.__coii?.controller.store.get().meet?.hand ?? [];
     return hand.findIndex((card) => !(saved.inbound ?? []).includes(card.personId));
   });
 }
 
-test("Meet: reveal today's Adda 3, wave at one and light up My tribe", async ({ page }) => {
+test("Meet: reveal today's 3, wave at one and light up My tribe", async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto("/?still");
   await waitForCrowd(page);
   await joinQuickly(page);
 
   await page.getByRole("button", { name: "Meet, 3 new" }).click();
-  await expect(page.getByRole("heading", { name: "Your Adda 3" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Today's 3" })).toBeVisible();
   await revealCard(page, 1);
   await revealCard(page, 2);
   await revealCard(page, 3);
@@ -185,7 +185,7 @@ test("Meet: reveal today's Adda 3, wave at one and light up My tribe", async ({ 
   const tribe = page.getByRole("button", { name: /My tribe/ });
   await tribe.click();
   await expect(tribe).toHaveAttribute("aria-pressed", "true");
-  expect(await page.evaluate(() => window.__adda?.controller.store.get().tribe)).toBe(true);
+  expect(await page.evaluate(() => window.__coii?.controller.store.get().tribe)).toBe(true);
   expect(errors).toEqual([]);
 });
 
@@ -207,6 +207,6 @@ test("Meet: before joining, the locked hand invites you in", async ({ page }) =>
   await waitForCrowd(page);
   await page.getByRole("button", { name: "Meet", exact: true }).click();
   await page.getByRole("button", { name: "Join to get your daily picks" }).click();
-  await expect(page.getByRole("heading", { name: "Join the adda" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Join coii" })).toBeVisible();
   await expect(page.getByRole("group", { name: /What are you here for/ })).toBeVisible();
 });

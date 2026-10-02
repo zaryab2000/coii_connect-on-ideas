@@ -1,6 +1,6 @@
-# Adda — pre-launch tracker
+# coii — pre-launch tracker
 
-Ideas and dev tasks to make Adda fun, game-like and worth coming back to before the first launch.
+Ideas and dev tasks to make coii fun, game-like and worth coming back to before the first launch.
 Update the **Status** column as work moves.
 
 **Status:** ☐ todo · ◐ doing · ☑ done
@@ -35,7 +35,7 @@ Mostly client-only, about 2 days, in this order:
 4. T4 dance hour on the Mumbai (IST) clock
 5. T7 easter eggs
 6. T6 three more booth jokes
-7. M1 "Today's Adda 3"
+7. M1 "Today's 3"
 8. T1 yeet golf
 9. S2 + S3 trending booth and milestones
 
@@ -52,7 +52,7 @@ Then, once the backend exists: L2–L4, C3 handshake QR, M2 waves, M5 meetup fla
 | L3  | Live arrivals via Supabase Realtime, with 60s polling fallback                           | M      | BE          | P0 for a real launch | ☐      |
 | L4  | Moderation: report button, auto-hide at 3 reports, name blocklist, admin hide            | M      | BE          | P0 for a real launch | ☐      |
 | L5  | Demo-crowd rules: hide or thin demo people once real ones arrive, with a clear label     | S      | —           | P0                   | ☐      |
-| L6  | Deploy to `gmadda.pages.dev` + Cloudflare Web Analytics                                  | S      | owner login | P0                   | ☐      |
+| L6  | Deploy to `coii.pages.dev` + Cloudflare Web Analytics                                    | S      | owner login | P0                   | ☐      |
 | L7  | Privacy page, consent copy, "delete me"                                                  | S      | —           | P0                   | ☐      |
 | L8  | Cold start: seed list (friends, speakers), QR poster, Devcon 8 India Telegram group post | S      | ORG         | P0                   | ☐      |
 
@@ -85,7 +85,7 @@ Then, once the backend exists: L2–L4, C3 handshake QR, M2 waves, M5 meetup fla
 | --- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------------------------------ | ----------------------- | ------ |
 | C1  | Chai drops: every 15 min, "Get chai" at the plaza gives a random collectible sticker, from common up to legendary (masala, cutting, golden kulhad)    | M      | BE (localStorage for the demo) | P1                      | ☐      |
 | C2  | Booth passport with 10 stamps. You earn a booth's stamp by meeting someone from that booth (see C3)                                                   | M      | BE                             | P1                      | ☐      |
-| C3  | Handshake QR: show your Adda QR, and scanning each other in person links your beans with a 🤝 string on the map and saves the contact for both of you | L      | BE                             | P1 (the killer feature) | ☐      |
+| C3  | Handshake QR: show your coii QR, and scanning each other in person links your beans with a 🤝 string on the map and saves the contact for both of you | L      | BE                             | P1 (the killer feature) | ☐      |
 | C4  | Rainbow set: meet someone from every booth to earn a "Rainbow" title and aura                                                                         | S      | BE (after C2)                  | P2                      | ☐      |
 | C5  | Real-world payoff: N stamps lets you claim a physical marigold sticker or badge at a meetup or partner booth (the frog-hat effect)                    | M      | ORG                            | P2                      | ☐      |
 | C6  | Three daily quests: "Meet someone outside your topics", "Take a dip in the liquidity pool", "Wave at 3 people at Privacy"                             | M      | BE                             | P2                      | ☐      |
@@ -94,13 +94,13 @@ Then, once the backend exists: L2–L4, C3 handshake QR, M2 waves, M5 meetup fla
 
 Full spec: [docs/prd/who-should-i-meet.md](docs/prd/who-should-i-meet.md)
 
-| ID  | Task                                                                                                                                            | Effort | Needs                            | Pri | Status |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------ | -------------------------------- | --- | ------ |
-| M1  | "Today's Adda 3": three daily picks ranked by shared topics and complementary intent (hiring ↔ looking, founder ↔ investor). Swipe Wave or Skip | M      | — (client ranking); BE for waves | P1  | ☑      |
-| M2  | Waves: send a 👋; when it's mutual, "It's a match!" confetti plus a suggested spot ("chai plaza, 4pm?")                                         | M      | BE                               | P1  | ◐      |
-| M3  | "Find my tribe" spotlight: dim everyone except people who share 2+ of your topics                                                               | S      | —                                | P1  | ☑      |
-| M4  | Intent props on beans so intent is visible on the map: hiring megaphone, résumé, laptop, briefcase                                              | S      | —                                | P2  | ☑      |
-| M5  | Meetup flares: light a beacon on a booth ("agent payments jam · 4pm · Hall 2"). It glows on the map; joining walks your bean over               | M      | BE                               | P1  | ☐      |
+| ID  | Task                                                                                                                                       | Effort | Needs                            | Pri | Status |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------ | -------------------------------- | --- | ------ |
+| M1  | "Today's 3": three daily picks ranked by shared topics and complementary intent (hiring ↔ looking, founder ↔ investor). Swipe Wave or Skip | M      | — (client ranking); BE for waves | P1  | ☑      |
+| M2  | Waves: send a 👋; when it's mutual, "It's a match!" confetti plus a suggested spot ("chai plaza, 4pm?")                                    | M      | BE                               | P1  | ◐      |
+| M3  | "Find my tribe" spotlight: dim everyone except people who share 2+ of your topics                                                          | S      | —                                | P1  | ☑      |
+| M4  | Intent props on beans so intent is visible on the map: hiring megaphone, résumé, laptop, briefcase                                         | S      | —                                | P2  | ☑      |
+| M5  | Meetup flares: light a beacon on a booth ("agent payments jam · 4pm · Hall 2"). It glows on the map; joining walks your bean over          | M      | BE                               | P1  | ☐      |
 
 ## 5. Live and social proof (it feels alive)
 

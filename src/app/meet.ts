@@ -335,7 +335,7 @@ class Meet implements MeetController {
     }
     const cards = this.deal(me, this.save, hand.day, HAND_SIZE + hand.bonus + 1, hand.cards);
     this.updateToday((h) => ({ ...h, cards, bonus: h.bonus + 1 }));
-    this.pushToast(`You met ${firstName(met)}! +1 card in today's Adda 3.`, "handshake", "success");
+    this.pushToast(`You met ${firstName(met)}! +1 card in today's picks.`, "handshake", "success");
   }
 
   // ---- cards and map ---------------------------------------------------------------------------

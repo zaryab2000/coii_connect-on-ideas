@@ -46,7 +46,7 @@ export interface MeetSave {
   readonly inboundDay: string | null;
 }
 
-const KEY = "adda:meet:v1";
+const KEY = "coii:meet:v1";
 const KEEP_DAYS = 7;
 
 export function emptySave(personId: string): MeetSave {

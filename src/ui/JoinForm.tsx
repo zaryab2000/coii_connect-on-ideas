@@ -471,7 +471,7 @@ export function JoinForm({ you, presetTopic, onDone, onCancel }: JoinFormProps) 
       <ConsentCard {...fields} />
       <div className="join-form__submit">
         <button type="submit" className="btn btn--primary btn--big">
-          {you ? "Save and walk back in" : "Walk into the adda"}
+          {you ? "Save and walk back in" : "Walk into coii"}
         </button>
         {onCancel ? (
           <button type="button" className="btn btn--quiet" onClick={onCancel}>

@@ -93,7 +93,7 @@ const SHEET: Record<PanelView["panel"], { size: SheetSize; modal: boolean; label
   profile: { size: "auto", modal: false, label: "Profile" },
   booth: { size: "peek", modal: false, label: "Booth" },
   people: { size: "tall", modal: true, label: "People" },
-  join: { size: "tall", modal: true, label: "Join the adda" },
+  join: { size: "tall", modal: true, label: "Join coii" },
   meet: { size: "tall", modal: true, label: "Meet" },
 };
 

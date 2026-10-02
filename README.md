@@ -1,10 +1,10 @@
-# gm adda
+# gm coii
 
 Find your people at Devcon by **ideas**, not logos. A live cartoon venue where every booth is a
 topic and every attendee is a tiny bean person hanging around the booths they care about. Tap
 someone to see what they want to talk about and how to reach them.
 
-> _adda_ (Hindi/Urdu): the spot where friends gather and talk for hours.
+> **coii**: connect on ideas & interests.
 
 This is the **demo** build: the crowd is generated (70% Indian, 30% international names) and
 contact buttons are disabled for demo people. Product plan: [PLAN.md](PLAN.md).
@@ -25,7 +25,7 @@ URL switches (combine with `&`):
 | `?n=800` | Crowd size (10–4000, default 1500)                           |
 | `?res=1` | Force canvas resolution (default `min(devicePixelRatio, 2)`) |
 
-In dev builds `window.__adda` exposes `{ engine, controller }` for scripting.
+In dev builds `window.__coii` exposes `{ engine, controller }` for scripting.
 
 ## Scripts
 
