@@ -1,0 +1,275 @@
+/* About overlay: a sunny hero, then the thesis, what you can do, how it works and ground rules. */
+
+.about {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Marigold sun rays rising from the floor line, with a little crowd standing on it. */
+.about__hero {
+  position: relative;
+  flex: none;
+  padding: 26px 24px 0;
+  border-bottom: var(--line);
+  background: repeating-conic-gradient(
+    from 0deg at 50% 115%,
+    var(--marigold) 0deg 8deg,
+    #ffc94d 8deg 16deg
+  );
+  text-align: center;
+}
+
+.about__kicker {
+  display: inline-block;
+  margin: 0;
+  padding: 3px 10px 0;
+  border: var(--line-thin);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  box-shadow: var(--pop-sm);
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  rotate: -3deg;
+}
+
+.about__title {
+  margin: 10px 0 0;
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-size: clamp(2.6rem, 9vw, 3.6rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 0.95;
+  text-shadow:
+    0 3px 0 var(--ink),
+    2px 3px 0 var(--ink),
+    -2px 3px 0 var(--ink);
+}
+
+.about__gm {
+  color: var(--rani);
+}
+
+.about__tagline {
+  display: inline-block;
+  margin: 10px 0 0;
+  padding: 4px 14px 1px;
+  border: var(--line-thin);
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.about__crowd {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 8px;
+  margin-bottom: -3px;
+}
+
+.about__body {
+  display: grid;
+  gap: 26px;
+  padding: 24px 28px 28px;
+  background: var(--paper);
+}
+
+.about__thesis p {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.55;
+}
+
+.about__thesis .about__lead {
+  margin-bottom: 10px;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.about__h {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.about__features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.about__feature {
+  padding: 14px 14px 12px;
+  border: var(--line-thin);
+  border-radius: var(--radius-md);
+  background: var(--floor);
+  box-shadow: var(--pop-sm);
+}
+
+.about__feature-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 8px;
+  border: var(--line-thin);
+  border-radius: 50%;
+  background: var(--paper);
+}
+
+.about__feature h4,
+.about__step h4 {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.about__feature p,
+.about__step p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.about__steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.about__step {
+  position: relative;
+  padding: 14px 14px 12px 58px;
+  border: var(--line-thin);
+  border-radius: var(--radius-md);
+  background: var(--cream);
+  counter-increment: step;
+}
+
+.about__step::before {
+  content: counter(step);
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding-top: 3px;
+  border: var(--line-thin);
+  border-radius: 50%;
+  background: var(--rani);
+  box-shadow: var(--pop-sm);
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.about__promises {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.about__promises li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.45;
+}
+
+.about__tick {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-top: -1px;
+  border: var(--line-thin);
+  border-radius: 50%;
+  background: var(--leaf);
+  color: var(--paper);
+}
+
+.about__footer {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border: var(--line);
+  border-radius: var(--radius-md);
+  background: var(--floor);
+  text-align: center;
+}
+
+.about__event,
+.about__fine {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.about__fine {
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+.about__ctas {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+@media (max-width: 767px) {
+  .about__hero {
+    padding: 22px 16px 0;
+  }
+
+  .about__body {
+    gap: 22px;
+    padding: 20px 16px 20px;
+  }
+
+  .about__crowd canvas:nth-child(n + 5) {
+    display: none;
+  }
+
+  /* Phones: icon beside the text, so six features don't become six screens. */
+  .about__feature {
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr);
+    column-gap: 12px;
+  }
+
+  .about__feature-icon {
+    grid-row: span 2;
+    margin-bottom: 0;
+  }
+
+  .about__ctas .btn {
+    flex: 1 1 100%;
+  }
+}

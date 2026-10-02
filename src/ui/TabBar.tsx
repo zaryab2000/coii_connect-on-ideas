@@ -2,7 +2,7 @@ import "@/ui/tabbar.css";
 import type { ReactNode } from "react";
 
 import { useActions, useApp } from "@/app/context";
-import type { Panel } from "@/app/store";
+import type { Overlay, Panel } from "@/app/store";
 import { BeanAvatar } from "@/ui/BeanAvatar";
 import { Icon } from "@/ui/Icon";
 import { meetTabLabel } from "@/ui/meet";
@@ -10,8 +10,9 @@ import { BadgeMark, useMeetBadge } from "@/ui/MeetBadge";
 
 type Tab = "map" | "meet" | "people" | "join";
 
-function activeTab(panel: Panel): Tab {
-  if (panel === "people" || panel === "join" || panel === "meet") return panel;
+function activeTab(panel: Panel, overlay: Overlay): Tab {
+  if (overlay === "you") return "join";
+  if (panel === "people" || panel === "meet") return panel;
   return "map";
 }
 
@@ -36,13 +37,14 @@ function TabButton(props: {
   );
 }
 
-/** Phone navigation: Map, Meet, People, and Join (which becomes You once you've joined). */
+/** Phone navigation: Map, Meet, People, and Join / You (which opens your profile overlay). */
 export function TabBar() {
   const actions = useActions();
   const panel = useApp((s) => s.panel);
+  const overlay = useApp((s) => s.overlay);
   const you = useApp((s) => s.you);
   const badge = useMeetBadge();
-  const tab = activeTab(panel);
+  const tab = activeTab(panel, overlay);
   return (
     <nav className="tabbar" aria-label="Main">
       <TabButton
@@ -79,7 +81,7 @@ export function TabBar() {
             <Icon id="waving_hand" size={26} />
           )
         }
-        onClick={() => actions.openPanel("join")}
+        onClick={() => actions.openOverlay("you")}
       />
     </nav>
   );

@@ -14,7 +14,7 @@ interface DebugHook {
       get(): {
         people: { id: string }[];
         selectedId: string | null;
-        you: { id: string } | null;
+        you: { id: string; avatar: { hair: number } } | null;
         tribe: boolean;
         meet: { hand: { personId: string }[]; waved: string[] } | null;
       };
@@ -113,20 +113,76 @@ test("joining puts you in the venue and you are still there after a reload", asy
   await expect(page.locator(".map-tag--you")).toHaveCount(1);
 });
 
-test("filling in the join form walks your bean into the venue", async ({ page }) => {
+test("the join overlay builds your bean and walks it into the venue", async ({ page }) => {
   await page.goto("/?still");
   await waitForCrowd(page);
   await page.getByRole("button", { name: "Join", exact: true }).first().click();
-  const form = page.locator("form").first();
-  await form.getByLabel("Your name").fill("Asha Rao");
-  await form.getByLabel("Telegram username").fill("asha_builds");
-  await form.getByRole("button", { name: /Privacy/ }).click();
-  await form.getByRole("button", { name: /Core/ }).click();
-  await form.getByRole("checkbox").check({ force: true });
-  await form.getByRole("button", { name: "Walk into coii" }).click();
+  const dialog = page.getByRole("dialog", { name: "Join coii" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel("Your name").fill("Asha Rao");
+  await dialog.getByLabel("Telegram username").fill("asha_builds");
+  await dialog.getByRole("button", { name: /Privacy/ }).click();
+  await dialog.getByRole("button", { name: /Core/ }).click();
+  await expect(dialog.locator(".studio__name")).toHaveText("Asha Rao");
+  await dialog.getByRole("radio", { name: "Turban" }).check({ force: true });
+  await dialog.getByRole("checkbox").check({ force: true });
+  await dialog.getByRole("button", { name: "Walk into coii" }).click();
+  await expect(dialog).toBeHidden();
   await expect(page.locator(".map-tag--you")).toContainText("Asha", { timeout: 15_000 });
-  const you = await page.evaluate(() => window.__coii?.controller.store.get().you?.id ?? null);
-  expect(you).not.toBeNull();
+  const you = await page.evaluate(() => window.__coii?.controller.store.get().you ?? null);
+  expect(you?.avatar.hair).toBe(11);
+});
+
+/** Screen positions of the first few dozen beans. */
+async function samplePositions(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const hook = window.__coii;
+    if (!hook) return "";
+    return hook.controller.store
+      .get()
+      .people.slice(0, 40)
+      .map((p) => {
+        const at = hook.engine.screenPositionOf(p.id);
+        return at ? `${Math.round(at.x)},${Math.round(at.y)}` : "-";
+      })
+      .join(" ");
+  });
+}
+
+test("About opens over the venue, which keeps moving behind it", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto("/?still");
+  await waitForCrowd(page);
+  await page.waitForTimeout(3000); // let the phone intro camera settle
+  await page.getByRole("button", { name: "About" }).click();
+  const about = page.getByRole("dialog", { name: "gm coii" });
+  await expect(about).toBeVisible();
+  await expect(about.getByText("connect on ideas & interests")).toBeVisible();
+  const before = await samplePositions(page);
+  await page.waitForTimeout(1500);
+  expect(await samplePositions(page)).not.toBe(before);
+  await page.keyboard.press("Escape");
+  await expect(about).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+test("tapping your own bean opens your profile overlay, not a side profile", async ({ page }) => {
+  await page.goto("/?still");
+  await waitForCrowd(page);
+  await joinQuickly(page);
+  await page.waitForTimeout(4000); // walk in from the gate while the camera follows
+  const at = await page.evaluate(() => {
+    const hook = window.__coii;
+    const you = hook?.controller.store.get().you;
+    if (!hook || !you) return null;
+    hook.engine.pause();
+    return hook.engine.screenPositionOf(you.id);
+  });
+  expect(at).not.toBeNull();
+  if (!at) return;
+  await page.mouse.click(at.x, at.y - 12);
+  await expect(page.getByRole("dialog", { name: "You're in" })).toBeVisible();
+  expect(await page.evaluate(() => window.__coii?.controller.store.get().selectedId)).toBeNull();
 });
 
 async function joinQuickly(page: Page): Promise<void> {
@@ -207,6 +263,7 @@ test("Meet: before joining, the locked hand invites you in", async ({ page }) =>
   await waitForCrowd(page);
   await page.getByRole("button", { name: "Meet", exact: true }).click();
   await page.getByRole("button", { name: "Join to get your daily picks" }).click();
-  await expect(page.getByRole("heading", { name: "Join coii" })).toBeVisible();
-  await expect(page.getByRole("group", { name: /What are you here for/ })).toBeVisible();
+  const dialog = page.getByRole("dialog", { name: "Join coii" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("group", { name: /What are you here for/ })).toBeVisible();
 });

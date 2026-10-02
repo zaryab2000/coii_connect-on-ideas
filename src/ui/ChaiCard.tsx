@@ -1,6 +1,5 @@
 import "@/ui/chai.css";
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import type { KeyboardEvent, RefObject, SyntheticEvent } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 
 import { useActions, useApp } from "@/app/context";
 import type { Person } from "@/data/types";
@@ -21,11 +20,11 @@ import { usePresence } from "@/ui/hooks";
 import { Glyph, Icon } from "@/ui/Icon";
 import { firstName } from "@/ui/meet";
 import { useReducedMotion } from "@/ui/meetHooks";
+import { modalCloseHandlers, OVERLAY_EXIT_MS, useModal } from "@/ui/Overlay";
 import { Toasts } from "@/ui/Toasts";
 
 const DEMO_CONTACT = "Demo profile — real people coming soon";
 const SAFETY = "Meet in public areas of the venue. Nobody legit asks for seed phrases or funds.";
-const EXIT_MS = 200;
 
 /** Today's card reasons when they are in your hand; otherwise worked out fresh. */
 function useChaiReasons(you: Person, them: Person, now: number): readonly string[] {
@@ -227,19 +226,6 @@ interface DialogProps {
   readonly onClose: () => void;
 }
 
-/** Opens as a modal on mount (focus moves in), closes on unmount (focus returns). */
-function useModal(): RefObject<HTMLDialogElement | null> {
-  const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const dialog = ref.current;
-    if (!dialog) return undefined;
-    if (!dialog.open) dialog.showModal();
-    dialog.focus();
-    return () => dialog.close();
-  }, []);
-  return ref;
-}
-
 function ChaiDialog({ you, them, chai, leaving, onClose }: DialogProps) {
   const ref = useModal();
   const titleId = useId();
@@ -252,15 +238,6 @@ function ChaiDialog({ you, them, chai, leaving, onClose }: DialogProps) {
   });
   const opener = openerText(you, them, plan.spot, plan.time);
   const reasons = useChaiReasons(you, them, plan.now);
-  const onKeyDown = (e: KeyboardEvent): void => {
-    if (e.key !== "Escape") return;
-    e.preventDefault();
-    onClose();
-  };
-  const onCancel = (e: SyntheticEvent): void => {
-    e.preventDefault();
-    onClose();
-  };
   return (
     <dialog
       ref={ref}
@@ -269,11 +246,7 @@ function ChaiDialog({ you, them, chai, leaving, onClose }: DialogProps) {
       data-leaving={leaving || undefined}
       inert={leaving}
       tabIndex={-1}
-      onKeyDown={onKeyDown}
-      onCancel={onCancel}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      {...modalCloseHandlers(onClose)}
     >
       <div className="chai__card">
         <button type="button" className="nav-btn nav-btn--close chai__close" onClick={onClose}>
@@ -354,7 +327,7 @@ export function ChaiOverlay({
   const actions = useActions();
   const shown = useShownChai(viewing);
   const celebrate = useApp((s) => s.meet?.celebrate ?? null);
-  const items = usePresence(shown, EXIT_MS);
+  const items = usePresence(shown, OVERLAY_EXIT_MS);
   const close = (): void => {
     if (shown !== null && shown === celebrate) actions.dismissChai(shown);
     onClose();

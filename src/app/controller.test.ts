@@ -116,13 +116,54 @@ describe("controller panels and map taps", () => {
       joinTopic: null,
     });
   });
+});
 
-  it("startJoin opens the form with a topic preset that other panels clear", () => {
+describe("controller overlays", () => {
+  it("startJoin opens your profile overlay with a topic preset that closing clears", () => {
     const { store, actions } = setup();
-    actions.startJoin("defi");
-    expect(store.get()).toMatchObject({ panel: "join", joinTopic: "defi" });
     actions.openPanel("people");
-    expect(store.get().joinTopic).toBeNull();
+    actions.startJoin("defi");
+    expect(store.get()).toMatchObject({ overlay: "you", joinTopic: "defi", panel: "people" });
+    actions.closeOverlay();
+    expect(store.get()).toMatchObject({ overlay: "none", joinTopic: null, panel: "people" });
+  });
+
+  it("About opens over whatever panel is showing and leaves it alone", () => {
+    const { store, actions } = setup();
+    actions.locate("a");
+    actions.openOverlay("about");
+    expect(store.get()).toMatchObject({ overlay: "about", panel: "profile", selectedId: "a" });
+    actions.closeOverlay();
+    expect(store.get()).toMatchObject({ overlay: "none", panel: "profile" });
+  });
+
+  it("tapping your own bean opens your profile overlay instead of a profile panel", () => {
+    const { store, actions, engine } = setup();
+    const you = actions.join(JOIN);
+    engine.emitSelect("a");
+    engine.emitSelect(you.id);
+    expect(store.get()).toMatchObject({ overlay: "you", panel: "none", selectedId: null });
+    expect(engine.calls.at(-1)).toEqual({ method: "select", args: [null] });
+  });
+
+  it("picking yourself from a list opens your overlay; Show me on map flies there", () => {
+    const { store, actions, engine } = setup();
+    const you = actions.join(JOIN);
+    actions.selectPerson(you.id);
+    expect(store.get()).toMatchObject({ overlay: "you", panel: "none" });
+    actions.locate(you.id);
+    expect(store.get()).toMatchObject({ overlay: "none", panel: "none", selectedId: you.id });
+    expect(engine.calls.at(-1)).toEqual({ method: "locate", args: [you.id] });
+  });
+
+  it("opening a booth or someone else's profile gets the overlay out of the way", () => {
+    const { store, actions } = setup();
+    actions.openOverlay("about");
+    actions.openBooth("ai");
+    expect(store.get()).toMatchObject({ overlay: "none", panel: "booth" });
+    actions.openOverlay("you");
+    actions.locate("b");
+    expect(store.get()).toMatchObject({ overlay: "none", panel: "profile", selectedId: "b" });
   });
 });
 
@@ -149,11 +190,12 @@ describe("controller map controls", () => {
 });
 
 describe("controller join and leave", () => {
-  it("join adds you, spawns your bean at the gate and celebrates", () => {
+  it("join closes the overlay, spawns your bean at the gate and celebrates", () => {
     const { store, actions, engine } = setup();
     actions.startJoin(null);
     const you = actions.join(JOIN);
     const state = store.get();
+    expect(state.overlay).toBe("none");
     expect(you).toMatchObject({ name: "Zara Khan", isYou: true, isDemo: false });
     expect(state.you).toBe(you);
     expect(state.people.at(-1)).toBe(you);
@@ -172,15 +214,16 @@ describe("controller join and leave", () => {
     expect(store.get().toasts.map((t) => t.tone)).toEqual(["success", "success"]);
   });
 
-  it("leave removes you, closes your own profile and says goodbye", () => {
+  it("leave removes you, closes your profile overlay and says goodbye", () => {
     const { store, actions, engine } = setup();
     const you = actions.join(JOIN);
     actions.locate(you.id);
+    actions.openOverlay("you");
     actions.leave();
     const state = store.get();
     expect(state.you).toBeNull();
     expect(state.people.some((p) => p.id === you.id)).toBe(false);
-    expect(state).toMatchObject({ selectedId: null, panel: "none" });
+    expect(state).toMatchObject({ selectedId: null, panel: "none", overlay: "none" });
     expect(engine.present.has(you.id)).toBe(false);
     expect(state.toasts.at(-1)).toMatchObject({ tone: "info", icon: "waving_hand" });
   });

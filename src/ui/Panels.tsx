@@ -7,7 +7,6 @@ import { topicById } from "@/data/topics";
 import type { TopicId } from "@/data/types";
 import { BoothPanel } from "@/ui/BoothPanel";
 import { usePresence } from "@/ui/hooks";
-import { JoinPanel } from "@/ui/JoinPanel";
 import { meetTabLabel } from "@/ui/meet";
 import { BadgeMark, useMeetBadge } from "@/ui/MeetBadge";
 import { MeetPanel } from "@/ui/MeetPanel";
@@ -82,8 +81,6 @@ export function PanelContent({
       return view.topic ? <BoothPanel topic={view.topic} chrome={chrome} /> : null;
     case "people":
       return <PeopleList chrome={chrome} query={query.query} onQuery={query.onQuery} />;
-    case "join":
-      return <JoinPanel chrome={chrome} />;
     case "meet":
       return <MeetPanel chrome={chrome} />;
   }
@@ -93,7 +90,6 @@ const SHEET: Record<PanelView["panel"], { size: SheetSize; modal: boolean; label
   profile: { size: "auto", modal: false, label: "Profile" },
   booth: { size: "peek", modal: false, label: "Booth" },
   people: { size: "tall", modal: true, label: "People" },
-  join: { size: "tall", modal: true, label: "Join coii" },
   meet: { size: "tall", modal: true, label: "Meet" },
 };
 
@@ -151,15 +147,15 @@ export function PhoneSheets({
   ));
 }
 
-type DeskTab = "people" | "meet" | "join";
+type DeskTab = "people" | "meet";
 
-const DESK_TABS: readonly DeskTab[] = ["people", "meet", "join"];
+const DESK_TABS: readonly DeskTab[] = ["people", "meet"];
 
 function isDeskTab(panel: Panel): panel is DeskTab {
-  return panel === "people" || panel === "meet" || panel === "join";
+  return panel === "people" || panel === "meet";
 }
 
-/** The People/Meet/Join tab to show; remembers the last one while a profile or booth is open. */
+/** The People/Meet tab to show; remembers the last one while a profile or booth is open. */
 function useDeskTab(panel: Panel): DeskTab {
   const [lastTab, setLastTab] = useState<DeskTab>("people");
   if (isDeskTab(panel) && panel !== lastTab) setLastTab(panel);
@@ -170,14 +166,12 @@ function detailOf(view: PanelView | null): PanelView | null {
   return view && (view.panel === "profile" || view.panel === "booth") ? view : null;
 }
 
-function tabName(tab: DeskTab, joined: boolean): string {
-  if (tab === "people") return "People";
-  if (tab === "meet") return "Meet";
-  return joined ? "You" : "Join";
+function tabName(tab: DeskTab): string {
+  return tab === "people" ? "People" : "Meet";
 }
 
 /** Back button for a desktop detail view: to the list it came from, else to the current tab. */
-function useDeskChrome(detail: PanelView | null, tab: DeskTab, joined: boolean): PanelChrome {
+function useDeskChrome(detail: PanelView | null, tab: DeskTab): PanelChrome {
   const actions = useActions();
   const boothTopic = useApp((s) => s.boothTopic);
   const returnTo = useReturnTo(detail?.panel ?? "none");
@@ -186,14 +180,17 @@ function useDeskChrome(detail: PanelView | null, tab: DeskTab, joined: boolean):
       ? backTo(returnTo, boothTopic, (next) => actions.openPanel(next))
       : null;
   return {
-    back: fromList ?? { label: tabName(tab, joined), onBack: () => actions.openPanel(tab) },
+    back: fromList ?? { label: tabName(tab), onBack: () => actions.openPanel(tab) },
     onClose: null,
   };
 }
 
-function SideTabs({ tab, detail, joined }: { tab: DeskTab; detail: boolean; joined: boolean }) {
+/** People and Meet switch the side panel; Join / You opens your profile overlay. */
+function SideTabs({ tab, detail }: { readonly tab: DeskTab; readonly detail: boolean }) {
   const actions = useActions();
   const badge = useMeetBadge();
+  const joined = useApp((s) => s.you !== null);
+  const youOpen = useApp((s) => s.overlay === "you");
   return (
     <nav className="side__tabs" aria-label="Panels">
       {DESK_TABS.map((id) => (
@@ -205,21 +202,29 @@ function SideTabs({ tab, detail, joined }: { tab: DeskTab; detail: boolean; join
           aria-label={id === "meet" ? meetTabLabel(badge) : undefined}
           onClick={() => actions.openPanel(id)}
         >
-          {tabName(id, joined)}
+          {tabName(id)}
           {id === "meet" ? <BadgeMark badge={badge} /> : null}
         </button>
       ))}
+      <button
+        type="button"
+        className="side__tab"
+        aria-haspopup="dialog"
+        aria-expanded={youOpen}
+        onClick={() => actions.openOverlay("you")}
+      >
+        {joined ? "You" : "Join"}
+      </button>
     </nav>
   );
 }
 
-/** Desktop: a side panel with People / Meet / Join tabs that also hosts profile and booth details. */
+/** Desktop: a side panel with People / Meet tabs that also hosts profile and booth details. */
 export function SidePanel({ query }: { readonly query: QueryState }) {
   const view = usePanelView();
-  const joined = useApp((s) => s.you !== null);
   const tab = useDeskTab(view?.panel ?? "none");
   const detail = detailOf(view);
-  const chrome = useDeskChrome(detail, tab, joined);
+  const chrome = useDeskChrome(detail, tab);
   const bodyRef = useRef<HTMLDivElement>(null);
   const detailKey = detail ? `${detail.panel}:${detail.personId}:${detail.topic}` : null;
   useEffect(() => {
@@ -230,7 +235,7 @@ export function SidePanel({ query }: { readonly query: QueryState }) {
   return (
     <aside className="side" aria-label="People and profiles">
       <div className="side__card">
-        <SideTabs tab={tab} detail={detail !== null} joined={joined} />
+        <SideTabs tab={tab} detail={detail !== null} />
         <div className="side__body" ref={bodyRef} tabIndex={-1}>
           <PanelContent
             view={detail ?? listView}

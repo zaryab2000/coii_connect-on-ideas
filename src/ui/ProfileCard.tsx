@@ -6,14 +6,7 @@ import { topicById } from "@/data/topics";
 import type { Person } from "@/data/types";
 import { BeanAvatar } from "@/ui/BeanAvatar";
 import { Glyph, Icon } from "@/ui/Icon";
-import {
-  Awning,
-  IntentChips,
-  LeaveButton,
-  PanelNav,
-  TopicChips,
-  topicVars,
-} from "@/ui/PanelChrome";
+import { Awning, IntentChips, PanelNav, TopicChips, topicVars } from "@/ui/PanelChrome";
 import type { PanelChrome } from "@/ui/PanelChrome";
 import { WaveButton } from "@/ui/WaveButton";
 
@@ -22,7 +15,6 @@ const DEMO_CONTACT = "Demo profile — real people coming soon";
 function Badges({ person }: { readonly person: Person }) {
   return (
     <ul className="badges" aria-label="Badges">
-      {person.isYou ? <li className="badge badge--you">That's you!</li> : null}
       {person.telegramVerified ? (
         <li className="badge badge--tg">
           <Glyph name="check" size={14} />
@@ -97,33 +89,7 @@ function OthersActions({ person }: { readonly person: Person }) {
   );
 }
 
-function YourActions({ person }: { readonly person: Person }) {
-  const actions = useActions();
-  return (
-    <div className="profile__actions">
-      <div className="profile__row">
-        <button
-          type="button"
-          className="btn btn--secondary"
-          onClick={() => actions.locate(person.id)}
-        >
-          <Glyph name="pin" size={20} />
-          Show on map
-        </button>
-        <button
-          type="button"
-          className="btn btn--secondary"
-          onClick={() => actions.startJoin(null)}
-        >
-          Edit my profile
-        </button>
-      </div>
-      <LeaveButton />
-    </div>
-  );
-}
-
-/** A person's card: who they are, what they're into, and how to reach them. */
+/** Someone else's card: who they are, what they're into, and how to reach them. */
 export function ProfileCard({
   person,
   chrome,
@@ -161,7 +127,7 @@ export function ProfileCard({
       </header>
       <div className="panel__scroll profile__body">
         {person.oneLiner ? <p className="bubble">{person.oneLiner}</p> : null}
-        {person.isYou ? <YourActions person={person} /> : <OthersActions person={person} />}
+        <OthersActions person={person} />
         <p className="safety">
           <Icon id="shield" size={18} />
           Tip: nobody legit will ask for your seed phrase or funds.

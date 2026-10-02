@@ -2,13 +2,11 @@ import { useId, useState } from "react";
 import type { CSSProperties, FormEvent, ReactNode } from "react";
 
 import { useActions } from "@/app/context";
-import { SKIN_TONES } from "@/data/avatar";
 import { INTENTS, INTENTS_MAX } from "@/data/intents";
 import { TOPICS } from "@/data/topics";
 import type { Person, TopicId } from "@/data/types";
-import { css } from "@/engine/palette";
 import { randomAvatar } from "@/ui/avatar";
-import { BeanAvatar } from "@/ui/BeanAvatar";
+import { CharacterStudio } from "@/ui/CharacterStudio";
 import { Glyph, Icon } from "@/ui/Icon";
 import {
   draftFrom,
@@ -264,48 +262,6 @@ function IntentQuestion({ draft, update }: Pick<FieldsProps, "draft" | "update">
   );
 }
 
-function BeanQuestion({ draft, update }: Pick<FieldsProps, "draft" | "update">) {
-  const primary: TopicId = draft.topics[0] ?? "ai";
-  const skinName = useId();
-  return (
-    <Question title="Your bean" hint="This is you on the map." group>
-      <div className="bean-maker">
-        <div className="bean-maker__stage rangoli-disc" style={topicVars(primary)}>
-          <BeanAvatar avatar={draft.avatar} topic={primary} size={104} face="happy" />
-        </div>
-        <div className="bean-maker__controls">
-          <button
-            type="button"
-            className="btn btn--secondary"
-            onClick={() => update({ avatar: randomAvatar(draft.avatar.skin) })}
-          >
-            <Glyph name="dice" size={22} />
-            Reroll look
-          </button>
-          <div className="swatches" role="radiogroup" aria-label="Skin tone">
-            {SKIN_TONES.map((tone, index) => (
-              <label
-                key={tone}
-                className="swatch"
-                style={{ "--swatch": css(tone) } as CSSProperties}
-              >
-                <input
-                  type="radio"
-                  name={skinName}
-                  className="visually-hidden"
-                  checked={draft.avatar.skin === index}
-                  onChange={() => update({ avatar: { ...draft.avatar, skin: index } })}
-                />
-                <span className="visually-hidden">Skin tone {index + 1}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      </div>
-    </Question>
-  );
-}
-
 function useJoinIds(): Record<JoinField, string> {
   const base = useId();
   return {
@@ -461,27 +417,41 @@ export function JoinForm({ you, presetTopic, onDone, onCancel }: JoinFormProps) 
 
   return (
     <form className="join-form" noValidate onSubmit={onSubmit}>
-      {you ? null : <TelegramSoon />}
-      <NameQuestion {...fields} touch={touch} />
-      <HandlesQuestion {...fields} touch={touch} />
-      <TopicsQuestion {...fields} />
-      <IntentQuestion draft={draft} update={update} />
-      <OneLinerQuestion {...fields} />
-      <BeanQuestion draft={draft} update={update} />
-      <ConsentCard {...fields} />
-      <div className="join-form__submit">
-        <button type="submit" className="btn btn--primary btn--big">
-          {you ? "Save and walk back in" : "Walk into coii"}
-        </button>
-        {onCancel ? (
-          <button type="button" className="btn btn--quiet" onClick={onCancel}>
-            Cancel
-          </button>
-        ) : null}
-        <p className="join-form__note">
-          Saved in this browser only for now. You can leave anytime.
-        </p>
+      <div className="join-form__questions">
+        {you ? null : <TelegramSoon />}
+        <NameQuestion {...fields} touch={touch} />
+        <HandlesQuestion {...fields} touch={touch} />
+        <TopicsQuestion {...fields} />
+        <IntentQuestion draft={draft} update={update} />
+        <OneLinerQuestion {...fields} />
+      </div>
+      <CharacterStudio draft={draft} update={update} />
+      <div className="join-form__finish">
+        <ConsentCard {...fields} />
+        <JoinSubmit editing={you !== null} onCancel={onCancel} />
       </div>
     </form>
+  );
+}
+
+function JoinSubmit({
+  editing,
+  onCancel,
+}: {
+  readonly editing: boolean;
+  readonly onCancel: (() => void) | null;
+}) {
+  return (
+    <div className="join-form__submit">
+      <button type="submit" className="btn btn--primary btn--big">
+        {editing ? "Save and walk back in" : "Walk into coii"}
+      </button>
+      {onCancel ? (
+        <button type="button" className="btn btn--quiet" onClick={onCancel}>
+          Cancel
+        </button>
+      ) : null}
+      <p className="join-form__note">Saved in this browser only for now. You can leave anytime.</p>
+    </div>
   );
 }

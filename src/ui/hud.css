@@ -127,8 +127,22 @@
   opacity: 0;
 }
 
-.hud__fit {
+.hud__about {
   margin-left: auto;
+  pointer-events: auto;
+}
+
+/* Phones show the info icon alone; the label still names the button for screen readers. */
+.hud__about-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.hud__fit {
   pointer-events: auto;
 }
 
@@ -272,6 +286,28 @@
 
   .wordmark__sub {
     display: block;
+  }
+
+  .hud__about {
+    display: inline-flex;
+    gap: 6px;
+    width: auto;
+    padding: 3px 14px 0 10px;
+    font-family: var(--font-display);
+    font-size: 0.98rem;
+    font-weight: 800;
+  }
+
+  .hud__about .glyph {
+    margin-top: -3px;
+  }
+
+  .hud__about-label {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
   }
 
   .hud__chips-row {

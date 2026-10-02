@@ -3,18 +3,21 @@ import type { RefObject } from "react";
 
 import { useActions, useApp } from "@/app/context";
 import { MapHost } from "@/app/MapHost";
-import type { Panel } from "@/app/store";
+import type { Overlay, Panel } from "@/app/store";
 import type { EngineApi } from "@/engine/types";
+import { AboutOverlay } from "@/ui/AboutOverlay";
 import { ChaiOverlay } from "@/ui/ChaiCard";
-import { useHeightVar, useMediaQuery } from "@/ui/hooks";
+import { useHeightVar, useMediaQuery, usePresence } from "@/ui/hooks";
 import { Hud } from "@/ui/Hud";
 import { OpenChaiContext } from "@/ui/meetHooks";
+import { OVERLAY_EXIT_MS } from "@/ui/Overlay";
 import { PhoneSheets, SidePanel } from "@/ui/Panels";
 import type { QueryState } from "@/ui/Panels";
 import type { PeopleQuery } from "@/ui/people";
 import { DEFAULT_QUERY } from "@/ui/PeopleList";
 import { TabBar } from "@/ui/TabBar";
 import { Toasts } from "@/ui/Toasts";
+import { YouOverlay } from "@/ui/YouOverlay";
 
 const DESKTOP = "(min-width: 768px)";
 
@@ -77,7 +80,7 @@ interface LayoutFlags {
 
 /** Panels that open as a tall phone sheet over most of the map. */
 function isTall(panel: Panel): boolean {
-  return panel === "people" || panel === "join" || panel === "meet";
+  return panel === "people" || panel === "meet";
 }
 
 function useLayoutFlags(): LayoutFlags {
@@ -113,6 +116,24 @@ function PanelArea({ flags, query, onSheetHeight }: PanelAreaProps) {
       />
       <TabBar />
     </>
+  );
+}
+
+/** About or your profile, centred over everything; fades out when closed or swapped. */
+function Overlays() {
+  const actions = useActions();
+  const overlay = useApp((s) => s.overlay);
+  const items = usePresence<Exclude<Overlay, "none">>(
+    overlay === "none" ? null : overlay,
+    OVERLAY_EXIT_MS,
+  );
+  const onClose = (): void => actions.closeOverlay();
+  return items.map(({ key, value, leaving }) =>
+    value === "about" ? (
+      <AboutOverlay key={key} leaving={leaving} onClose={onClose} />
+    ) : (
+      <YouOverlay key={key} leaving={leaving} onClose={onClose} />
+    ),
   );
 }
 
@@ -160,6 +181,7 @@ export function App({ engine }: { readonly engine: EngineApi }) {
           query={{ query, onQuery: setQuery }}
           onSheetHeight={onSheetHeight}
         />
+        <Overlays />
         <ChaiOverlay viewing={viewingChai} onClose={closeChai} />
       </div>
     </OpenChaiContext.Provider>

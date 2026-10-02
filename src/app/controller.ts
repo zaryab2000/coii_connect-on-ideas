@@ -1,7 +1,7 @@
 import { createMeet, realClock } from "@/app/meet";
 import type { MeetActions, MeetClock, MeetController } from "@/app/meet";
 import { createStore } from "@/app/store";
-import type { AppState, Panel, Store, Toast } from "@/app/store";
+import type { AppState, Overlay, Panel, Store, Toast } from "@/app/store";
 import { clearYou, saveYou } from "@/data/localUser";
 import type { PeopleSource } from "@/data/source";
 import { topicById } from "@/data/topics";
@@ -23,9 +23,12 @@ export interface Actions extends MeetActions {
   locate(id: string): void;
   openBooth(topic: TopicId): void;
   openPanel(panel: Panel): void;
-  /** Opens the join form, optionally with a topic preselected (or added, when editing). */
-  startJoin(topic: TopicId | null): void;
   closePanel(): void;
+  /** Shows About or your own profile as a centred overlay above the moving venue. */
+  openOverlay(overlay: Exclude<Overlay, "none">): void;
+  closeOverlay(): void;
+  /** Opens your profile overlay on the form, optionally with a topic preselected (or added). */
+  startJoin(topic: TopicId | null): void;
   toggleHighlight(topic: TopicId): void;
   clearHighlight(): void;
   fit(): void;
@@ -117,38 +120,73 @@ function toastActions(store: AppStore): ToastActions {
   };
 }
 
+function isYourId(store: AppStore, id: string | null): boolean {
+  return id !== null && store.get().you?.id === id;
+}
+
+/** Your own bean opens the "you" overlay instead of a profile panel. */
+function openYou(engine: EngineApi, store: AppStore): void {
+  engine.select(null);
+  store.set((s) => ({
+    overlay: "you",
+    selectedId: null,
+    panel: s.panel === "profile" ? "none" : s.panel,
+    framed: false,
+  }));
+}
+
+/** Flies to your bean with every panel and overlay out of the way, so you can see yourself. */
+function showYouOnMap(engine: EngineApi, store: AppStore, id: string): void {
+  store.set({ selectedId: id, panel: "none", overlay: "none", framed: false, joinTopic: null });
+  engine.locate(id);
+}
+
 type PanelActions = Pick<
   Actions,
-  "selectPerson" | "locate" | "openBooth" | "openPanel" | "startJoin" | "closePanel"
+  | "selectPerson"
+  | "locate"
+  | "openBooth"
+  | "openPanel"
+  | "closePanel"
+  | "openOverlay"
+  | "closeOverlay"
+  | "startJoin"
 >;
 
 function panelActions(engine: EngineApi, store: AppStore): PanelActions {
   const openPanel = (panel: Panel): void => {
     if (panel !== "profile") deselect(engine, store);
-    store.set(panel === "join" ? { panel } : { panel, joinTopic: null });
+    store.set({ panel });
   };
   return {
     selectPerson(id) {
+      if (isYourId(store, id)) return openYou(engine, store);
       store.set({ selectedId: id, panel: id ? "profile" : "none", framed: false });
       engine.select(id);
     },
     locate(id) {
-      store.set({ selectedId: id, panel: "profile", framed: true });
+      if (isYourId(store, id)) return showYouOnMap(engine, store, id);
+      store.set({ selectedId: id, panel: "profile", overlay: "none", framed: true });
       engine.locate(id);
     },
     openBooth(topic) {
       deselect(engine, store);
-      store.set({ boothTopic: topic, panel: "booth", framed: true });
+      store.set({ boothTopic: topic, panel: "booth", overlay: "none", framed: true });
       engine.focusBooth(topic);
     },
     openPanel,
-    startJoin(topic) {
-      openPanel("join");
-      store.set({ joinTopic: topic });
-    },
     closePanel() {
       deselect(engine, store);
-      store.set({ panel: "none", framed: false, joinTopic: null });
+      store.set({ panel: "none", framed: false });
+    },
+    openOverlay(overlay) {
+      store.set({ overlay, joinTopic: null });
+    },
+    closeOverlay() {
+      store.set({ overlay: "none", joinTopic: null });
+    },
+    startJoin(topic) {
+      store.set({ overlay: "you", joinTopic: topic });
     },
   };
 }
@@ -191,6 +229,7 @@ function youActions(
         you: person,
         people: [...s.people, person],
         panel: "none",
+        overlay: "none",
         selectedId: null,
         framed: false,
         joinTopic: null,
@@ -210,6 +249,7 @@ function youActions(
     },
     leave() {
       if (!removeYou(engine, store)) return;
+      store.set({ overlay: "none", joinTopic: null });
       meet.forget();
       toasts.pushToast("You left coii. Come back anytime.", "waving_hand", "info");
     },
@@ -220,10 +260,12 @@ function youActions(
 function followEngine(engine: EngineApi, store: AppStore): void {
   engine.on("ready", () => store.set({ ready: true }));
   engine.on("select", (id) => {
+    if (isYourId(store, id)) openYou(engine, store);
     // The engine centres a tapped bean, so the phone layout can lift it above the sheet.
-    if (id) store.set({ selectedId: id, panel: "profile", framed: true });
+    else if (id) store.set({ selectedId: id, panel: "profile", framed: true });
     else if (store.get().panel === "profile")
       store.set({ selectedId: null, panel: "none", framed: false });
+    else store.set({ selectedId: null });
   });
   engine.on("boothTap", (topic) => {
     deselect(engine, store);
@@ -252,6 +294,7 @@ export function createController(engine: EngineApi, options: ControllerOptions):
     selectedId: null,
     boothTopic: null,
     panel: "none",
+    overlay: "none",
     highlight: [],
     framed: false,
     joinTopic: null,

@@ -4,7 +4,10 @@ import type { IconId, Person, TopicId } from "@/data/types";
 import type { Card } from "@/match/hand";
 import type { Chai } from "@/match/storage";
 
-export type Panel = "none" | "profile" | "booth" | "people" | "join" | "meet";
+export type Panel = "none" | "profile" | "booth" | "people" | "meet";
+
+/** Centred cards above everything else; the venue keeps moving behind them. */
+export type Overlay = "none" | "about" | "you";
 
 export interface Toast {
   readonly id: number;
@@ -41,6 +44,8 @@ export interface AppState {
   readonly selectedId: string | null;
   readonly boothTopic: TopicId | null;
   readonly panel: Panel;
+  /** About, or your own profile (join, view, edit). */
+  readonly overlay: Overlay;
   readonly highlight: readonly TopicId[];
   /**
    * True while the camera is centred on the selected person or booth (after `locate` or a booth

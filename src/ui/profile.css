@@ -82,12 +82,6 @@
   color: var(--ink-soft);
 }
 
-.badge--you {
-  background: var(--rani);
-  color: var(--paper);
-  text-shadow: 0 1px 0 var(--ink);
-}
-
 .profile__body {
   padding-top: 2px;
   padding-bottom: 14px;

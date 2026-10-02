@@ -117,7 +117,7 @@ function TopicHighlights() {
   );
 }
 
-/** Heads-up display over the map: wordmark, live count, fit button and topic highlights. */
+/** Heads-up display over the map: wordmark, live count, About, fit button and topic highlights. */
 export function Hud({ ref }: { readonly ref: Ref<HTMLDivElement> }) {
   const actions = useActions();
   return (
@@ -125,6 +125,15 @@ export function Hud({ ref }: { readonly ref: Ref<HTMLDivElement> }) {
       <div className="hud__top">
         <Wordmark />
         <LivePill />
+        <button
+          type="button"
+          className="icon-btn hud__about"
+          aria-haspopup="dialog"
+          onClick={() => actions.openOverlay("about")}
+        >
+          <Glyph name="info" size={22} />
+          <span className="hud__about-label">About</span>
+        </button>
         <button
           type="button"
           className="icon-btn hud__fit"

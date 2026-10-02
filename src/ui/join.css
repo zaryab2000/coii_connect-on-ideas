@@ -1,11 +1,19 @@
+/* Your profile overlay: a rani header band over a lilac "form floor". */
 .join__band {
-  padding-bottom: 16px;
+  position: relative;
+  flex: none;
+  padding: 0 24px 18px;
+  border-bottom: var(--line);
   background: var(--rani);
   color: var(--ink);
 }
 
+.join__band .awning {
+  margin: 0 -24px;
+}
+
 .join__title {
-  margin: 16px 0 4px;
+  margin: 18px 56px 4px 0;
   color: var(--paper);
   font-size: 1.65rem;
   line-height: 1.05;
@@ -19,7 +27,8 @@
 }
 
 /* Google-Forms feel: white question cards on the lilac floor. */
-.join .panel__scroll {
+.join__scroll {
+  padding: 0 24px 24px;
   background: var(--floor);
 }
 
@@ -27,7 +36,63 @@
 .you-summary {
   display: grid;
   gap: 14px;
-  padding: 16px 0 8px;
+  padding: 20px 0 8px;
+}
+
+.join-form__questions,
+.join-form__finish {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* Wide screens: the character studio stays in view on the left while you fill in the form. */
+@media (min-width: 900px) {
+  .join-form {
+    grid-template-areas:
+      "studio questions"
+      "studio finish";
+    grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
+    align-items: start;
+    column-gap: 24px;
+  }
+
+  .join-form__questions {
+    grid-area: questions;
+  }
+
+  .join-form__finish {
+    grid-area: finish;
+  }
+
+  .studio {
+    position: sticky;
+    top: 20px;
+    grid-area: studio;
+  }
+
+  .you-summary {
+    grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
+    align-items: start;
+    gap: 24px;
+    max-width: 880px;
+    margin-inline: auto;
+  }
+}
+
+@media (max-width: 767px) {
+  .join__band {
+    padding: 0 16px 16px;
+  }
+
+  .join__band .awning {
+    margin: 0 -16px;
+  }
+
+  .join__scroll {
+    padding: 0 14px 20px;
+  }
 }
 
 .q-card {
@@ -257,32 +322,176 @@ fieldset.q-card > .q-card__title + * {
   line-height: 1;
 }
 
-/* ---- bean maker ----------------------------------------------------------------------------- */
+/* ---- character studio ----------------------------------------------------------------------- */
 
-.bean-maker {
+.studio {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: var(--line);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  box-shadow: var(--pop-sm);
+}
+
+.studio__head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
+  justify-content: space-between;
+  gap: 10px;
 }
 
-.bean-maker__stage {
-  width: 124px;
-  height: 124px;
+.studio__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1.1;
 }
 
-.bean-maker__controls {
+.studio__reroll {
+  min-height: 40px;
+  padding-block: 6px 3px;
+}
+
+.studio__hint {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+/* The profile card people will see, updating as you type and pick. */
+.studio__preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 12px 14px;
+  border: var(--line-thin);
+  border-radius: var(--radius-md);
+  background: var(--floor);
+  text-align: center;
+}
+
+.studio__stage {
+  width: 184px;
+  height: 184px;
+}
+
+.studio__name {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.studio__name[data-empty] {
+  color: var(--ink-faint);
+}
+
+.studio__handles {
+  margin: 0;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.studio__empty {
+  margin: 0;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+
+.studio__preview .topic-chips,
+.studio__preview .intent-chips {
+  justify-content: center;
+}
+
+.studio__preview .bubble {
+  align-self: stretch;
+  margin: 4px 0 0;
+  text-align: left;
+}
+
+.studio__pickers {
   display: grid;
-  flex: 1 1 150px;
-  gap: 12px;
-  justify-items: start;
+  gap: 14px;
 }
 
-.swatches {
+.studio__group {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.studio__legend {
+  margin-bottom: 8px;
+  padding: 0;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.studio__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 8px;
+  padding-left: 2px;
+}
+
+/* One look option: your own bean wearing it, on a little sticker tile. */
+.look {
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(3, 32px);
-  gap: 12px;
-  padding-left: 4px;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border: var(--line-thin);
+  border-radius: 14px;
+  background: var(--cream);
+  box-shadow: var(--pop-sm);
+  cursor: pointer;
+  transition:
+    background-color 140ms var(--ease-out),
+    box-shadow 140ms var(--ease-out);
+}
+
+.look:has(:checked) {
+  background: var(--marigold);
+  box-shadow:
+    0 0 0 3px var(--paper),
+    0 0 0 5.5px var(--ink);
+}
+
+.look:has(:focus-visible) {
+  outline: 3px solid var(--rani);
+  outline-offset: 5px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .look:hover {
+    background: var(--paper);
+  }
+
+  .look:has(:checked):hover {
+    background: var(--marigold);
+  }
+}
+
+@media (max-width: 767px) {
+  .studio {
+    padding: 14px 12px;
+  }
+
+  .studio__stage {
+    width: 156px;
+    height: 156px;
+  }
 }
 
 .swatch {
@@ -396,8 +605,8 @@ fieldset.q-card > .q-card__title + * {
 }
 
 .you-card__bean {
-  width: 116px;
-  height: 116px;
+  width: 184px;
+  height: 184px;
 }
 
 .you-card__name {
