@@ -45,16 +45,17 @@ Then, once the backend exists: L2–L4, C3 handshake QR, M2 waves, M5 meetup fla
 
 ## 0. Launch must-haves (blocking, not fun)
 
-| ID  | Task                                                                                     | Effort | Needs       | Pri                  | Status |
-| --- | ---------------------------------------------------------------------------------------- | ------ | ----------- | -------------------- | ------ |
-| L1  | Real-phone pass on iPhone + Android: FPS, pinch, long-press, sheets, keyboard            | S      | —           | P0                   | ☐      |
-| L2  | Real sign-ups: Supabase table + RLS, Telegram Login, open form, behind `PeopleSource`    | L      | BE          | P0 for a real launch | ☐      |
-| L3  | Live arrivals via Supabase Realtime, with 60s polling fallback                           | M      | BE          | P0 for a real launch | ☐      |
-| L4  | Moderation: report button, auto-hide at 3 reports, name blocklist, admin hide            | M      | BE          | P0 for a real launch | ☐      |
-| L5  | Demo-crowd rules: hide or thin demo people once real ones arrive, with a clear label     | S      | —           | P0                   | ☐      |
-| L6  | Deploy to `coii.pages.dev` + Cloudflare Web Analytics                                    | S      | owner login | P0                   | ☐      |
-| L7  | Privacy page, consent copy, "delete me"                                                  | S      | —           | P0                   | ☐      |
-| L8  | Cold start: seed list (friends, speakers), QR poster, Devcon 8 India Telegram group post | S      | ORG         | P0                   | ☐      |
+| ID  | Task                                                                                                                                                             | Effort | Needs       | Pri                  | Status |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----------- | -------------------- | ------ |
+| L1  | Real-phone pass on iPhone + Android: FPS, pinch, long-press, sheets, keyboard                                                                                    | S      | —           | P0                   | ☐      |
+| L2  | Real sign-ups: anonymous Supabase session + open form, Google to save your bean, Telegram ✓ verification. Database done; app wiring is next                      | L      | BE          | P0 for a real launch | ◐      |
+| L3  | Live arrivals via 60 s delta polling of `get_venue_changes`; personal events (waves, chais) via Realtime                                                         | M      | BE          | P0 for a real launch | ◐      |
+| L4  | Moderation: report button, auto-hide at 3 reports, name blocklist, admin hide                                                                                    | M      | BE          | P0 for a real launch | ◐      |
+| L5  | Demo-crowd rules: hide or thin demo people once real ones arrive, with a clear label                                                                             | S      | —           | P0                   | ☐      |
+| L6  | Deploy to `www.decipherclub.com/coii/` with a Cloudflare cache in front of `get_venue`, + Web Analytics                                                          | S      | owner login | P0                   | ☐      |
+| L7  | Privacy page, consent copy, "delete me"                                                                                                                          | S      | —           | P0                   | ☐      |
+| L8  | Cold start: seed list (friends, speakers), QR poster, Devcon 8 India Telegram group post                                                                         | S      | ORG         | P0                   | ☐      |
+| L9  | **Launch gate:** no public posts (Devcon Telegram group, X) until the Cloudflare cache in front of `get_venue` is live. Friends and testers are fine before that | S      | L6          | P0                   | ☐      |
 
 ## 1. Your bean (make people care about their character)
 

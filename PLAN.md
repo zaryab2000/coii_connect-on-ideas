@@ -4,7 +4,8 @@
 > Find your people at Devcon by **ideas**, not logos.
 
 Name: **coii**, short for "connect on ideas & interests" (final). On-site wordmark: "gm coii".
-Free web address: `coii.pages.dev` (unclaimed on 2 Oct 2026). The repo folder is still `conDevCon`; renaming it is optional.
+Web address (decided): `https://www.decipherclub.com/coii/` (the owner holds `decipherclub.com` on
+Cloudflare). The repo folder is still `conDevCon`; renaming it is optional.
 
 A playful live map of a cartoon venue. Every booth is a topic (AI Agents, Prediction Markets,
 DeFi, …). Every registered attendee is a tiny "bean" human hanging around the booths they care
@@ -34,7 +35,7 @@ for how to run it.
 - Daily 3 with card reveal, hidden waves (50/day), demo replies, "Chai's on!" with a
   Telegram opener, We met + bonus cards, Unmatch
 - Intent field and props, My tribe glow, pick sparkles
-- Spec: `docs/prd/who-should-i-meet.md`. Phase 1 needs the backend (real waves, 18+ gate);
+- Spec: `docs/prd/who-should-i-meet.md`. Phase 1 needs the backend (real waves);
   Phase 2 adds flares
 
 **Iteration v1 (2 Oct 2026, branch `iteration-v1`):**
@@ -53,11 +54,11 @@ for how to run it.
 
 1. Owner phone test on the LAN URL (`pnpm dev`, then `http://<mac-ip>:5173/?debug`): FPS +
    gestures
-2. Weekend launch, static: `pnpm build`, then `npx wrangler pages deploy dist --project-name coii`
-   after `npx wrangler login`. Needs the owner's free Cloudflare account and an explicit OK. The
-   link-preview image and headers are already in `public/`
-3. Real sign-ups (Stage B): Supabase + Telegram Login behind the `PeopleSource` seam in
-   `src/data/source.ts`
+2. Hosting at `https://www.decipherclub.com/coii/` (separate task; needs the owner's OK). The
+   link-preview image and headers are already in `public/`. **Launch gate:** no public posts until
+   the Cloudflare cache in front of `get_venue` is live
+3. Real sign-ups: the database is built ([docs/prd/database.md](docs/prd/database.md)); connecting
+   the app through the `PeopleSource` seam in `src/data/source.ts` is its Phase 5
 
 **Known gaps**
 
@@ -139,11 +140,13 @@ only knows who is interested in what.
 
 **P1: Real registrations**
 
-- Supabase schema + RLS; writes only through Edge Functions
-- Two sign-up paths: **Telegram Login** (verified ✓) and an **open form** (self-reported, no ✓)
+- Supabase: private tables, every read and write through database functions (three Edge
+  Functions where a secret is needed)
+- Joining: an anonymous Supabase session (Turnstile) plus the open form; optional Google to save
+  your bean; optional Telegram verification adds the ✓
 - Optional X handle (plain text, no API)
-- Live arrivals via Realtime, with a polling fallback
-- Edit / delete yourself; report button; name blocklist; no URLs in free text
+- Live arrivals via 60-second delta polling; only personal events (waves, chais) use Realtime
+- Edit / delete yourself; report button; name blocklist; no links or @usernames in public text
 - Bean customizer (skin, hair, accessory, 🎲 reroll); consent checkbox; privacy page
 
 **P2: Delight & growth (public launch)**
@@ -188,7 +191,12 @@ so booths can change without a code change. 8–12 booths is the readable maximu
 
 ---
 
-## 5. Identity & trust (decided: Telegram + open form)
+## 5. Identity & trust
+
+> **Updated 2 Oct 2026:** joining uses Supabase Auth (an anonymous session, Turnstile-protected),
+> with optional Google to save your bean and optional Telegram verification for the ✓. Telegram is
+> not a login method. The [database PRD](docs/prd/database.md) §2 and §10 supersede the details
+> below.
 
 Crypto conferences attract scammers. A public list of attendee Telegram handles will draw fake
 "Devcon Support" profiles and impersonators. A Devcon Telegram group already exists, which makes
@@ -240,87 +248,38 @@ the event. The demo data includes a mocked badge state so the UI is designed for
 
 ## 6. Architecture & stack ($0)
 
-```
-  Browser (phone / tablet / desktop)
- ┌──────────────────────────────────────────────┐
- │ React UI (list, sheets, forms)               │
- │ PixiJS venue canvas ← crowd sim runs locally │
- └──────┬─────────────────────────┬─────────────┘
-        │ static files            │ read:  people_public view (anon key)
-        │ (free, unlimited)       │ live:  Realtime row changes
-   Cloudflare Pages               │ write: Edge Functions only
-                          ┌───────▼─────────────────────────┐
-                          │ Supabase (free)                 │
-                          │ Postgres + RLS                  │
-                          │ Edge Fns: join, update, delete, │
-                          │           report                │
-                          └─────────────────────────────────┘
-```
+The backend (Supabase: private tables, database functions, three Edge Functions, personal realtime
+events, polling for the venue) is specified in [docs/prd/database.md](docs/prd/database.md).
 
-| Layer          | Choice                                                       | Why                                                              |
-| -------------- | ------------------------------------------------------------ | ---------------------------------------------------------------- |
-| UI shell       | Vite + React + TypeScript                                    | Fast to build forms, sheets, list                                |
-| Venue renderer | PixiJS (WebGL) + pixi-viewport                               | Thousands of animated sprites at 60fps; pinch/pan/zoom on mobile |
-| Crowd sim      | Custom pure-TS module                                        | Behaviors are bespoke; pure functions are unit-testable          |
-| List           | TanStack Virtual                                             | Smooth with thousands of rows                                    |
-| Backend        | Supabase free                                                | Postgres, Realtime, Edge Functions, table editor for moderation  |
-| Hosting        | Cloudflare Pages                                             | Static requests free and unlimited                               |
-| Auth           | Telegram Login Widget (HMAC verified in Edge Fn) + open form | Free; verifies Telegram handles                                  |
-| Anti-bot       | Cloudflare Turnstile                                         | Free                                                             |
-| Art            | Procedural vector beans + hand-built booths; Google Fonts    | Zero asset cost, crisp at any zoom                               |
+| Layer          | Choice                                                                      | Why                                                              |
+| -------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| UI shell       | Vite + React + TypeScript                                                   | Fast to build forms, sheets, list                                |
+| Venue renderer | PixiJS (WebGL) + pixi-viewport                                              | Thousands of animated sprites at 60fps; pinch/pan/zoom on mobile |
+| Crowd sim      | Custom pure-TS module                                                       | Behaviors are bespoke; pure functions are unit-testable          |
+| List           | TanStack Virtual                                                            | Smooth with thousands of rows                                    |
+| Backend        | Supabase free                                                               | Postgres, Realtime, Edge Functions, table editor for moderation  |
+| Hosting        | Cloudflare Pages                                                            | Static requests free and unlimited                               |
+| Auth           | Supabase Auth: anonymous join + optional Google; Telegram verification only | Nobody needs Telegram to join; Google restores your bean         |
+| Anti-bot       | Cloudflare Turnstile                                                        | Free                                                             |
+| Art            | Procedural vector beans + hand-built booths; Google Fonts                   | Zero asset cost, crisp at any zoom                               |
 
 Exact package versions are looked up when scaffolding, not assumed.
 
 **Why it stays free under load:** the simulation runs client-side, so there is no per-frame server
-traffic. Each visit makes one snapshot read (~100 KB gzipped for 3k people) plus tiny realtime
-deltas.
+traffic. A first visit reads one snapshot (about 200 bytes per person uncompressed, ~0.3 MB for
+1,500 people); after that the browser keeps it and polls small deltas. A Cloudflare cache in front
+of the snapshot is required before going public.
 
 Supabase free limits: 500 MB DB · 5 GB egress · 200 concurrent Realtime connections · 2M Realtime
-messages/mo · 500k Edge Function calls/mo · pauses after 1 week idle. Above 200 live viewers,
-clients fall back to 60-second delta polling.
+messages/mo · 500k Edge Function calls/mo · pauses after 1 week idle. The venue is polled (no
+venue-wide broadcasts); above 200 Realtime connections, personal events fall back to polling too.
 
 ---
 
-## 7. Data model (sketch)
+## 7. Data model
 
-```sql
-create table topics (
-  id text primary key,            -- 'privacy'
-  label text not null,
-  emoji text not null,
-  color text not null,            -- shirt/booth color
-  sort int not null
-);
-
-create table people (
-  id uuid primary key default gen_random_uuid(),
-  display_name text not null check (char_length(display_name) between 1 and 40),
-  telegram_user_id bigint unique,           -- from verified payload
-  telegram text,                            -- 5–32 chars [a-z0-9_]
-  x_handle text,                            -- 1–15 chars [A-Za-z0-9_], self-reported
-  topics text[] not null check (cardinality(topics) between 1 and 3),
-  one_liner text check (char_length(one_liner) <= 80),  -- "what I want to talk about"; URLs rejected
-  avatar jsonb not null,                    -- skin, hair, accessory, seed
-  source text not null check (source in ('self', 'organizer', 'demo')),
-  status text not null default 'visible' check (status in ('visible', 'hidden')),
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  check (telegram is not null or x_handle is not null)
-);
-
-create table reports (
-  person_id uuid references people on delete cascade,
-  reporter_telegram_id bigint not null,
-  created_at timestamptz not null default now(),
-  primary key (person_id, reporter_telegram_id)
-);
--- 3 unique reports → status = 'hidden' pending review.
--- people_public view exposes only safe columns where status = 'visible'.
--- RLS: anon can select people_public; no direct writes from clients.
-```
-
-Handle input accepts `@name`, `name`, `t.me/name`, and `x.com/name`, and normalizes all of them.
-This normalizer gets property-based tests.
+See [docs/prd/database.md](docs/prd/database.md) §6. Handle input accepts `@name`, `name`,
+`t.me/name` and `x.com/name` and normalizes all of them (property-tested).
 
 ---
 
@@ -390,13 +349,13 @@ Label it "unofficial community project" until then.
 
 ### Stage B: go live (after the demo is approved)
 
-| Target  | Milestone                                                                                                  |
-| ------- | ---------------------------------------------------------------------------------------------------------- |
-| ~Oct 8  | Free accounts ready: GitHub, Supabase, Cloudflare, Telegram bot                                            |
-| ~Oct 12 | Real sign-ups (Telegram ✓ + form), moderation, deploy to `coii.pages.dev`, soft launch to friends/speakers |
-| ~Oct 19 | P2 delighters + **public launch** (Devcon 8 India Telegram group, X)                                       |
-| ~Oct 30 | P3 done, load-tested, **feature freeze**                                                                   |
-| Nov 3–6 | Event: monitor, moderate, kiosk mode on screens                                                            |
+| Target  | Milestone                                                                                                                                       |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| ~Oct 8  | Free accounts ready: GitHub, Supabase, Cloudflare, Telegram bot                                                                                 |
+| ~Oct 12 | Real sign-ups (anonymous join + form, Telegram ✓ optional), moderation, deploy to `www.decipherclub.com/coii/`, soft launch to friends/speakers |
+| ~Oct 19 | P2 delighters + **public launch** (Devcon 8 India Telegram group, X)                                                                            |
+| ~Oct 30 | P3 done, load-tested, **feature freeze**                                                                                                        |
+| Nov 3–6 | Event: monitor, moderate, kiosk mode on screens                                                                                                 |
 
 **In parallel (owner, any time):** the organizer conversation (§14).
 
@@ -446,7 +405,9 @@ list filters), prek hooks, GitHub Actions with SHA-pinned actions + zizmor.
 **Decided:**
 
 - Name: coii (connect on ideas & interests)
-- Sign-up: Telegram ✓ plus an on-site form
+- Sign-up: Supabase Auth with an anonymous session on joining (Turnstile-protected); optional
+  Google to save and restore your bean; Telegram is optional verification (✓ badge), not a login
+- Production domain: `https://www.decipherclub.com/coii/`
 - Responsive web only
 - No X API
 - Ticket verification parked (launch open; add the 🎟️ badge later)
@@ -470,4 +431,4 @@ list filters), prek hooks, GitHub Actions with SHA-pinned actions + zizmor.
    - Failing both: can a coii invite code go into a pre-event email?
 5. Do they want the stats page (topic popularity, top combos) for their own planning?
 
-**Optional:** a custom domain (~$10/yr); otherwise `coii.pages.dev`.
+**Domain (decided):** `https://www.decipherclub.com/coii/`.

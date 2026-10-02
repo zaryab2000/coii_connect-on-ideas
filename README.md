@@ -29,15 +29,38 @@ In dev builds `window.__coii` exposes `{ engine, controller }` for scripting.
 
 ## Scripts
 
-| Command         | What it does                                                            |
-| --------------- | ----------------------------------------------------------------------- |
-| `pnpm check`    | Format check, lint (zero warnings), type check, unit tests              |
-| `pnpm test`     | Unit and property tests (vitest + fast-check)                           |
-| `pnpm test:e2e` | Browser smoke tests on desktop and phone viewports (uses system Chrome) |
-| `pnpm build`    | Type check + production build into `dist/`                              |
+| Command               | What it does                                                                        |
+| --------------------- | ----------------------------------------------------------------------------------- |
+| `pnpm check`          | Format check, lint (zero warnings), type check, unit tests                          |
+| `pnpm test`           | Unit and property tests (vitest + fast-check)                                       |
+| `pnpm test:e2e`       | Browser smoke tests on desktop and phone viewports (uses system Chrome)             |
+| `pnpm build`          | Type check + production build into `dist/`                                          |
+| `pnpm test:db`        | Database integration tests and Edge Functions over HTTP (local stack)               |
+| `pnpm test:functions` | Deno unit tests for the Edge Functions                                              |
+| `pnpm db:seed`        | Writes `supabase/seed.sql`: 1,500 demo beans and ~15,000 waves                      |
+| `pnpm sync:shared`    | Copies the matching code the Edge Functions reuse into `supabase/functions/_shared` |
 
 Git hooks run through [prek](https://github.com/j178/prek): `prek install` once, then every commit
 runs the same checks as `pnpm check`.
+
+## Backend (Supabase)
+
+The database, its functions and the Edge Functions live in `supabase/` (spec:
+[docs/prd/database.md](docs/prd/database.md), operations: [docs/runbooks/database.md](docs/runbooks/database.md)).
+The app itself still runs in demo mode; connecting it to the backend is the next phase.
+
+Needs Docker (local stack), the Supabase CLI and [Deno](https://deno.com) (`pnpm db:seed` and the
+Edge Function tests run on Deno).
+
+```bash
+supabase start                      # local stack (needs Docker)
+pnpm db:seed && supabase db reset   # schema + demo seed
+supabase test db                    # pgTAP: security invariants, validation, operations
+pnpm test:db                        # resets + seeds, then integration tests (needs internet)
+```
+
+`.env.local` (gitignored) holds `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. Secret keys
+never go in the repo or the browser.
 
 ## How it works
 

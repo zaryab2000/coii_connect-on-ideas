@@ -55,20 +55,14 @@ notices people and gets curious. **Waving** is how you connect: it gives the oth
   attract more waves. These are remembered in this browser (`coii:points:v1`).
 - Every 40–110 s (at most 8 times a visit) a demo person who shares your topics waves at you.
 
-## 3. Backend notes (Phase 1)
+## 3. Backend
 
-- `waves(from, to, at)` with a unique `(from, to)`; points are `count(*) group by to`. Keep the
-  50/day quota and the "who waved" privacy in the database function, as in the Meet PRD.
-- Contact unlock is a read rule: return handles only when a wave from the viewer exists (or the
-  viewer is the person). Never send handles to the client otherwise.
-- Board: a materialised top-N plus "rank of me", refreshed on each wave; push "+1" events
-  through Realtime for the map pops.
-- One-liners: `one_liners text[]` with a check of at most 3 items of at most 80 characters,
-  links rejected server-side as well.
+The [database PRD](database.md) specifies the backend: waves, points, the Today board, contact
+unlocks and one-liner validation.
 
-## 4. Open questions
+## 4. Decisions (owner, 2 Oct 2026)
 
-1. Should points reset each day (a daily board) or stay all-time (current)?
-2. Does the board need moderation, such as hiding people who were reported?
-3. Point farming with throwaway accounts: Telegram sign-in plus the daily quota limit it; do we
-   also need ticket verification before points count?
+1. **Board:** all-time plus a **Today** tab (points from waves received this Meet day).
+2. **Moderation:** hidden (reported) people appear on neither board.
+3. **Farming:** every wave counts for now; farming protections are deferred (50/day cap and
+   Turnstile only).

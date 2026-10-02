@@ -62,7 +62,6 @@ Use these words consistently in UI and code.
 - Not a dating product: no photos, no romantic copy, no hearts, no swipe-to-judge looks.
 - No in-app chat. Hand off to Telegram or X, where users already have controls.
 - No LLM or embeddings ($0 budget). Rules-based, explainable scoring.
-- No public "most popular" leaderboards of people.
 - No physical location tracking. "We met" is a mutual confirmation, not GPS.
 
 **Metrics** (aggregate, privacy-friendly; targets for event week)
@@ -84,14 +83,13 @@ Use these words consistently in UI and code.
 
 ## 4. Users
 
-| Persona                                                          | Wants                                                 | Risk to design for                                          |
-| ---------------------------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------- |
-| **First-timer** (student, new builder; large share of the crowd) | Someone friendly in their topic; permission to say hi | Shyness: hidden waves protect them from visible rejection   |
-| **Builder / founder**                                            | Co-founders, users, investors in a niche topic        | Wants precision: strong topic + intent matching             |
-| **Hiring manager / recruiter**                                   | Candidates                                            | Can spam: wave cap, hidden waves                            |
-| **Job seeker**                                                   | Hiring teams                                          | Needs complements: hiring ↔ looking                         |
-| **Speaker / well-known person**                                  | Fewer, better conversations                           | Gets flooded: popularity dampening, "pause Meet"            |
-| **Youth attendee** (Devcon sells youth tickets for ages 3–17)    | Browse the map                                        | Must not be matched privately with adults: 18+ gate on Meet |
+| Persona                                                          | Wants                                                 | Risk to design for                                        |
+| ---------------------------------------------------------------- | ----------------------------------------------------- | --------------------------------------------------------- |
+| **First-timer** (student, new builder; large share of the crowd) | Someone friendly in their topic; permission to say hi | Shyness: hidden waves protect them from visible rejection |
+| **Builder / founder**                                            | Co-founders, users, investors in a niche topic        | Wants precision: strong topic + intent matching           |
+| **Hiring manager / recruiter**                                   | Candidates                                            | Can spam: wave cap, hidden waves                          |
+| **Job seeker**                                                   | Hiring teams                                          | Needs complements: hiring ↔ looking                       |
+| **Speaker / well-known person**                                  | Fewer, better conversations                           | Gets flooded: popularity dampening, "pause Meet"          |
 
 Context: phones on venue Wi-Fi or mobile data, short bursts between talks, Telegram as the
 default chat app, English plus Indian languages.
@@ -101,7 +99,7 @@ default chat app, English plus Indian languages.
 | Phase                                 | Ships                                                                                                                                                                                 | Needs       |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
 | **0: Demo (pre-launch, client-only)** | Intent field + map props (M4), scoring library, Daily 3 UI with reveal, waves to demo people with **simulated** "Chai's on!" (labelled demo), My tribe (M3), pick sparkles on the map | Nothing new |
-| **1: Launch**                         | Server-side hands, real hidden waves, matches, block, pause, 18+ gate, match screen with Telegram opener, matches list, rate limits                                                   | L2, L4      |
+| **1: Launch**                         | Server-side hands, real hidden waves, matches, block, pause, match screen with Telegram opener, matches list, rate limits                                                             | L2, L4      |
 | **2: Event week**                     | Flares (M5), "we met" + handshake QR (C3), rewards and titles, Daily streak, bonus cards for in-person meetups                                                                        | C3          |
 
 ---
@@ -129,7 +127,6 @@ Existing fields: name, handles, topics (1–3, first = primary), one-liner, avat
 
 **New: Meet settings** (on your profile, launch phase):
 
-- `I'm 18 or older` — required to use Meet; youth attendees can still browse.
 - `Pause Meet` — you stop appearing in hands and can't receive waves. You can still browse.
 - Languages (P2, optional): small bonus when you share a language.
 
@@ -179,7 +176,7 @@ can spot them in the crowd.
 | State                     | Shows                                                         |
 | ------------------------- | ------------------------------------------------------------- |
 | Not joined                | Three locked face-down cards + "Join to get your daily picks" |
-| Under 18 or paused        | Explanation + My tribe still available                        |
+| Paused                    | Explanation + My tribe still available                        |
 | Cold start (few people)   | Partial hand + "More people arrive every day"                 |
 | Nobody shares your topics | Wildcard-heavy hand + "Here's who's nearby in idea-space"     |
 
@@ -233,7 +230,6 @@ both people's intents):
 - anyone blocked, in either direction
 - people you've already waved at, skipped (for 7 days) or have a chai with
 - paused profiles, hidden or reported profiles
-- under-18 profiles
 - demo people, once real mode is on
 
 **Wildcard slot:** the best-scored person whose primary topic is _adjacent_ to yours (it uses the
@@ -364,8 +360,6 @@ A flare is a time-boxed group meetup that anyone who has joined can light.
 | Unlocks      | Cosmetics and pets (F1/F4) from meetings                                                         | Ties into the bean you care about                                           |
 | Wrapped      | End-of-event card: who you met, booths stamped, chais                                            | Shareable payoff (G5)                                                       |
 
-No public leaderboard of people, so there's nothing to rank humans by.
-
 ---
 
 ## 7. UX flows and wireframes
@@ -424,80 +418,8 @@ Phone · Meet tab (before reveal)      Phone · card                       Phone
 
 ## 8. Data model and API (launch phase, Supabase)
 
-```sql
-alter table people add column intent text[] not null default '{}'
-  check (cardinality(intent) <= 2);
-alter table people add column meet_paused boolean not null default false;
-alter table people add column adult_confirmed boolean not null default false;
-alter table people add column last_seen_at timestamptz;
-
-create table daily_hands (
-  person_id uuid references people on delete cascade,
-  day date not null,                       -- IST calendar day
-  cards uuid[] not null,                   -- ordered; wildcard flagged separately
-  wildcard uuid,
-  bonus int not null default 0,
-  revealed_at timestamptz,
-  primary key (person_id, day)
-);
-
-create table waves (
-  from_id uuid references people on delete cascade,
-  to_id uuid references people on delete cascade,
-  created_at timestamptz not null default now(),
-  primary key (from_id, to_id)
-);
-
-create table chais (                        -- mutual waves
-  a_id uuid references people on delete cascade,
-  b_id uuid references people on delete cascade,
-  created_at timestamptz not null default now(),
-  met_a boolean not null default false,
-  met_b boolean not null default false,
-  primary key (a_id, b_id),
-  check (a_id < b_id)
-);
-
-create table skips (person_id uuid, skipped_id uuid, until date, primary key (person_id, skipped_id));
-create table blocks (blocker uuid, blocked uuid, primary key (blocker, blocked));
-
-create table flares (
-  id uuid primary key default gen_random_uuid(),
-  host_id uuid references people on delete cascade,
-  topic text not null,
-  title text not null check (char_length(title) <= 60),
-  place text check (char_length(place) <= 40),
-  starts_at timestamptz not null,
-  ends_at timestamptz not null,
-  status text not null default 'visible'
-);
-create table flare_joins (flare_id uuid references flares on delete cascade, person_id uuid, primary key (flare_id, person_id));
-```
-
-**RLS principles**
-
-- Clients never read `waves` rows addressed to them; only counts come back, via an RPC.
-- `chais` are readable by their two participants only.
-- All writes go through Edge Functions, which check quotas, 18+, pause, blocks and the
-  blocklist.
-
-**Edge Functions**
-
-| Function                                              | Does                                                              |
-| ----------------------------------------------------- | ----------------------------------------------------------------- |
-| `get_hand()`                                          | Computes or returns today's hand (§6.3) for the caller            |
-| `wave(to)`                                            | Quota 50/day; awards a point; makes a `chais` row if reciprocal   |
-| `skip(id)`                                            | 7-day skip                                                        |
-| `confirm_met(chai)`                                   | Sets the caller's side; when both are set, awards stamp and bonus |
-| `inbound_count()`                                     | Number of hidden waves only                                       |
-| `light_flare(…)` / `join_flare(id)` / `end_flare(id)` | Flare lifecycle and limits                                        |
-| `block(id)` / `report(id)`                            | Safety                                                            |
-
-**Realtime**
-
-- Subscribe to your own `chais` inserts for the live "Chai's on!".
-- Subscribe to `flares` for beacons.
-- Fall back to 60s polling.
+The tables, database functions, Edge Functions, realtime events and security rules live in the
+[database PRD](database.md), which is the single source of truth for the backend.
 
 **Client modules** (pure and unit-tested, shared by demo and server)
 
@@ -532,8 +454,6 @@ create table flare_joins (flare_id uuid references flares on delete cascade, per
 ## 10. Privacy, safety and trust
 
 - **Hidden waves:** identities of inbound waves never leave the server; the teaser is a count.
-- **18+ gate for Meet.** Devcon sells tickets to under-18s, who can browse the map but not wave
-  or match.
 - **Pause Meet** at any time; leaving coii deletes waves, chais and flares.
 - **Block and report** from every card, profile and chai. Blocked people are excluded both ways.
 - **Telegram hand-off only.** No DMs hosted. Every chai card carries a safety line: "Meet in
@@ -548,7 +468,7 @@ create table flare_joins (flare_id uuid references flares on delete cascade, per
 **Unit and property tests (vitest + fast-check):**
 
 - Scores stay in range.
-- Exclusions always hold: self, blocked, waved, skipped, paused, under-18.
+- Exclusions always hold: self, blocked, waved, skipped, paused.
 - The hand is deterministic per (person, day) and differs across days.
 - The wildcard shares no topic with the viewer.
 - Diversity rule holds.
@@ -567,10 +487,10 @@ URL, tribe dims non-tribe beans, reduced motion fades instead of flipping.
 
 ## 12. Acceptance criteria
 
-1. Given a joined adult on IST day D, opening Meet shows exactly 3 face-down cards (fewer only if
+1. Given a joined person on IST day D, opening Meet shows exactly 3 face-down cards (fewer only if
    fewer people are eligible), and reloading during D shows the same people.
 2. No card ever shows yourself, a blocked person, someone you waved at or skipped, someone you
-   share a chai with, a paused or under-18 profile, or (in real mode) a demo person.
+   share a chai with, a paused profile, or (in real mode) a demo person.
 3. Every card shows at least one reason that comes from real profile data.
 4. Waving updates the card within 100 ms. The 51st wave in a day is refused with "You've used
    today's 50 waves. They refill at 06:00."
@@ -591,7 +511,6 @@ URL, tribe dims non-tribe beans, reduced motion fades instead of flipping.
 | 1   | Hidden or visible waves?                                   | **Hidden**: protects first-timers, kills spam, creates the surprise moment        |
 | 2   | Hand size and reset time                                   | **3 per day at 06:00 IST**, +1 bonus card per in-person meeting                   |
 | 3   | Make demo people wave-able with simulated chais at launch? | **Yes**, clearly labelled; turn off once real people pass ~300                    |
-| 4   | 18+ gate on Meet?                                          | **Yes** (youth tickets exist)                                                     |
 | 5   | Real venue meeting spots                                   | Ask organizers for a list of Jio World Centre spots (halls, food courts, lounges) |
 | 6   | Final intent list (9 chips above)                          | Keep it, but allow only 2 picks                                                   |
 | 7   | Public friendship strings on the map?                      | **Opt-in, off by default**                                                        |
