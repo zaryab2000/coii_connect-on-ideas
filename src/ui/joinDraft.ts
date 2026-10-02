@@ -1,5 +1,5 @@
 import type { JoinInput } from "@/app/controller";
-import { normalizeTelegram, normalizeX } from "@/data/handles";
+import { cleanText, nameHasLink, normalizeTelegram, normalizeX } from "@/data/handles";
 import { INTENTS_MAX } from "@/data/intents";
 import { oneLinerError, ONE_LINERS_MAX } from "@/data/oneLinerRules";
 import type { Avatar, IntentId, Person, TopicId } from "@/data/types";
@@ -53,7 +53,7 @@ function checkTopics(topics: readonly TopicId[]): string | undefined {
 
 /** One message per one-liner input (undefined where the line is fine or blank). */
 export function lineErrors(lines: readonly string[]): (string | undefined)[] {
-  return lines.map((line) => oneLinerError(line.trim()));
+  return lines.map((line) => oneLinerError(cleanText(line)));
 }
 
 /** The lines you actually wrote: trimmed, blanks and repeats dropped, at most three. */
@@ -61,7 +61,7 @@ function cleanLines(lines: readonly string[]): string[] {
   const seen = new Set<string>();
   const kept: string[] = [];
   for (const raw of lines) {
-    const line = raw.trim().replace(/\s+/g, " ");
+    const line = cleanText(raw);
     const key = line.toLowerCase();
     if (line.length === 0 || seen.has(key)) continue;
     seen.add(key);
@@ -73,6 +73,7 @@ function cleanLines(lines: readonly string[]): string[] {
 function checkName(name: string): string | undefined {
   if (name.length === 0) return "Add your name.";
   if (name.length > NAME_MAX) return `Keep your name to ${NAME_MAX} characters.`;
+  if (nameHasLink(name)) return "Names can't contain links. Add your handles below instead.";
   return undefined;
 }
 
@@ -104,7 +105,7 @@ function fieldErrors(name: string, draft: JoinDraft): JoinErrors {
  * At least one handle is required; each handle that is filled in must be valid.
  */
 export function validateJoin(draft: JoinDraft): JoinResult {
-  const name = draft.name.trim().replace(/\s+/g, " ");
+  const name = cleanText(draft.name);
   const telegram = handle(draft.telegram, normalizeTelegram);
   const x = handle(draft.x, normalizeX);
   const errors: JoinErrors = {
