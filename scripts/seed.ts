@@ -1,14 +1,25 @@
-// Writes supabase/seed.sql: 1,500 demo beans with handles and ~15,000 waves across the last 3
-// Meet days, from the app's own demo generator (docs/prd/database.md §14).
-// Run with `pnpm db:seed`; Deno resolves the app's `@/` imports through scripts/deno.json.
+// Writes supabase/seed.sql: demo beans with handles and ~10 waves each across the last 3 Meet
+// days, from the app's own demo generator (docs/prd/database.md §14). 1,500 beans by default (the
+// local test suite expects that many); `pnpm db:seed --people=500` for a smaller remote demo.
+// Deno resolves the app's `@/` imports through scripts/deno.json.
 import { generateDemo } from "@/data/generateDemo";
 import { createRng } from "@/data/rng";
 import type { Person } from "@/data/types";
 import { demoWaveTarget } from "@/match/points";
 
 const SEED = 2026;
-const PEOPLE = 1500;
-const WAVES = 15_000;
+/** `--people=N` (10–5000), default 1500. */
+function peopleArg(): number {
+  const arg = Deno.args.find((a) => a.startsWith("--people="));
+  const count = arg ? Number(arg.slice("--people=".length)) : 1500;
+  if (!Number.isInteger(count) || count < 10 || count > 5000) {
+    throw new Error(`--people must be a whole number from 10 to 5000, got "${arg}"`);
+  }
+  return count;
+}
+
+const PEOPLE = peopleArg();
+const WAVES = PEOPLE * 10;
 const DAYS = 3;
 const WAVES_PER_DAY = 50;
 const BATCH = 500;
