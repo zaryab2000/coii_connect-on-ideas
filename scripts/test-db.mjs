@@ -3,7 +3,7 @@
 // reads the local URL and keys from `supabase status`, serves the Edge Functions locally with a
 // fake bot token, runs vitest, and stops the functions again.
 import { execFileSync, spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -38,7 +38,8 @@ try {
 }
 
 if (!keepData) {
-  if (!existsSync("supabase/seed.sql")) run("pnpm", ["db:seed"]);
+  // Always the default 1,500-bean seed: supabase/seed.sql may hold a smaller remote one.
+  run("pnpm", ["db:seed"]);
   run("supabase", ["db", "reset"]);
 }
 
