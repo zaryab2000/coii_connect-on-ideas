@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { generateDemo } from "@/data/generateDemo";
 import { containsLink, normalizeTelegram, normalizeX } from "@/data/handles";
-import { ONE_LINERS } from "@/data/oneLiners";
+import { GENERAL_ONE_LINERS, ONE_LINERS } from "@/data/oneLiners";
 import { TOPIC_IDS } from "@/data/types";
 import type { TopicId } from "@/data/types";
 
@@ -72,14 +72,39 @@ describe("generateDemo", () => {
 });
 
 describe("one-liners", () => {
-  it("stay within 80 characters and contain no links", () => {
+  const URL_OR_HANDLE = /https?:|www\.|\.(com|xyz|io|org|app|dev)\b|@\w|t\.me/i;
+  const lists: readonly (readonly string[])[] = [
+    ...TOPIC_IDS.map((id: TopicId) => ONE_LINERS[id]),
+    GENERAL_ONE_LINERS,
+  ];
+  const allLines = lists.flat();
+
+  it("has a healthy pool for every topic and a general pool", () => {
     for (const id of TOPIC_IDS) {
-      const lines = ONE_LINERS[id as TopicId];
-      expect(lines.length).toBeGreaterThanOrEqual(6);
-      for (const line of lines) {
-        expect(line.length).toBeLessThanOrEqual(80);
-        expect(containsLink(line)).toBe(false);
-      }
+      expect(ONE_LINERS[id].length).toBeGreaterThanOrEqual(25);
     }
+    expect(GENERAL_ONE_LINERS.length).toBeGreaterThanOrEqual(40);
+  });
+
+  it("stay within 1 to 80 characters and contain no links or handles", () => {
+    const bad = allLines.filter(
+      (line) =>
+        line.trim().length === 0 ||
+        line.length > 80 ||
+        URL_OR_HANDLE.test(line) ||
+        containsLink(line),
+    );
+    expect(bad).toEqual([]);
+  });
+
+  it("never repeat a line across lists, ignoring case", () => {
+    const seen = new Set<string>();
+    const repeats = allLines.filter((line) => {
+      const key = line.toLowerCase();
+      const repeated = seen.has(key);
+      seen.add(key);
+      return repeated;
+    });
+    expect(repeats).toEqual([]);
   });
 });
