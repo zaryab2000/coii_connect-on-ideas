@@ -37,6 +37,15 @@ for how to run it.
 - Spec: `docs/prd/who-should-i-meet.md`. Phase 1 needs the backend (real waves, 18+ gate);
   Phase 2 adds flares
 
+**Iteration v1 (2 Oct 2026, branch `iteration-v1`):**
+
+- Renamed to coii (connect on ideas & interests); the gate and wordmark say "gm coii"
+- About: a centred overlay with the thesis, what you can do, how it works and ground rules; the
+  venue keeps moving behind it
+- Your profile (join, view, edit) moved into a big centred overlay with a character studio:
+  live profile preview plus hair, hair colour, extras and skin tone pickers. Tapping your own
+  bean opens it; other people's profiles stay in the side panel / sheet
+
 **Next** (detailed task list with fun and engagement ideas: [TRACKER.md](TRACKER.md))
 
 1. Owner phone test on the LAN URL (`pnpm dev`, then `http://<mac-ip>:5173/?debug`): FPS +
