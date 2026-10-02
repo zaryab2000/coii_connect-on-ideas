@@ -4,7 +4,7 @@ import { assertEquals } from "jsr:@std/assert@1.0.13";
 import { handle, noContent, projectKey } from "./http.ts";
 import type { Deps, Handler } from "./http.ts";
 
-const ORIGIN = "https://www.decipherclub.com";
+const ORIGIN = "https://coii.decipherclub.com";
 const USER = { id: "user-1" } as User;
 
 function deps(user: User | null = USER): Deps {

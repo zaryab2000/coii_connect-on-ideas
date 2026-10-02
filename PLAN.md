@@ -4,8 +4,8 @@
 > Find your people at Devcon by **ideas**, not logos.
 
 Name: **coii**, short for "connect on ideas & interests" (final). On-site wordmark: "gm coii".
-Web address (decided): `https://www.decipherclub.com/coii/` (the owner holds `decipherclub.com` on
-Cloudflare). The repo folder is still `conDevCon`; renaming it is optional.
+Web address (decided): `https://coii.decipherclub.com/`, hosted on Vercel (`decipherclub.com` DNS
+is on Cloudflare; `www` is the Ghost blog). The repo folder is still `conDevCon`; renaming it is optional.
 
 A playful live map of a cartoon venue. Every booth is a topic (AI Agents, Prediction Markets,
 DeFi, …). Every registered attendee is a tiny "bean" human hanging around the booths they care
@@ -54,9 +54,9 @@ for how to run it.
 
 1. Owner phone test on the LAN URL (`pnpm dev`, then `http://<mac-ip>:5173/?debug`): FPS +
    gestures
-2. Hosting at `https://www.decipherclub.com/coii/` (separate task; needs the owner's OK). The
+2. Hosting on Vercel at `https://coii.decipherclub.com/` (needs the owner's OK). The
    link-preview image and headers are already in `public/`. **Launch gate:** no public posts until
-   the Cloudflare cache in front of `get_venue` is live
+   the CDN cache in front of `get_venue` is live
 3. Real sign-ups: the database is built ([docs/prd/database.md](docs/prd/database.md)); connecting
    the app through the `PeopleSource` seam in `src/data/source.ts` is its Phase 5
 
@@ -349,13 +349,13 @@ Label it "unofficial community project" until then.
 
 ### Stage B: go live (after the demo is approved)
 
-| Target  | Milestone                                                                                                                                       |
-| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| ~Oct 8  | Free accounts ready: GitHub, Supabase, Cloudflare, Telegram bot                                                                                 |
-| ~Oct 12 | Real sign-ups (anonymous join + form, Telegram ✓ optional), moderation, deploy to `www.decipherclub.com/coii/`, soft launch to friends/speakers |
-| ~Oct 19 | P2 delighters + **public launch** (Devcon 8 India Telegram group, X)                                                                            |
-| ~Oct 30 | P3 done, load-tested, **feature freeze**                                                                                                        |
-| Nov 3–6 | Event: monitor, moderate, kiosk mode on screens                                                                                                 |
+| Target  | Milestone                                                                                                                                  |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| ~Oct 8  | Free accounts ready: GitHub, Supabase, Cloudflare, Telegram bot                                                                            |
+| ~Oct 12 | Real sign-ups (anonymous join + form, Telegram ✓ optional), moderation, deploy to `coii.decipherclub.com`, soft launch to friends/speakers |
+| ~Oct 19 | P2 delighters + **public launch** (Devcon 8 India Telegram group, X)                                                                       |
+| ~Oct 30 | P3 done, load-tested, **feature freeze**                                                                                                   |
+| Nov 3–6 | Event: monitor, moderate, kiosk mode on screens                                                                                            |
 
 **In parallel (owner, any time):** the organizer conversation (§14).
 
@@ -407,7 +407,7 @@ list filters), prek hooks, GitHub Actions with SHA-pinned actions + zizmor.
 - Name: coii (connect on ideas & interests)
 - Sign-up: Supabase Auth with an anonymous session on joining (Turnstile-protected); optional
   Google to save and restore your bean; Telegram is optional verification (✓ badge), not a login
-- Production domain: `https://www.decipherclub.com/coii/`
+- Production domain: `https://coii.decipherclub.com/` (Vercel)
 - Responsive web only
 - No X API
 - Ticket verification parked (launch open; add the 🎟️ badge later)
@@ -431,4 +431,4 @@ list filters), prek hooks, GitHub Actions with SHA-pinned actions + zizmor.
    - Failing both: can a coii invite code go into a pre-event email?
 5. Do they want the stats page (topic popularity, top combos) for their own planning?
 
-**Domain (decided):** `https://www.decipherclub.com/coii/`.
+**Domain (decided):** `https://coii.decipherclub.com/` on Vercel.
