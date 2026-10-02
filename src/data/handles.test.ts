@@ -1,7 +1,13 @@
 import * as fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
-import { containsLink, normalizeTelegram, normalizeX } from "@/data/handles";
+import {
+  cleanText,
+  containsLink,
+  nameHasLink,
+  normalizeTelegram,
+  normalizeX,
+} from "@/data/handles";
 
 const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 const tail = [...letters, ..."0123456789_".split("")];
@@ -72,8 +78,57 @@ describe("containsLink", () => {
     expect(containsLink("www.something")).toBe(true);
   });
 
-  it("allows ordinary sentences", () => {
+  it("flags any word.word with 2+ letters after the dot, whatever the ending", () => {
+    expect(containsLink("airdrop at claimdrop.ai")).toBe(true);
+    expect(containsLink("docs on coii.dev")).toBe(true);
+    expect(containsLink("yield at max.finance")).toBe(true);
+    expect(containsLink("dm t.me/someone")).toBe(true);
+    expect(containsLink("I build with Node.js")).toBe(true);
+  });
+
+  it("allows ordinary sentences and numbers after a dot", () => {
     expect(containsLink("building private payments on Ethereum")).toBe(false);
     expect(containsLink("cricket prediction markets, anyone?")).toBe(false);
+    expect(containsLink("rolled out v2.0 today")).toBe(false);
+    expect(containsLink("gas is 3.5 gwei. Wild.")).toBe(false);
+    expect(containsLink("i.e. a single letter after a dot")).toBe(false);
+  });
+});
+
+describe("nameHasLink", () => {
+  it("lets names written with initials through", () => {
+    for (const name of ["K.Ravi Kumar", "S.Priya", "A.R.Rahman", "Dr.Anita Rao", "Zara v2.0"]) {
+      expect([name, nameHasLink(name)]).toEqual([name, false]);
+    }
+  });
+
+  it("still catches domains, URLs and the short domains people paste", () => {
+    for (const name of [
+      "free ETH at mint-now.xyz",
+      "claimdrop.ai team",
+      "dm t.me/zara",
+      "Zara x.com",
+      "win at t.co",
+      "https://evil",
+      "www.thing",
+      "MINT.XYZ",
+    ]) {
+      expect([name, nameHasLink(name)]).toEqual([name, true]);
+    }
+  });
+});
+
+describe("cleanText", () => {
+  it("removes invisible characters that could disguise blocked words or links", () => {
+    expect(cleanText("Dev\u200bcon")).toBe("Devcon");
+    expect(cleanText("scam\u200b.xyz")).toBe("scam.xyz");
+    expect(containsLink(cleanText("scam\u200b.xyz"))).toBe(true);
+    expect(cleanText("\ufeffZara\u200d")).toBe("Zara");
+    expect(cleanText("\u3164\u2800\uffa0")).toBe("");
+  });
+
+  it("trims and collapses every kind of whitespace to one space", () => {
+    expect(cleanText("  Zara \u00a0\n Khan  ")).toBe("Zara Khan");
+    expect(cleanText("a\u3000b\u2003c")).toBe("a b c");
   });
 });

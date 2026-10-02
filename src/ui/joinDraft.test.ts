@@ -58,6 +58,20 @@ describe("validateJoin", () => {
     expect(none.ok && none.input.oneLiners).toEqual([]);
   });
 
+  it("refuses @usernames in one-liners but allows a lone @", () => {
+    expect(lineErrors(["dm @zara_builds", "meet me @ the chai stall"])).toEqual([
+      "No @usernames here. Your handles show after someone waves.",
+      undefined,
+    ]);
+  });
+
+  it("refuses links in names and strips invisible characters", () => {
+    expect(errorsOf({ ...VALID, name: "free ETH at mint-now.xyz" }).name).toMatch(/links/);
+    const result = validateJoin({ ...VALID, name: "Za\u200bra Khan", oneLiners: ["gm\u200b"] });
+    expect(result.ok && [result.input.name, result.input.oneLiners]).toEqual(["Zara Khan", ["gm"]]);
+    expect(lineErrors(["scam\u200b.xyz"])[0]).toMatch(/Links/);
+  });
+
   it("requires a name", () => {
     expect(errorsOf({ ...VALID, name: "   " })).toEqual({ name: "Add your name." });
   });
