@@ -41,6 +41,7 @@ function view(patch: Partial<MeetView> = {}): MeetView {
     skipped: [],
     chais: [],
     inbound: 0,
+    wavedAtYou: 0,
     celebrate: null,
     ...patch,
   };
@@ -112,8 +113,8 @@ describe("waveToast", () => {
     );
   });
 
-  it("reassures on your first wave only", () => {
-    expect(waveToast("waved", "Asha Rao", true)?.text).toContain("Asha only finds out");
+  it("explains the point and the unlocked contact on your first wave only", () => {
+    expect(waveToast("waved", "Asha Rao", true)?.text).toContain("+1 wave point for Asha");
     expect(waveToast("waved", "Asha Rao", false)).toBeNull();
   });
 

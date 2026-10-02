@@ -49,7 +49,7 @@ export function CloseButton({ onClose }: { readonly onClose: () => void }) {
 
 interface OverlayProps {
   /** Picks the card size: About reads like a page, You is a roomy two-column studio. */
-  readonly kind: "about" | "you";
+  readonly kind: "about" | "you" | "board";
   readonly labelledBy: string;
   readonly leaving: boolean;
   readonly onClose: () => void;

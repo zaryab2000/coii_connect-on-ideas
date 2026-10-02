@@ -7,7 +7,7 @@ import type { Chai } from "@/match/storage";
 export type Panel = "none" | "profile" | "booth" | "people" | "meet";
 
 /** Centred cards above everything else; the venue keeps moving behind them. */
-export type Overlay = "none" | "about" | "you";
+export type Overlay = "none" | "about" | "you" | "board";
 
 export interface Toast {
   readonly id: number;
@@ -34,8 +34,18 @@ export interface MeetView {
   readonly chais: readonly Chai[];
   /** How many people waved at you without a chai yet. A count only, never who. */
   readonly inbound: number;
+  /** Everyone who has waved at you, chais included: your wave points. */
+  readonly wavedAtYou: number;
   /** Person whose "Chai's on!" moment should show now. */
   readonly celebrate: string | null;
+}
+
+/** Live wave points on top of what is derived from people and Meet (see `pointsReader`). */
+export interface PointsState {
+  /** Waves the demo crowd gave each other while you watched, by person id. */
+  readonly extra: ReadonlyMap<string, number>;
+  /** Who got the latest point and when, so lists can flash it. */
+  readonly lastBump: { readonly id: string; readonly at: number } | null;
 }
 
 export interface AppState {
@@ -60,6 +70,7 @@ export interface AppState {
   readonly meet: MeetView | null;
   /** "My tribe" map mode: everyone sharing your topics glows, the rest dim. */
   readonly tribe: boolean;
+  readonly points: PointsState;
   readonly reducedMotion: boolean;
   readonly ready: boolean;
 }

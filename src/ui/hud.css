@@ -158,6 +158,30 @@
   display: none;
 }
 
+/* Live wave-points standing: a marigold sticker that pops when the number changes. */
+.board-chip {
+  margin-right: 8px;
+  padding-right: 12px;
+  background: var(--marigold);
+  pointer-events: auto;
+}
+
+.board-chip__text {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+  animation: board-chip-pop 450ms var(--spring-pop);
+}
+
+@keyframes board-chip-pop {
+  from {
+    transform: scale(0.7);
+  }
+}
+
+.app[data-motion="reduced"] .board-chip__text {
+  animation: none;
+}
+
 .demo-chip {
   position: relative;
   flex: none;

@@ -31,13 +31,13 @@ const FEATURES: readonly Feature[] = [
   },
   {
     icon: "hot_beverage",
-    title: "Wave, then chai",
-    text: "Waves are private. If they wave back, it's Chai's on! We suggest a spot at the venue and a first message you can send in one tap.",
+    title: "Wave to connect",
+    text: "Waving gives them a wave point and shows you their Telegram and X. They only learn it was you if they wave back, and then it's Chai's on!",
   },
   {
-    icon: "handshake",
-    title: "Find your tribe",
-    text: "My tribe lights up everyone who shares your topics, so you can see where your people are right now.",
+    icon: "trophy",
+    title: "Collect wave points",
+    text: "Every person who waves at you is a point. Catchy one-liners pop up over your bean and get you noticed. Watch the live board.",
   },
   {
     icon: "dizzy",
@@ -53,7 +53,7 @@ const STEPS: readonly { readonly title: string; readonly text: string }[] = [
   },
   {
     title: "Meet by ideas",
-    text: "Browse the booths, flip today's 3, light up your tribe.",
+    text: "Read the one-liners, flip today's 3, wave at whoever makes you curious.",
   },
   {
     title: "Take it offline",
@@ -62,7 +62,7 @@ const STEPS: readonly { readonly title: string; readonly text: string }[] = [
 ];
 
 const PROMISES: readonly string[] = [
-  "You choose what's public: your name, handles, topics and one-liner. Nothing else.",
+  "Your name, topics and one-liners are public. Your handles only show to people who wave at you.",
   "No app to install and no wallet to connect. It's just a web page.",
   "Leave anytime and your bean walks out.",
   "Meet in public parts of the venue. Nobody legit will ask for your seed phrase or funds.",

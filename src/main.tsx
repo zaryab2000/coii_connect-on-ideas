@@ -25,8 +25,10 @@ const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matc
 engine.setReducedMotion(reducedMotion);
 engine.setPeople(you ? [...crowd.people, you] : crowd.people);
 const controller = createController(engine, { people: crowd.people, you, reducedMotion });
-if (!params.has("still"))
+if (!params.has("still")) {
   controller.startArrivals(demoSource(crowd.reserve, { minDelayMs: 6000, maxDelayMs: 14000 }));
+  controller.startDemoWaves();
+}
 
 if (import.meta.env.DEV || params.has("debug")) {
   Object.assign(window, { __coii: { engine, controller } });

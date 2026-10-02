@@ -12,14 +12,14 @@ interface DebugHook {
   controller: {
     store: {
       get(): {
-        people: { id: string }[];
+        people: { id: string; isDemo: boolean; x: string | null }[];
         selectedId: string | null;
         you: { id: string; avatar: { hair: number } } | null;
         tribe: boolean;
         meet: { hand: { personId: string }[]; waved: string[] } | null;
       };
     };
-    actions: { join(input: unknown): { id: string } };
+    actions: { join(input: unknown): { id: string }; locate(id: string): void };
   };
 }
 
@@ -266,14 +266,54 @@ test("Meet: reveal today's 3, wave at one and light up My tribe", async ({ page 
   const slot = page.locator(".meet-slot").nth(index);
   await slot.getByRole("button", { name: "Wave", exact: true }).click();
   await expect(slot.locator(".stamp")).toContainText("Waved");
-  await expect(slot.getByRole("button", { name: "Take it back" })).toBeVisible();
-  await expect(page.getByText("19 waves left today")).toBeVisible();
+  await expect(slot.getByText(/\+1 wave point for/)).toBeVisible();
+  await expect(slot.getByRole("button", { name: "See how to reach them" })).toBeVisible();
+  await expect(page.getByText("49 waves left today")).toBeVisible();
 
   await page.keyboard.press("Escape");
   const tribe = page.getByRole("button", { name: /My tribe/ });
   await tribe.click();
   await expect(tribe).toHaveAttribute("aria-pressed", "true");
   expect(await page.evaluate(() => window.__coii?.controller.store.get().tribe)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test("waving at someone unlocks their contact and gives them a wave point", async ({ page }) => {
+  await page.goto("/?still");
+  await waitForCrowd(page);
+  await joinQuickly(page);
+  const id = await page.evaluate(
+    () =>
+      window.__coii?.controller.store.get().people.find((p) => p.isDemo && p.x !== null)?.id ?? "",
+  );
+  await page.evaluate((target) => window.__coii?.controller.actions.locate(target), id);
+  const profile = page.locator("article.profile");
+  await expect(profile.getByText("Wave to see their handles")).toBeVisible();
+  await expect(profile.getByRole("button", { name: "Message on Telegram" })).toHaveCount(0);
+  const before = Number(await profile.locator(".points-badge strong").textContent());
+  await profile.getByRole("button", { name: "Wave to connect" }).click();
+  await expect(profile.getByRole("button", { name: "Message on Telegram" })).toBeVisible();
+  await expect(profile.locator(".profile__handles")).toContainText("@demo_");
+  await expect(profile.locator(".points-badge strong")).toHaveText(String(before + 1));
+});
+
+test("the board pill opens a live wave-points leaderboard", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto("/?still");
+  await waitForCrowd(page);
+  await joinQuickly(page);
+  await page.getByRole("button", { name: /Wave points board/ }).click();
+  const board = page.getByRole("dialog", { name: "Wave points" });
+  await expect(board).toBeVisible();
+  await expect(board.getByRole("list", { name: "Top three" }).getByRole("listitem")).toHaveCount(3);
+  await expect(board.getByText(/^You · #\d+ · \d+ wave points?$/)).toBeVisible();
+  const defi = board
+    .getByRole("group", { name: "Show the board for a booth" })
+    .getByRole("button", { name: "DeFi" });
+  await defi.click();
+  await expect(defi).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Escape");
+  await expect(board).toBeHidden();
   expect(errors).toEqual([]);
 });
 

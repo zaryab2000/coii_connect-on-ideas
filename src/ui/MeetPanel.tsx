@@ -217,7 +217,7 @@ function MeetBody({ meet, you }: { readonly meet: MeetView; readonly you: Person
       <Hand meet={meet} you={you} />
       <p className="meet-private">
         <Icon id="shield" size={18} />
-        Waves are private. Nobody sees yours unless they wave back.
+        Each wave gives them a wave point, but nobody sees it was you unless they wave back.
       </p>
       <ChaiList chais={meet.chais} />
     </>

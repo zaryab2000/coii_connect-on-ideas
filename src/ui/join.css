@@ -638,6 +638,35 @@ fieldset.q-card > .q-card__title + * {
   text-align: left;
 }
 
+.you-points {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px 10px;
+  border: var(--line);
+  border-radius: var(--radius-md);
+  background: var(--marigold);
+  box-shadow: var(--pop-sm);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.you-points__text {
+  display: grid;
+  line-height: 1.25;
+}
+
+.you-points__text strong {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.you-points__text span {
+  font-weight: 600;
+}
+
 .you-summary__actions {
   display: grid;
   gap: 10px;

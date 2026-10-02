@@ -1,5 +1,7 @@
 import { createMeet, realClock } from "@/app/meet";
 import type { MeetActions, MeetClock, MeetController } from "@/app/meet";
+import { createPoints, loadPoints } from "@/app/points";
+import type { PointsController } from "@/app/points";
 import { createStore } from "@/app/store";
 import type { AppState, Overlay, Panel, Store, Toast } from "@/app/store";
 import { clearYou, saveYou } from "@/data/localUser";
@@ -43,6 +45,8 @@ export interface AppController {
   readonly actions: Actions;
   /** Starts live arrivals; returns a stop function. */
   startArrivals(source: PeopleSource): () => void;
+  /** Starts the demo crowd waving at each other (live wave points); returns a stop function. */
+  startDemoWaves(): () => void;
 }
 
 export interface ControllerOptions {
@@ -219,6 +223,7 @@ function youActions(
   store: AppStore,
   toasts: ToastActions,
   meet: MeetController,
+  points: PointsController,
 ): Pick<Actions, "join" | "leave"> {
   return {
     join(input) {
@@ -238,6 +243,7 @@ function youActions(
       engine.spawn(person, true);
       meet.forget();
       meet.sync();
+      points.refreshCrowns();
       toasts.pushToast(
         saved
           ? "You're in! Watch yourself walk in."
@@ -251,6 +257,7 @@ function youActions(
       if (!removeYou(engine, store)) return;
       store.set({ overlay: "none", joinTopic: null });
       meet.forget();
+      points.refreshCrowns();
       toasts.pushToast("You left coii. Come back anytime.", "waving_hand", "info");
     },
   };
@@ -277,7 +284,6 @@ function meetActionsOf(meet: MeetController): MeetActions {
   return {
     revealCard: meet.revealCard,
     wave: meet.wave,
-    unwave: meet.unwave,
     skip: meet.skip,
     dismissChai: meet.dismissChai,
     markMessaged: meet.markMessaged,
@@ -302,20 +308,30 @@ export function createController(engine: EngineApi, options: ControllerOptions):
     toasts: [],
     meet: null,
     tribe: false,
+    points: loadPoints(),
     reducedMotion: options.reducedMotion,
     ready: false,
   });
   const toasts = toastActions(store);
-  const meet = createMeet(engine, store, toasts.pushToast, options.clock ?? realClock);
+  const clock = options.clock ?? realClock;
+  const points = createPoints(engine, store, clock);
+  const meet = createMeet({
+    engine,
+    store,
+    pushToast: toasts.pushToast,
+    clock,
+    onPoint: points.bump,
+  });
   const actions: Actions = {
     ...panelActions(engine, store),
     ...mapActions(engine, store),
-    ...youActions(engine, store, toasts, meet),
+    ...youActions(engine, store, toasts, meet, points),
     ...toasts,
     ...meetActionsOf(meet),
   };
   followEngine(engine, store);
   meet.sync();
+  points.refreshCrowns();
 
   return {
     store,
@@ -331,5 +347,6 @@ export function createController(engine: EngineApi, options: ControllerOptions):
         );
       });
     },
+    startDemoWaves: points.startDemoWaves,
   };
 }

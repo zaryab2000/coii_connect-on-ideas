@@ -1,11 +1,13 @@
 import "@/ui/profile.css";
 import { useId } from "react";
 
-import { useActions } from "@/app/context";
+import { useActions, useApp } from "@/app/context";
+import { pointsReader } from "@/app/points";
 import { topicById } from "@/data/topics";
 import type { Person } from "@/data/types";
 import { BeanAvatar } from "@/ui/BeanAvatar";
 import { Glyph, Icon } from "@/ui/Icon";
+import { contactUnlocked, firstName, pointsText } from "@/ui/meet";
 import { Awning, IntentChips, OneLiners, PanelNav, TopicChips, topicVars } from "@/ui/PanelChrome";
 import type { PanelChrome } from "@/ui/PanelChrome";
 import { WaveButton } from "@/ui/WaveButton";
@@ -68,24 +70,84 @@ function ContactLink({
   );
 }
 
-function OthersActions({ person }: { readonly person: Person }) {
+function useUnlocked(personId: string): boolean {
+  return useApp((s) => contactUnlocked(s.meet, personId));
+}
+
+function ShowOnMap({ id }: { readonly id: string }) {
   const actions = useActions();
+  return (
+    <button type="button" className="btn btn--secondary" onClick={() => actions.locate(id)}>
+      <Glyph name="pin" size={20} />
+      Show on map
+    </button>
+  );
+}
+
+/** Before you wave: where the contact buttons will appear, and why waving first. */
+function LockedContact({ person }: { readonly person: Person }) {
+  return (
+    <div className="contact-lock">
+      <Icon id="locked" size={26} />
+      <p>
+        <strong>Telegram and X unlock when you wave.</strong> {firstName(person.name)} gets +1 wave
+        point, and only finds out it was you if they wave back.
+      </p>
+    </div>
+  );
+}
+
+function OthersActions({ person }: { readonly person: Person }) {
+  const unlocked = useUnlocked(person.id);
   return (
     <div className="profile__actions">
       <WaveButton person={person} />
-      <ContactLink person={person} kind="telegram" primary />
-      <div className="profile__row">
-        <ContactLink person={person} kind="x" primary={!person.telegram} />
-        <button
-          type="button"
-          className="btn btn--secondary"
-          onClick={() => actions.locate(person.id)}
-        >
-          <Glyph name="pin" size={20} />
-          Show on map
-        </button>
-      </div>
+      {unlocked ? (
+        <div className="contact-open">
+          <ContactLink person={person} kind="telegram" primary />
+          <div className="profile__row">
+            <ContactLink person={person} kind="x" primary={!person.telegram} />
+            <ShowOnMap id={person.id} />
+          </div>
+        </div>
+      ) : (
+        <>
+          <LockedContact person={person} />
+          <ShowOnMap id={person.id} />
+        </>
+      )}
     </div>
+  );
+}
+
+/** Handles once unlocked; until then a hint that a wave reveals them. */
+function Handles({ person }: { readonly person: Person }) {
+  const unlocked = useUnlocked(person.id);
+  if (!unlocked) {
+    return (
+      <p className="profile__handles profile__handles--locked">
+        <Icon id="locked" size={14} />
+        Wave to see their handles
+      </p>
+    );
+  }
+  const handles = [
+    person.telegram ? `@${person.telegram}` : null,
+    person.x ? `X @${person.x}` : null,
+  ]
+    .filter((h) => h !== null)
+    .join(" · ");
+  return handles ? <p className="profile__handles">{handles}</p> : null;
+}
+
+function PointsBadge({ person }: { readonly person: Person }) {
+  const points = useApp((s) => pointsReader(s)(person));
+  return (
+    <p className="points-badge" aria-label={pointsText(points)}>
+      <Icon id="waving_hand" size={18} />
+      <strong>{points}</strong>
+      <span aria-hidden="true">wave {points === 1 ? "point" : "points"}</span>
+    </p>
   );
 }
 
@@ -99,12 +161,6 @@ export function ProfileCard({
 }) {
   const nameId = useId();
   const primary = person.topics[0] ?? "ai";
-  const handles = [
-    person.telegram ? `@${person.telegram}` : null,
-    person.x ? `X @${person.x}` : null,
-  ]
-    .filter((h) => h !== null)
-    .join(" · ");
   return (
     <article className="panel profile" style={topicVars(primary)} aria-labelledby={nameId}>
       <header className="panel__head profile__head" data-sheet-grab>
@@ -118,8 +174,9 @@ export function ProfileCard({
             <h2 id={nameId} className="profile__name">
               {person.name}
             </h2>
-            {handles ? <p className="profile__handles">{handles}</p> : null}
+            <Handles person={person} />
             <Badges person={person} />
+            <PointsBadge person={person} />
           </div>
         </div>
         <TopicChips topics={person.topics} />

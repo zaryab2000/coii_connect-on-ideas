@@ -33,3 +33,19 @@ export function demoInboundWaves(
   }
   return [...picked];
 }
+
+/**
+ * One demo person who shares a topic with you and hasn't waved yet waves at you now (the live
+ * "someone waved at you" moment). Null when nobody suitable is left.
+ */
+export function demoWaveAtYou(
+  viewer: Person,
+  people: readonly Person[],
+  exclude: ReadonlySet<string>,
+  random: () => number,
+): string | null {
+  const candidates = people.filter(
+    (p) => p.isDemo && !exclude.has(p.id) && topicOverlap(viewer, p) > 0,
+  );
+  return candidates[Math.floor(random() * candidates.length)]?.id ?? null;
+}

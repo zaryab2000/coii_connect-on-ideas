@@ -3,9 +3,13 @@ import { useId, useMemo } from "react";
 import type { CSSProperties, MouseEvent, Ref } from "react";
 
 import { useActions, useApp } from "@/app/context";
+import { pointsReader } from "@/app/points";
+import type { AppState } from "@/app/store";
 import { TOPICS } from "@/data/topics";
+import { rankOf } from "@/match/points";
 import { tribeOf } from "@/match/tribe";
 import { Glyph, Icon } from "@/ui/Icon";
+import { firstName } from "@/ui/meet";
 import { topicVars } from "@/ui/PanelChrome";
 
 const numberFormat = new Intl.NumberFormat("en-IN");
@@ -61,6 +65,49 @@ function DemoChip() {
         </p>
       </div>
     </>
+  );
+}
+
+/** What the board pill says: your rank and points, or who leads before you join. */
+function boardSummary(state: AppState): { text: string; label: string } {
+  const read = pointsReader(state);
+  const you = state.you;
+  if (you) {
+    const rank = rankOf(state.people, read, you);
+    const points = read(you);
+    return {
+      text: `#${rank} · ${points}`,
+      label: `Wave points board. You're number ${rank} with ${points} points.`,
+    };
+  }
+  let leader = state.people[0];
+  for (const person of state.people) if (leader && read(person) > read(leader)) leader = person;
+  if (!leader) return { text: "Board", label: "Wave points board" };
+  const points = read(leader);
+  return {
+    text: `${firstName(leader.name)} ${points}`,
+    label: `Wave points board. ${leader.name} leads with ${points} points.`,
+  };
+}
+
+/** Live wave-points standing; opens the full board. */
+function BoardPill() {
+  const actions = useActions();
+  const text = useApp((s) => boardSummary(s).text);
+  const label = useApp((s) => boardSummary(s).label);
+  return (
+    <button
+      type="button"
+      className="chip board-chip"
+      aria-haspopup="dialog"
+      aria-label={label}
+      onClick={() => actions.openOverlay("board")}
+    >
+      <Icon id="trophy" size={20} />
+      <span key={text} className="board-chip__text">
+        {text}
+      </span>
+    </button>
   );
 }
 
@@ -145,6 +192,7 @@ export function Hud({ ref }: { readonly ref: Ref<HTMLDivElement> }) {
         </button>
       </div>
       <div className="hud__chips-row">
+        <BoardPill />
         <DemoChip />
         <TribeToggle />
         <TopicHighlights />

@@ -6,6 +6,7 @@ import { MapHost } from "@/app/MapHost";
 import type { Overlay, Panel } from "@/app/store";
 import type { EngineApi } from "@/engine/types";
 import { AboutOverlay } from "@/ui/AboutOverlay";
+import { BoardOverlay } from "@/ui/BoardOverlay";
 import { ChaiOverlay } from "@/ui/ChaiCard";
 import { useHeightVar, useMediaQuery, usePresence } from "@/ui/hooks";
 import { Hud } from "@/ui/Hud";
@@ -119,22 +120,33 @@ function PanelArea({ flags, query, onSheetHeight }: PanelAreaProps) {
   );
 }
 
-/** About or your profile, centred over everything; fades out when closed or swapped. */
+type OverlayKind = Exclude<Overlay, "none">;
+
+function OverlayFor(props: {
+  readonly kind: OverlayKind;
+  readonly leaving: boolean;
+  readonly onClose: () => void;
+}) {
+  const { kind, ...rest } = props;
+  switch (kind) {
+    case "about":
+      return <AboutOverlay {...rest} />;
+    case "you":
+      return <YouOverlay {...rest} />;
+    case "board":
+      return <BoardOverlay {...rest} />;
+  }
+}
+
+/** About, your profile or the board, centred over everything; fades out when closed or swapped. */
 function Overlays() {
   const actions = useActions();
   const overlay = useApp((s) => s.overlay);
-  const items = usePresence<Exclude<Overlay, "none">>(
-    overlay === "none" ? null : overlay,
-    OVERLAY_EXIT_MS,
-  );
+  const items = usePresence<OverlayKind>(overlay === "none" ? null : overlay, OVERLAY_EXIT_MS);
   const onClose = (): void => actions.closeOverlay();
-  return items.map(({ key, value, leaving }) =>
-    value === "about" ? (
-      <AboutOverlay key={key} leaving={leaving} onClose={onClose} />
-    ) : (
-      <YouOverlay key={key} leaving={leaving} onClose={onClose} />
-    ),
-  );
+  return items.map(({ key, value, leaving }) => (
+    <OverlayFor key={key} kind={value} leaving={leaving} onClose={onClose} />
+  ));
 }
 
 /** App shell: the live map fills the screen; UI sits on top (phone) or beside it (desktop). */

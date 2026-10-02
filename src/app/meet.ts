@@ -2,7 +2,7 @@ import type { AppState, MeetView, Store, Toast } from "@/app/store";
 import type { IconId, Person } from "@/data/types";
 import type { EngineApi } from "@/engine/types";
 import { daysBetween, meetDay, nextResetAt } from "@/match/day";
-import { demoInboundWaves, demoReply } from "@/match/demoBots";
+import { demoInboundWaves, demoReply, demoWaveAtYou } from "@/match/demoBots";
 import { buildHand } from "@/match/hand";
 import type { Card } from "@/match/hand";
 import type { Eligibility, ScoreContext } from "@/match/score";
@@ -10,8 +10,10 @@ import { clearMeet, loadMeet, saveMeet } from "@/match/storage";
 import type { Chai, ChaiStatus, DayHand, MeetSave } from "@/match/storage";
 import { tribeOf } from "@/match/tribe";
 
-export const WAVES_PER_DAY = 20;
+export const WAVES_PER_DAY = 50;
 const HAND_SIZE = 3;
+/** Most simulated "someone waved at you" moments per visit. */
+const DRIP_MAX = 8;
 const BONUS_MAX = 3;
 const SKIP_DAYS = 7;
 const DAY_MS = 86_400_000;
@@ -38,9 +40,8 @@ export const realClock: MeetClock = {
 export interface MeetActions {
   /** Flip one of today's cards. */
   revealCard(personId: string): void;
+  /** Waves at someone: they get a wave point and you can see how to reach them. Final. */
   wave(personId: string): WaveResult;
-  /** Take a wave back (only before it became a chai). */
-  unwave(personId: string): void;
   /** Hide someone from your hands for a week. */
   skip(personId: string): void;
   /** Marks this person's "Chai's on!" moment as seen; no-op if that chai is gone or seen. */
@@ -61,6 +62,8 @@ export interface MeetController extends MeetActions {
 }
 
 type PushToast = (text: string, icon: IconId | null, tone: Toast["tone"]) => void;
+/** Somebody just earned a wave point. */
+type OnPoint = (personId: string) => void;
 
 function addDays(day: string, days: number): string {
   return new Date(Date.parse(day) + days * DAY_MS).toISOString().slice(0, 10);
@@ -99,6 +102,7 @@ function viewOf(save: MeetSave, day: string, now: number): MeetView {
   const hand = todayHand(save);
   const chaiIds = new Set(save.chais.map((c) => c.personId));
   const wavesToday = save.waves.filter((w) => w.day === day).length;
+  const wavedAtYou = new Set([...save.inbound, ...chaiIds]).size;
   return {
     day,
     resetAt: nextResetAt(now),
@@ -109,6 +113,7 @@ function viewOf(save: MeetSave, day: string, now: number): MeetView {
     skipped: save.skips.filter((s) => s.until > day).map((s) => s.id),
     chais: save.chais,
     inbound: save.inbound.filter((id) => !chaiIds.has(id)).length,
+    wavedAtYou,
     celebrate: save.chais.find((c) => !c.seen)?.personId ?? null,
   };
 }
@@ -127,6 +132,8 @@ function withChaiStatus(save: MeetSave, personId: string, status: ChaiStatus): M
 class Meet implements MeetController {
   private save: MeetSave | null = null;
   private cancelReset: (() => void) | null = null;
+  private cancelDrip: (() => void) | null = null;
+  private drips = 0;
   private readonly replies = new Map<string, () => void>();
 
   constructor(
@@ -134,6 +141,7 @@ class Meet implements MeetController {
     private readonly store: Store<AppState>,
     private readonly pushToast: PushToast,
     private readonly clock: MeetClock,
+    private readonly onPoint: OnPoint,
   ) {}
 
   // ---- lifecycle -------------------------------------------------------------------------------
@@ -148,6 +156,7 @@ class Meet implements MeetController {
     this.save = this.dealToday(me, this.save);
     this.publish();
     this.scheduleReset();
+    if (!this.cancelDrip) this.scheduleDrip();
   };
 
   readonly forget = (): void => {
@@ -159,6 +168,8 @@ class Meet implements MeetController {
     this.save = null;
     this.cancelReset?.();
     this.cancelReset = null;
+    this.cancelDrip?.();
+    this.cancelDrip = null;
     for (const cancel of this.replies.values()) cancel();
     this.replies.clear();
     this.store.set({ meet: null, tribe: false });
@@ -254,6 +265,7 @@ class Meet implements MeetController {
     const wave = { to: personId, at: this.clock.now(), day: this.day() };
     this.save = { ...this.save, waves: [...this.save.waves, wave] };
     this.engine.greet(personId);
+    this.onPoint(personId);
     if (this.save.inbound.includes(personId)) {
       this.addChai(personId, target.isDemo);
       return "chai";
@@ -277,18 +289,43 @@ class Meet implements MeetController {
     if (!reply.wavesBack) return;
     const cancel = this.clock.schedule(() => {
       this.replies.delete(target.id);
-      if (this.save?.waves.some((w) => w.to === target.id)) this.addChai(target.id, true);
+      if (!this.save?.waves.some((w) => w.to === target.id)) return;
+      this.addChai(target.id, true);
+      this.onPoint(me.id);
     }, reply.delayMs);
     this.replies.set(target.id, cancel);
   }
 
-  readonly unwave = (personId: string): void => {
-    if (!this.save || this.save.chais.some((c) => c.personId === personId)) return;
-    this.replies.get(personId)?.();
-    this.replies.delete(personId);
-    this.save = { ...this.save, waves: this.save.waves.filter((w) => w.to !== personId) };
+  /** Now and then a demo person who shares your topics waves at you: a point, but not who. */
+  private scheduleDrip(): void {
+    if (this.drips >= DRIP_MAX) return;
+    this.cancelDrip = this.clock.schedule(
+      () => {
+        this.cancelDrip = null;
+        this.drip();
+        this.scheduleDrip();
+      },
+      40_000 + this.clock.random() * 70_000,
+    );
+  }
+
+  private drip(): void {
+    const me = this.you();
+    if (!this.save || !me) return;
+    const save = this.save;
+    const taken = new Set([
+      ...save.inbound,
+      ...save.waves.map((w) => w.to),
+      ...save.chais.map((c) => c.personId),
+    ]);
+    const id = demoWaveAtYou(me, this.store.get().people, taken, this.clock.random);
+    if (!id) return;
+    this.drips++;
+    this.save = { ...save, inbound: [...save.inbound, id] };
     this.publish();
-  };
+    this.onPoint(me.id);
+    this.pushToast("Someone waved at you! +1 wave point", "waving_hand", "success");
+  }
 
   readonly dismissChai = (personId: string): void => {
     if (!this.save?.chais.some((c) => c.personId === personId && !c.seen)) return;
@@ -363,11 +400,14 @@ class Meet implements MeetController {
   };
 }
 
-export function createMeet(
-  engine: EngineApi,
-  store: Store<AppState>,
-  pushToast: PushToast,
-  clock: MeetClock,
-): MeetController {
-  return new Meet(engine, store, pushToast, clock);
+export interface MeetDeps {
+  readonly engine: EngineApi;
+  readonly store: Store<AppState>;
+  readonly pushToast: PushToast;
+  readonly clock: MeetClock;
+  readonly onPoint: OnPoint;
+}
+
+export function createMeet(deps: MeetDeps): MeetController {
+  return new Meet(deps.engine, deps.store, deps.pushToast, deps.clock, deps.onPoint);
 }

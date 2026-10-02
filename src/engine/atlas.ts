@@ -181,6 +181,7 @@ export async function buildCrowdAtlas(): Promise<CrowdAtlas> {
     "dizzy",
     "party_popper",
     "robot",
+    "crown",
   ]);
   const b = new AtlasBuilder();
   const bean = (draw: Request["draw"]): Promise<Frame> => b.add(BEAN_BOX, BEAN_SCALE, draw);

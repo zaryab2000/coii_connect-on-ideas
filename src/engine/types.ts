@@ -40,6 +40,10 @@ export interface EngineApi {
   chaiMoment(aId: string, bId: string): void;
   /** Their bean waves back at you (feedback after you wave at them). */
   greet(personId: string): void;
+  /** A "+1 👋" floats up from their bean when they earn a wave point (if on screen). */
+  pointPop(personId: string): void;
+  /** The wave-points leaders wear crowns on the map. */
+  setCrowns(personIds: readonly string[]): void;
   /** Screen pixels at the top of the map covered by UI, so framing keeps content visible. */
   setInsets(top: number): void;
   pause(): void;

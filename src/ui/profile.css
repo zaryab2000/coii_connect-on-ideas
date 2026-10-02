@@ -41,6 +41,45 @@
   overflow-wrap: anywhere;
 }
 
+.profile__handles--locked {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ink-faint);
+}
+
+.profile__handles--locked img {
+  margin-top: -2px;
+  opacity: 0.8;
+}
+
+/* Wave points: a marigold sticker next to the badges. */
+.points-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 8px 0 0;
+  padding: 3px 11px 1px 7px;
+  border: var(--line-thin);
+  border-radius: var(--radius-pill);
+  background: var(--marigold);
+  box-shadow: var(--pop-sm);
+  font-family: var(--font-display);
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.points-badge img {
+  margin-top: -3px;
+}
+
+.points-badge strong {
+  font-size: 1rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
 .badges {
   display: flex;
   flex-wrap: wrap;
@@ -111,7 +150,53 @@
   padding-inline: 10px;
 }
 
-/* After a wave: a quiet confirmation with a way to take it back. */
+/* Before a wave: a dashed placeholder where the contact buttons will appear. */
+.contact-lock {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 12px 8px;
+  border: 2px dashed var(--ink-faint);
+  border-radius: var(--radius-md);
+  background: var(--floor);
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.contact-lock p {
+  margin: 0;
+}
+
+.contact-lock strong {
+  color: var(--ink);
+}
+
+.contact-lock img {
+  flex: none;
+  margin-top: 1px;
+}
+
+/* After a wave the contact buttons spring in, like a lock popping open. */
+.contact-open {
+  display: grid;
+  gap: 10px;
+  animation: contact-open 500ms var(--spring-pop) both;
+}
+
+@keyframes contact-open {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+}
+
+.app[data-motion="reduced"] .contact-open {
+  animation: none;
+}
+
+/* After a wave: a quiet confirmation. */
 .wave-done {
   display: flex;
   flex-wrap: wrap;
@@ -133,12 +218,6 @@
 
 .wave-done__text {
   flex: 1 1 180px;
-}
-
-.wave-done .btn--quiet {
-  min-height: 40px;
-  margin-left: auto;
-  padding-inline: 8px;
 }
 
 .wave-done--quota {

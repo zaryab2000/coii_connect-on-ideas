@@ -452,7 +452,7 @@ function ConsentCard({ ids, draft, errors, update }: Omit<FieldsProps, "touch">)
           <Glyph name="check" size={18} />
         </span>
         <span>
-          Show my name and handles publicly on this map
+          Show my name, topics and one-liners on this map, and my handles to people who wave at me
           <RequiredMark />
         </span>
       </label>

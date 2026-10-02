@@ -17,7 +17,7 @@ import { buildPool, buildPoolSign, poolRect, RobotCrew, Ticker } from "@/engine/
 import { Gestures } from "@/engine/gestures";
 import type { GestureTarget } from "@/engine/gestures";
 import { loadIconTextures } from "@/engine/icons";
-import { BoothLabels, LabelLayer, QuoteBubbles } from "@/engine/labels";
+import { BoothLabels, LabelLayer, PointPops, QuoteBubbles } from "@/engine/labels";
 import { bgr, FLOOR } from "@/engine/palette";
 import { bubbleBox, QUOTE_ZOOM, QuoteDirector, quoteCap } from "@/engine/quotes";
 import type { QuoteSpot } from "@/engine/quotes";
@@ -47,6 +47,7 @@ interface Scene {
   readonly labels: LabelLayer;
   readonly boothLabels: BoothLabels;
   readonly quotes: QuoteBubbles;
+  readonly pops: PointPops;
   readonly atlas: CrowdAtlas;
   readonly worldLayer: Container;
   readonly robots: RobotCrew | null;
@@ -350,6 +351,23 @@ export class CoiiEngine implements EngineApi {
     });
   }
 
+  pointPop(personId: string): void {
+    this.whenReady((scene) => {
+      const index = this.agentOf.get(personId);
+      const a = index === undefined ? undefined : scene.world.agents[index];
+      if (index === undefined || !a?.active || !this.inView(scene, a.x, a.y)) return;
+      scene.crowd.impulse(index, 0.4);
+      const p = scene.camera.worldToScreen(a.x, a.y - a.z - 48);
+      scene.pops.show(p.x, p.y);
+    });
+  }
+
+  setCrowns(personIds: readonly string[]): void {
+    this.whenReady((scene) => {
+      scene.crowd.crowns = this.indexesOf(personIds);
+    });
+  }
+
   fit(): void {
     this.whenReady((scene) => {
       this.follow = -1;
@@ -476,7 +494,8 @@ export class CoiiEngine implements EngineApi {
     const quotes = new QuoteBubbles((agent) => {
       if (this.scene) this.tapBean(this.scene, agent);
     });
-    this.root.append(labels.el, boothLabels.el, quotes.el);
+    const pops = new PointPops(iconUrl("waving_hand"));
+    this.root.append(labels.el, boothLabels.el, quotes.el, pops.el);
     const scene: Scene = {
       app,
       world,
@@ -485,6 +504,7 @@ export class CoiiEngine implements EngineApi {
       labels,
       boothLabels,
       quotes,
+      pops,
       atlas,
       ...venue,
       effects: new EffectPool(),
@@ -556,6 +576,7 @@ export class CoiiEngine implements EngineApi {
     scene.effects.update(dt);
     scene.robots?.update(dt);
     scene.ticker?.update(dt);
+    scene.crowd.zoom = camera.zoom;
     scene.crowd.render(alpha, camera.view(), scene.world.time + alpha * STEP, dt, scene.effects);
     this.updateLabels(scene, alpha);
     this.positionBoothLabels(scene);

@@ -2,11 +2,14 @@ import "@/ui/join.css";
 import { useId, useState } from "react";
 
 import { useActions, useApp } from "@/app/context";
+import { pointsReader } from "@/app/points";
 import { topicById } from "@/data/topics";
 import type { Person, TopicId } from "@/data/types";
+import { rankOf } from "@/match/points";
 import { BeanAvatar } from "@/ui/BeanAvatar";
 import { Glyph, Icon } from "@/ui/Icon";
 import { JoinForm } from "@/ui/JoinForm";
+import { pointsText } from "@/ui/meet";
 import { CloseButton, Overlay } from "@/ui/Overlay";
 import {
   Awning,
@@ -35,6 +38,22 @@ function YouCard({ you }: { readonly you: Person }) {
   );
 }
 
+/** Your wave points and rank, opening the live board. */
+function YourPoints({ you }: { readonly you: Person }) {
+  const actions = useActions();
+  const points = useApp((s) => pointsReader(s)(you));
+  const rank = useApp((s) => rankOf(s.people, pointsReader(s), you));
+  return (
+    <button type="button" className="you-points" onClick={() => actions.openOverlay("board")}>
+      <Icon id="trophy" size={36} />
+      <span className="you-points__text">
+        <strong>{pointsText(points)}</strong>
+        <span>#{rank} on the board · see it live</span>
+      </span>
+    </button>
+  );
+}
+
 /** Your profile once you've joined: the card people see, plus what you can do with it. */
 function YouSummary({ you, onEdit }: { readonly you: Person; readonly onEdit: () => void }) {
   const actions = useActions();
@@ -42,6 +61,7 @@ function YouSummary({ you, onEdit }: { readonly you: Person; readonly onEdit: ()
     <div className="you-summary">
       <YouCard you={you} />
       <div className="you-summary__actions">
+        <YourPoints you={you} />
         <button type="button" className="btn btn--primary" onClick={() => actions.locate(you.id)}>
           <Glyph name="pin" size={20} />
           Show me on map

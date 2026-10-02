@@ -196,3 +196,37 @@ export class QuoteBubbles {
     window.setTimeout(() => bubble.el.remove(), QUOTE_FADE_MS);
   }
 }
+
+const POP_MS = 1300;
+const POPS_MAX = 6;
+
+/** "+1 👋" floating up from a bean that just earned a wave point. */
+export class PointPops {
+  readonly el: HTMLDivElement;
+  private live = 0;
+
+  constructor(private readonly waveIcon: string) {
+    this.el = document.createElement("div");
+    this.el.className = "map-pops";
+    this.el.setAttribute("aria-hidden", "true");
+  }
+
+  show(x: number, y: number): void {
+    if (this.live >= POPS_MAX) return;
+    const pop = document.createElement("span");
+    pop.className = "point-pop";
+    pop.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
+    const icon = document.createElement("img");
+    icon.src = this.waveIcon;
+    icon.alt = "";
+    icon.width = 18;
+    icon.height = 18;
+    pop.append("+1", icon);
+    this.el.append(pop);
+    this.live++;
+    window.setTimeout(() => {
+      pop.remove();
+      this.live--;
+    }, POP_MS);
+  }
+}

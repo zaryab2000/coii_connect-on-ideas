@@ -61,6 +61,14 @@ export class FakeEngine implements EngineApi {
   greet(personId: string): void {
     this.log("greet", personId);
   }
+
+  pointPop(personId: string): void {
+    this.log("pointPop", personId);
+  }
+
+  setCrowns(personIds: readonly string[]): void {
+    this.log("setCrowns", [...personIds]);
+  }
   setInsets(top: number): void {
     this.log("setInsets", top);
   }

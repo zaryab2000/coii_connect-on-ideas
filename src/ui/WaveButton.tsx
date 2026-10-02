@@ -17,8 +17,8 @@ function useWaveStatus(personId: string): WaveStatus {
 }
 
 /**
- * Wave at someone from their profile. Moves through Wave → Waved (take it back) → Chai's on;
- * before you join it invites you in.
+ * Wave at someone from their profile: it gives them a wave point and unlocks their contact.
+ * Moves through Wave → Waved → Chai's on; before you join it invites you in.
  */
 export function WaveButton({ person }: { readonly person: Person }) {
   const actions = useActions();
@@ -42,19 +42,13 @@ export function WaveButton({ person }: { readonly person: Person }) {
       );
     case "waved":
       return (
-        <div className="wave-done" role="status">
+        <p className="wave-done" role="status">
           <Icon id="waving_hand" size={22} />
           <span className="wave-done__text">
-            Waved! {firstName(person.name)} only finds out if they wave back.
+            Waved! +1 wave point for {firstName(person.name)}. They only find out it was you if they
+            wave back.
           </span>
-          <button
-            type="button"
-            className="btn btn--quiet"
-            onClick={() => actions.unwave(person.id)}
-          >
-            Take it back
-          </button>
-        </div>
+        </p>
       );
     case "quota":
       return <p className="wave-done wave-done--quota">{QUOTA_TEXT}</p>;
@@ -62,7 +56,7 @@ export function WaveButton({ person }: { readonly person: Person }) {
       return (
         <button type="button" className="btn btn--wave" onClick={() => wave(person)}>
           <Icon id="waving_hand" size={22} />
-          Wave
+          Wave to connect
         </button>
       );
   }

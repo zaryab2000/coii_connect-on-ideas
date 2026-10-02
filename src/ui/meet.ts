@@ -32,6 +32,20 @@ export function inboundText(count: number): string {
 
 export const QUOTA_TEXT = `You've used today's ${WAVES_PER_DAY} waves. They refill at 06:00.`;
 
+/**
+ * You can see how to reach someone once you've waved at them (or you share a chai). Waving
+ * first is what earns them their wave point.
+ */
+export function contactUnlocked(meet: MeetView | null, personId: string): boolean {
+  if (!meet) return false;
+  return meet.waved.includes(personId) || meet.chais.some((c) => c.personId === personId);
+}
+
+/** "1 wave point", "12 wave points". */
+export function pointsText(points: number): string {
+  return `${points} wave ${points === 1 ? "point" : "points"}`;
+}
+
 /** Where one of today's cards stands. */
 export type CardState = "hidden" | "open" | "waved" | "chai" | "skipped";
 
@@ -98,7 +112,7 @@ export function waveToast(result: WaveResult, name: string, firstWave: boolean):
     case "waved":
       return firstWave
         ? {
-            text: `Wave sent! ${first} only finds out if they wave back.`,
+            text: `Wave sent! +1 wave point for ${first}, and their contact is unlocked.`,
             icon: "waving_hand",
             tone: "success",
           }

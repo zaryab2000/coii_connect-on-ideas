@@ -11,7 +11,7 @@ import { CardFace } from "@/ui/CardBack";
 import { useCardSwipe } from "@/ui/cardSwipe";
 import { Confetti } from "@/ui/Confetti";
 import { Glyph, Icon } from "@/ui/Icon";
-import { cardState } from "@/ui/meet";
+import { cardState, firstName } from "@/ui/meet";
 import type { CardState } from "@/ui/meet";
 import { useOpenChai, useReducedMotion, useWave } from "@/ui/meetHooks";
 import { IntentChips, OneLiners, topicVars } from "@/ui/PanelChrome";
@@ -137,17 +137,18 @@ function CardActions({ state, person }: { readonly state: CardState; readonly pe
   if (state === "waved") {
     return (
       <div className="meet-card__actions">
-        <p className="meet-card__note">They only find out if they wave back.</p>
-        <div className="meet-card__row">
-          <button
-            type="button"
-            className="btn btn--quiet"
-            onClick={() => actions.unwave(person.id)}
-          >
-            Take it back
-          </button>
-          <ShowOnMap id={person.id} quiet={false} />
-        </div>
+        <p className="meet-card__note">
+          +1 wave point for {firstName(person.name)}, and their contact is unlocked. They only find
+          out it was you if they wave back.
+        </p>
+        <button
+          type="button"
+          className="btn btn--secondary"
+          onClick={() => actions.locate(person.id)}
+        >
+          <Icon id="speech_balloon" size={22} />
+          See how to reach them
+        </button>
       </div>
     );
   }

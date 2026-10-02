@@ -4,6 +4,7 @@ import { createController } from "@/app/controller";
 import type { JoinInput } from "@/app/controller";
 import { WAVES_PER_DAY } from "@/app/meet";
 import type { MeetClock } from "@/app/meet";
+import { pointsReader } from "@/app/points";
 import type { AppState, MeetView, Store } from "@/app/store";
 import { generateDemo } from "@/data/generateDemo";
 import { FakeEngine } from "@/engine/fake";
@@ -126,15 +127,32 @@ describe("Meet", () => {
     expect(Object.keys(meet ?? {})).not.toContain("inboundIds");
   });
 
-  it("cancels a pending demo reply when you take the wave back", () => {
+  it("gives a wave point to whoever you wave at, and one to you when they wave back", () => {
+    const { store, actions, advance, engine } = setup();
+    actions.join(JOIN);
+    const target = CROWD[0];
+    if (!target) throw new Error("expected a demo crowd");
+    const before = pointsReader(store.get())(target);
+    actions.wave(target.id);
+    expect(pointsReader(store.get())(target)).toBe(before + 1);
+    expect(engine.calls).toContainEqual({ method: "pointPop", args: [target.id] });
+    for (const p of CROWD.slice(1, 15)) actions.wave(p.id);
+    advance(30_000);
+    const meet = meetOf(store);
+    expect(meet.chais.length).toBeGreaterThan(0);
+    const you = store.get().you;
+    if (!you) throw new Error("expected you to have joined");
+    expect(pointsReader(store.get())(you)).toBe(meet.wavedAtYou);
+    expect(meet.wavedAtYou).toBeGreaterThanOrEqual(meet.chais.length);
+  });
+
+  it("now and then someone waves at you: a point and a toast, never who", () => {
     const { store, actions, advance } = setup();
     actions.join(JOIN);
-    for (const p of CROWD.slice(0, 15)) {
-      actions.wave(p.id);
-      actions.unwave(p.id);
-    }
-    advance(30_000);
-    expect(store.get().meet?.chais.filter((c) => !c.personId.startsWith("you"))).toEqual([]);
+    const before = meetOf(store).wavedAtYou;
+    advance(115_000);
+    expect(meetOf(store).wavedAtYou).toBe(before + 1);
+    expect(store.get().toasts.at(-1)?.text).toBe("Someone waved at you! +1 wave point");
   });
 
   it("rewards meeting in person with a bonus card in today's hand", () => {

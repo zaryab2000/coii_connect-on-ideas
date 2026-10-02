@@ -58,6 +58,11 @@ function lerpX(a: Agent, alpha: number): number {
   return a.px + (a.x - a.px) * alpha;
 }
 
+/** Icon frames are this many world units across at scale 1. */
+const ICON_UNITS = 16;
+/** Crowns aim for this size on screen at any zoom. */
+const CROWN_PX = 22;
+
 function lerpY(a: Agent, alpha: number): number {
   return a.py + (a.y - a.py) * alpha;
 }
@@ -77,6 +82,10 @@ export class CrowdRenderer {
   highlightIds: ReadonlySet<number> = new Set();
   /** Today's picks; they get sparkles that only the viewer sees. */
   picks: ReadonlySet<number> = new Set();
+  /** Wave-points leaders; they wear crowns, big enough to spot from the overview. */
+  crowns: ReadonlySet<number> = new Set();
+  /** Current camera zoom, so crowns keep a readable size on screen. */
+  zoom = 1;
   private readonly particles: Particle[] = [];
   private count = 0;
   private order: number[] = [];
@@ -270,7 +279,13 @@ export class CrowdRenderer {
   }
 
   private needsOverlay(index: number, a: Agent): boolean {
-    return index === this.selected || a.isYou || a.state === State.Dizzy || this.picks.has(index);
+    return (
+      index === this.selected ||
+      a.isYou ||
+      a.state === State.Dizzy ||
+      this.picks.has(index) ||
+      this.crowns.has(index)
+    );
   }
 
   private writeUpperBody(
@@ -313,6 +328,7 @@ export class CrowdRenderer {
     const alphaBits = this.dimmed(a, index) ? 60 << 24 : OPAQUE;
     this.place(lerpX(a, alpha), lerpY(a, alpha) - a.z - bob, a.facing, squash, 0);
     this.stamp(look.lod, WHITE + alphaBits);
+    if (this.crowns.has(index)) this.writeCrown(lerpX(a, alpha), lerpY(a, alpha) - a.z - 30);
     if (index !== this.selected) return;
     const s = 2.6 + Math.sin(this.world.time * 5) * 0.2;
     this.place(lerpX(a, alpha), lerpY(a, alpha) - 70, s, s, 0);
@@ -326,12 +342,25 @@ export class CrowdRenderer {
       const x = lerpX(a, alpha);
       const head = lerpY(a, alpha) - a.z - 33.5;
       if (a.state === State.Dizzy) this.writeDizzyStars(x, head, time);
+      if (this.crowns.has(index)) this.writeCrown(x, head - 3 + Math.sin(time * 2.4 + x) * 1.5);
       if (this.picks.has(index) && index !== this.selected) this.writeSparkle(x, head, time);
       if (index !== this.selected) continue;
       const bounce = Math.abs(Math.sin(time * 4)) * 2.5;
       this.place(x, head - 22 - bounce, 1, 1, 0);
       this.stamp(this.atlas.bang, WHITE + OPAQUE);
     }
+  }
+
+  /**
+   * A crown perched on top of the head. It grows as you zoom out so it stays about 22 CSS px
+   * on screen, which makes the leaders easy to spot from the overview.
+   */
+  private writeCrown(x: number, top: number): void {
+    const frame = this.atlas.icons.get("crown");
+    if (!frame) return;
+    const scale = Math.min(6, Math.max(1.25, CROWN_PX / (ICON_UNITS * Math.max(this.zoom, 0.05))));
+    this.place(x, top - 9 * scale, scale, scale, -0.12);
+    this.stamp(frame, WHITE + OPAQUE);
   }
 
   /** A gently bobbing sparkle above one of today's picks. */
