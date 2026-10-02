@@ -37,6 +37,11 @@
   },
   "overrides": [
     {
+      // Database tests edit one profile fixture by fixture; running them in parallel would race.
+      "files": ["tests/db/**"],
+      "rules": { "eslint/no-await-in-loop": "off", "eslint/max-lines-per-function": "off" }
+    },
+    {
       // describe() blocks in tests group many cases; the length limit targets production code.
       "files": ["**/*.test.ts", "e2e/**"],
       "rules": { "eslint/max-lines-per-function": "off" }
