@@ -7,7 +7,7 @@ import {
 } from "@/data/avatar";
 import { INDIAN_REGIONS, INTERNATIONAL_REGIONS } from "@/data/names";
 import type { NameRegion } from "@/data/names";
-import { ONE_LINERS } from "@/data/oneLiners";
+import { GENERAL_ONE_LINERS, ONE_LINERS } from "@/data/oneLiners";
 import { createRng } from "@/data/rng";
 import type { Rng } from "@/data/rng";
 import { INTENT_IDS, TOPIC_IDS } from "@/data/types";
@@ -110,14 +110,18 @@ function pickIntents(rng: Rng, topics: readonly TopicId[]): IntentId[] {
 /** How many one-liners demo people show: none, one, two or three. */
 const LINE_COUNT_WEIGHTS: readonly number[] = [12, 33, 30, 25];
 
-/** 0–3 distinct one-liners, drawn mostly from the person's first topic. */
+/** Share of demo one-liners about conference life rather than a topic. */
+const GENERAL_SHARE = 0.25;
+
+/** 0–3 distinct one-liners, mostly about the person's first topic, some about the event. */
 function pickOneLiners(rng: Rng, topics: readonly TopicId[]): string[] {
   const count = rng.weighted(LINE_COUNT_WEIGHTS);
   const topicWeights = topics.map((_, i) => (i === 0 ? 3 : 1));
   const lines: string[] = [];
   for (let attempt = 0; lines.length < count && attempt < 12; attempt++) {
     const topic = topics[rng.weighted(topicWeights)] ?? "ai";
-    const line = rng.pick(ONE_LINERS[topic]);
+    const pool = rng.chance(GENERAL_SHARE) ? GENERAL_ONE_LINERS : ONE_LINERS[topic];
+    const line = rng.pick(pool);
     if (!lines.includes(line)) lines.push(line);
   }
   return lines;

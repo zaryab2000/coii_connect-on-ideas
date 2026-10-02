@@ -47,6 +47,20 @@ describe("generateDemo", () => {
     }
   });
 
+  it("gives people 0 to 3 distinct one-liners from the demo pools, most at least one", () => {
+    const known = new Set([...Object.values(ONE_LINERS).flat(), ...GENERAL_ONE_LINERS]);
+    for (const person of everyone) {
+      expect(person.oneLiners.length).toBeLessThanOrEqual(3);
+      expect(new Set(person.oneLiners).size).toBe(person.oneLiners.length);
+      for (const line of person.oneLiners) expect(known.has(line)).toBe(true);
+    }
+    const withLines = everyone.filter((p) => p.oneLiners.length > 0).length;
+    expect(withLines / everyone.length).toBeGreaterThan(0.8);
+    expect(everyone.some((p) => p.oneLiners.some((l) => GENERAL_ONE_LINERS.includes(l)))).toBe(
+      true,
+    );
+  });
+
   it("marks every generated person as demo data", () => {
     expect(everyone.every((p) => p.isDemo && !p.isYou)).toBe(true);
   });
