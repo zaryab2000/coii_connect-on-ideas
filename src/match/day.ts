@@ -1,0 +1,23 @@
+const HOUR_MS = 3_600_000;
+const DAY_MS = 24 * HOUR_MS;
+/** India Standard Time is UTC+5:30 all year (no daylight saving). */
+const IST_OFFSET_MS = 5.5 * HOUR_MS;
+/** A new set of 3 picks is dealt at 06:00 IST, before the first talks. */
+const RESET_HOUR = 6;
+
+/** The Meet day containing `now`, as `YYYY-MM-DD`. Days run 06:00–06:00 IST. */
+export function meetDay(now: number): string {
+  return new Date(now + IST_OFFSET_MS - RESET_HOUR * HOUR_MS).toISOString().slice(0, 10);
+}
+
+/** Epoch ms of the next 06:00 IST strictly after `now`. */
+export function nextResetAt(now: number): number {
+  const shifted = now + IST_OFFSET_MS - RESET_HOUR * HOUR_MS;
+  const dayStart = Math.floor(shifted / DAY_MS) * DAY_MS;
+  return dayStart + DAY_MS - IST_OFFSET_MS + RESET_HOUR * HOUR_MS;
+}
+
+/** Whole days between two Meet days (`later` − `earlier`). */
+export function daysBetween(earlier: string, later: string): number {
+  return Math.round((Date.parse(later) - Date.parse(earlier)) / DAY_MS);
+}

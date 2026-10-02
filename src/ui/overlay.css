@@ -1,0 +1,106 @@
+/* Centred overlays (About, your profile). The backdrop only tints the venue, so it keeps moving. */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: calc(var(--safe-top) + 24px) calc(var(--safe-right) + 24px)
+    calc(var(--safe-bottom) + 24px) calc(var(--safe-left) + 24px);
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  outline: none;
+  opacity: 1;
+  transition: opacity 220ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+.overlay[open] {
+  display: grid;
+  place-items: center;
+}
+
+.overlay::backdrop {
+  background: rgb(30 21 56 / 0.32);
+}
+
+.overlay[data-leaving] {
+  opacity: 0;
+  transition-duration: 200ms;
+}
+
+.overlay__card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(100%, var(--overlay-w));
+  max-height: 100%;
+  overflow: hidden;
+  border: var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  box-shadow: 6px 6px 0 var(--ink);
+  transform: none;
+  transition: transform 500ms var(--spring-pop);
+
+  @starting-style {
+    transform: translateY(16px) scale(0.97);
+  }
+}
+
+.overlay--about {
+  --overlay-w: 760px;
+}
+
+.overlay--you {
+  --overlay-w: 1080px;
+}
+
+/* The form gets the full room, so the studio doesn't jump as you fill it in. */
+.overlay--you .overlay__card:has(.join-form) {
+  height: min(100%, 880px);
+}
+
+.overlay__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.overlay .overlay__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+}
+
+.app[data-motion="reduced"] .overlay,
+.app[data-motion="reduced"] .overlay__card {
+  transition: none;
+}
+
+@media (max-width: 767px) {
+  .overlay {
+    padding: calc(var(--safe-top) + 10px) calc(var(--safe-right) + 10px)
+      calc(var(--safe-bottom) + 10px) calc(var(--safe-left) + 10px);
+  }
+
+  .overlay--you .overlay__card:has(.join-form) {
+    height: 100%;
+  }
+
+  /* About is read, not filled in: leave a strip of the moving venue showing around it. */
+  .overlay--about {
+    padding: calc(var(--safe-top) + 28px) calc(var(--safe-right) + 16px)
+      calc(var(--safe-bottom) + 28px) calc(var(--safe-left) + 16px);
+  }
+}

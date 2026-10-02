@@ -1,13 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": [
-    "typescript",
-    "unicorn",
-    "oxc",
-    "import",
-    "react",
-    "vitest"
-  ],
+  "plugins": ["typescript", "unicorn", "oxc", "import", "react", "vitest"],
   "categories": {
     "correctness": "error",
     "suspicious": "warn",
@@ -15,8 +8,21 @@
   },
   "rules": {
     "import/no-cycle": "error",
+    // Side-effect imports are how CSS and fonts are loaded.
+    "import/no-unassigned-import": ["warn", { "allow": ["**/*.css"] }],
+    // `window.__coii` is the deliberate debug/test hook.
+    "no-underscore-dangle": ["warn", { "allow": ["__coii"] }],
     "react/react-in-jsx-scope": "off",
     "unicorn/no-null": "off",
+    // False positive: PixiJS Graphics has a chainable `.fill({ color })` that is not Array#fill.
+    "unicorn/no-array-fill-with-reference-type": "off",
+    // Hard limits from the project standards.
+    "eslint/complexity": ["error", { "max": 8 }],
+    "eslint/max-lines-per-function": [
+      "error",
+      { "max": 100, "skipBlankLines": true, "skipComments": true }
+    ],
+    "eslint/max-params": ["error", { "max": 5 }],
     "vitest/expect-expect": [
       "error",
       {
@@ -29,10 +35,17 @@
       }
     ]
   },
-  "ignorePatterns": [
-    ".claude/**",
-    "dist/**",
-    "coverage/**",
-    "src/assets/icons/**"
-  ]
+  "overrides": [
+    {
+      // Database tests edit one profile fixture by fixture; running them in parallel would race.
+      "files": ["tests/db/**"],
+      "rules": { "eslint/no-await-in-loop": "off", "eslint/max-lines-per-function": "off" }
+    },
+    {
+      // describe() blocks in tests group many cases; the length limit targets production code.
+      "files": ["**/*.test.ts", "e2e/**"],
+      "rules": { "eslint/max-lines-per-function": "off" }
+    }
+  ],
+  "ignorePatterns": [".claude/**", "dist/**", "coverage/**", "src/assets/icons/**"]
 }

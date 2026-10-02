@@ -1,0 +1,673 @@
+/* Your profile overlay: a rani header band over a lilac "form floor". */
+.join__band {
+  position: relative;
+  flex: none;
+  padding: 0 24px 18px;
+  border-bottom: var(--line);
+  background: var(--rani);
+  color: var(--ink);
+}
+
+.join__band .awning {
+  margin: 0 -24px;
+}
+
+.join__title {
+  margin: 18px 56px 4px 0;
+  color: var(--paper);
+  font-size: 1.65rem;
+  line-height: 1.05;
+  text-shadow: 0 2px 0 var(--ink);
+}
+
+.join__blurb {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+/* Google-Forms feel: white question cards on the lilac floor. */
+.join__scroll {
+  padding: 0 24px 24px;
+  background: var(--floor);
+}
+
+.join-form,
+.you-summary {
+  display: grid;
+  gap: 14px;
+  padding: 20px 0 8px;
+}
+
+.join-form__questions,
+.join-form__finish {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* Wide screens: the character studio stays in view on the left while you fill in the form. */
+@media (min-width: 900px) {
+  .join-form {
+    grid-template-areas:
+      "studio questions"
+      "studio finish";
+    grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
+    align-items: start;
+    column-gap: 24px;
+  }
+
+  .join-form__questions {
+    grid-area: questions;
+  }
+
+  .join-form__finish {
+    grid-area: finish;
+  }
+
+  .studio {
+    position: sticky;
+    top: 20px;
+    grid-area: studio;
+  }
+
+  .you-summary {
+    grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
+    align-items: start;
+    gap: 24px;
+    max-width: 880px;
+    margin-inline: auto;
+  }
+}
+
+@media (max-width: 767px) {
+  .join__band {
+    padding: 0 16px 16px;
+  }
+
+  .join__band .awning {
+    margin: 0 -16px;
+  }
+
+  .join__scroll {
+    padding: 0 14px 20px;
+  }
+}
+
+.q-card {
+  position: relative;
+  min-width: 0;
+  margin: 0;
+  padding: 14px 16px 16px;
+  border: var(--line);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  box-shadow: var(--pop-sm);
+  transition: box-shadow 160ms var(--ease-out);
+}
+
+/* The card you're answering gets a marigold edge, like the active question in a form. */
+.q-card:focus-within {
+  box-shadow:
+    inset 7px 0 0 var(--marigold),
+    var(--pop-sm);
+}
+
+.q-card[data-invalid] {
+  box-shadow:
+    inset 7px 0 0 var(--danger),
+    var(--pop-sm);
+}
+
+.q-card__title {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  width: 100%;
+  margin: 0 0 6px;
+  padding: 0;
+  font-family: var(--font-display);
+  font-size: 1.08rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+fieldset.q-card > .q-card__title {
+  float: left;
+}
+
+fieldset.q-card > .q-card__title + * {
+  clear: left;
+}
+
+.q-card__required {
+  color: var(--danger);
+}
+
+.q-card__counter {
+  margin-left: auto;
+  color: var(--ink-faint);
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.q-card__hint {
+  margin: 0 0 10px;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.q-card__error {
+  margin: 8px 0 0;
+  color: var(--danger);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.input {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  padding: 11px 12px 8px;
+  border: var(--line-thin);
+  border-radius: 12px;
+  background: var(--paper);
+  line-height: 1.3;
+}
+
+.input::placeholder {
+  color: var(--ink-faint);
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.input--area {
+  min-height: 76px;
+  resize: none;
+  line-height: 1.4;
+}
+
+.handle-field + .handle-field {
+  margin-top: 12px;
+}
+
+.handle-field__label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.affix {
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: var(--line-thin);
+  border-radius: 12px;
+  background: var(--paper);
+}
+
+.affix:focus-within {
+  outline: 3px solid var(--rani);
+  outline-offset: 2px;
+}
+
+.affix:has([aria-invalid="true"]) {
+  border-color: var(--danger);
+}
+
+.affix__at {
+  display: grid;
+  place-items: center;
+  padding: 3px 11px 0;
+  border-right: var(--line-thin);
+  background: var(--floor);
+  color: var(--ink-soft);
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.affix__input {
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.affix__input:focus-visible {
+  outline: none;
+}
+
+/* ---- telegram (coming soon) ----------------------------------------------------------------- */
+
+.btn--tg {
+  position: relative;
+  width: 100%;
+  border-style: dashed;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.btn--tg img {
+  opacity: 0.6;
+}
+
+/* A "coming soon" sticker slapped on the corner of the disabled button. */
+.soon {
+  position: absolute;
+  top: -12px;
+  right: 12px;
+  padding: 3px 8px 0;
+  box-shadow: var(--pop-sm);
+  rotate: 4deg;
+  border: var(--line-thin);
+  border-radius: var(--radius-pill);
+  background: var(--marigold);
+  color: var(--ink);
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.q-or {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 0;
+  color: var(--ink-soft);
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.q-or::before,
+.q-or::after {
+  content: "";
+  flex: 1;
+  height: 8px;
+  background: radial-gradient(circle, var(--marigold) 2.6px, transparent 3.1px) 0 0 / 11px 8px
+    repeat-x;
+}
+
+/* ---- topics --------------------------------------------------------------------------------- */
+
+.topic-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 8px;
+  outline: none;
+}
+
+.chip--pick {
+  min-height: 42px;
+}
+
+.chip__order {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin: -2px -5px 0 2px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* ---- character studio ----------------------------------------------------------------------- */
+
+.studio {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: var(--line);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  box-shadow: var(--pop-sm);
+}
+
+.studio__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.studio__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.studio__reroll {
+  min-height: 40px;
+  padding-block: 6px 3px;
+}
+
+.studio__hint {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+/* The profile card people will see, updating as you type and pick. */
+.studio__preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 12px 14px;
+  border: var(--line-thin);
+  border-radius: var(--radius-md);
+  background: var(--floor);
+  text-align: center;
+}
+
+.studio__stage {
+  width: 184px;
+  height: 184px;
+}
+
+.studio__name {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.studio__name[data-empty] {
+  color: var(--ink-faint);
+}
+
+.studio__handles {
+  margin: 0;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.studio__empty {
+  margin: 0;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+
+.studio__preview .topic-chips,
+.studio__preview .intent-chips {
+  justify-content: center;
+}
+
+.studio__preview .one-liners {
+  align-self: stretch;
+  margin: 12px 0 0;
+  text-align: left;
+}
+
+.studio__pickers {
+  display: grid;
+  gap: 14px;
+}
+
+.studio__group {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.studio__legend {
+  margin-bottom: 8px;
+  padding: 0;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.studio__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 8px;
+  padding-left: 2px;
+}
+
+/* One look option: your own bean wearing it, on a little sticker tile. */
+.look {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border: var(--line-thin);
+  border-radius: 14px;
+  background: var(--cream);
+  box-shadow: var(--pop-sm);
+  cursor: pointer;
+  transition:
+    background-color 140ms var(--ease-out),
+    box-shadow 140ms var(--ease-out);
+}
+
+.look:has(:checked) {
+  background: var(--marigold);
+  box-shadow:
+    0 0 0 3px var(--paper),
+    0 0 0 5.5px var(--ink);
+}
+
+.look:has(:focus-visible) {
+  outline: 3px solid var(--rani);
+  outline-offset: 5px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .look:hover {
+    background: var(--paper);
+  }
+
+  .look:has(:checked):hover {
+    background: var(--marigold);
+  }
+}
+
+@media (max-width: 767px) {
+  .studio {
+    padding: 14px 12px;
+  }
+
+  .studio__stage {
+    width: 156px;
+    height: 156px;
+  }
+}
+
+.swatch {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border: var(--line-thin);
+  border-radius: 50%;
+  background: var(--swatch);
+  box-shadow: var(--pop-sm);
+  cursor: pointer;
+  transition: box-shadow 140ms var(--ease-out);
+}
+
+.swatch::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
+
+.swatch:has(:checked) {
+  box-shadow:
+    0 0 0 3px var(--paper),
+    0 0 0 5.5px var(--ink);
+}
+
+.swatch:has(:focus-visible) {
+  outline: 3px solid var(--rani);
+  outline-offset: 5px;
+}
+
+/* ---- consent + submit ----------------------------------------------------------------------- */
+
+.consent {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.consent__box {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: -2px 0 0;
+  border: var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  box-shadow: var(--pop-sm);
+  appearance: none;
+  cursor: pointer;
+}
+
+.consent__box:checked {
+  background: var(--leaf);
+}
+
+/* The tick sits over the box; the real checkbox underneath keeps keyboard and AT behaviour. */
+.consent__tick {
+  position: absolute;
+  top: -2px;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: var(--paper);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms var(--ease-out);
+}
+
+.consent__box:checked + .consent__tick {
+  opacity: 1;
+}
+
+.consent__box[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.join-form__submit {
+  display: grid;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+.join-form__note {
+  margin: 4px 0 0;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* ---- you're in ------------------------------------------------------------------------------ */
+
+.you-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 18px 16px 14px;
+  border: var(--line);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  box-shadow: var(--pop-sm);
+  text-align: center;
+}
+
+.you-card__bean {
+  width: 184px;
+  height: 184px;
+}
+
+.you-card__name {
+  margin: 10px 0 0;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.you-card__handles {
+  margin: 2px 0 10px;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.you-card .topic-chips,
+.you-card .intent-chips {
+  justify-content: center;
+}
+
+.you-card .intent-chips {
+  margin-top: 10px;
+}
+
+.you-card .one-liners {
+  align-self: stretch;
+  margin-bottom: 4px;
+  text-align: left;
+}
+
+.you-points {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px 10px;
+  border: var(--line);
+  border-radius: var(--radius-md);
+  background: var(--marigold);
+  box-shadow: var(--pop-sm);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.you-points__text {
+  display: grid;
+  line-height: 1.25;
+}
+
+.you-points__text strong {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.you-points__text span {
+  font-weight: 600;
+}
+
+.you-summary__actions {
+  display: grid;
+  gap: 10px;
+}

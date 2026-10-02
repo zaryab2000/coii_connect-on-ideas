@@ -1,0 +1,38 @@
+import type { TopicId } from "@/data/types";
+
+/**
+ * Topics that tend to go together (multiplier > 1). Used to generate realistic demo overlaps and
+ * to pick "wildcard" matches from a neighbouring topic.
+ */
+export const AFFINITY_PAIRS: ReadonlyArray<readonly [TopicId, TopicId, number]> = [
+  ["ai", "stablecoins", 4],
+  ["ai", "wallets", 2],
+  ["ai", "consumer", 1.6],
+  ["defi", "prediction", 4],
+  ["defi", "stablecoins", 2.6],
+  ["defi", "security", 2],
+  ["privacy", "core", 2.6],
+  ["privacy", "security", 2.2],
+  ["privacy", "wallets", 1.6],
+  ["stablecoins", "wallets", 2],
+  ["core", "security", 1.6],
+  ["consumer", "wallets", 2],
+];
+
+/** Pull between two topics; unlisted pairs are neutral (1). */
+export function affinity(a: TopicId, b: TopicId): number {
+  for (const [x, y, weight] of AFFINITY_PAIRS) {
+    if ((x === a && y === b) || (x === b && y === a)) return weight;
+  }
+  return 1;
+}
+
+/** Topics adjacent to `topic` in idea-space (any listed affinity pair). */
+export function adjacentTopics(topic: TopicId): TopicId[] {
+  const out: TopicId[] = [];
+  for (const [x, y] of AFFINITY_PAIRS) {
+    if (x === topic) out.push(y);
+    else if (y === topic) out.push(x);
+  }
+  return out;
+}

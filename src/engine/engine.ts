@@ -1,0 +1,999 @@
+import { Application, Container } from "pixi.js";
+import type { Texture } from "pixi.js";
+
+import { hairTint, SKIN_TONES } from "@/data/avatar";
+import { iconUrl } from "@/data/icons";
+import { intentById } from "@/data/intents";
+import { TOPICS, topicIndex } from "@/data/topics";
+import type { IconId, Person, TopicId } from "@/data/types";
+import { BUBBLE_ICONS, buildCrowdAtlas } from "@/engine/atlas";
+import type { CrowdAtlas, Frame } from "@/engine/atlas";
+import { BOOTH_LABEL_DY, BoothView } from "@/engine/booths";
+import { Camera } from "@/engine/camera";
+import { CrowdRenderer, LOD_ZOOM } from "@/engine/crowd";
+import type { BeanLook } from "@/engine/crowd";
+import { EffectPool } from "@/engine/fx";
+import { buildPool, buildPoolSign, poolRect, RobotCrew, Ticker } from "@/engine/gags";
+import { Gestures } from "@/engine/gestures";
+import type { GestureTarget } from "@/engine/gestures";
+import { loadIconTextures } from "@/engine/icons";
+import { BoothLabels, LabelLayer, PointPops, QuoteBubbles } from "@/engine/labels";
+import { bgr, FLOOR } from "@/engine/palette";
+import { bubbleBox, QUOTE_ZOOM, QuoteDirector, quoteCap } from "@/engine/quotes";
+import type { QuoteSpot } from "@/engine/quotes";
+import type { EngineApi, EngineEvents, EngineStats } from "@/engine/types";
+import { buildChaiStall, buildFloor, buildGarlands, buildGate } from "@/engine/venue";
+import { zoneCapacities } from "@/sim/capacity";
+import { computeLayout, modeForAspect } from "@/sim/layout";
+import type { VenueLayout, Zone } from "@/sim/layout";
+import { State, World } from "@/sim/world";
+import type { Agent } from "@/sim/world";
+import type { SimEvent, SimEventKind } from "@/sim/world";
+
+const STEP = 1 / 30;
+const MAX_STEPS = 3;
+const DISPLAY_FONT = "Baloo 2";
+const MAX_BUBBLES = 70;
+
+interface Scene {
+  readonly app: Application;
+  readonly world: World;
+  readonly layout: VenueLayout;
+  readonly crowd: CrowdRenderer;
+  readonly booths: readonly BoothView[];
+  readonly camera: Camera;
+  readonly gestures: Gestures;
+  readonly effects: EffectPool;
+  readonly labels: LabelLayer;
+  readonly boothLabels: BoothLabels;
+  readonly quotes: QuoteBubbles;
+  readonly pops: PointPops;
+  readonly atlas: CrowdAtlas;
+  readonly worldLayer: Container;
+  readonly robots: RobotCrew | null;
+  readonly ticker: Ticker | null;
+}
+
+type Listeners = { [K in keyof EngineEvents]: Set<EngineEvents[K]> };
+
+function intentPropFor(atlas: CrowdAtlas, person: Person): Frame | null {
+  const main = person.intent[0];
+  return main ? (atlas.icons.get(intentById(main).icon) ?? null) : null;
+}
+
+/** States in which a bean is too busy (or flying) to say a one-liner. */
+const QUIET_STATES: ReadonlySet<number> = new Set([
+  State.Arriving,
+  State.Held,
+  State.Grabbed,
+  State.Thrown,
+  State.Dizzy,
+  State.RunningHome,
+]);
+
+/** Bubble anchor above a bean's head, in world units. */
+const QUOTE_LIFT = 62;
+
+function seedOf(id: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < id.length; i++) hash = Math.imul(hash ^ id.charCodeAt(i), 16777619);
+  return ((hash >>> 0) % 1000) / 1000;
+}
+
+interface SceneParts {
+  readonly app: Application;
+  readonly world: World;
+  readonly layout: VenueLayout;
+  readonly atlas: CrowdAtlas;
+  readonly icons: Map<IconId, Texture>;
+  readonly rect: DOMRect;
+}
+
+interface VenueLayers {
+  readonly worldLayer: Container;
+  readonly booths: readonly BoothView[];
+  readonly crowd: CrowdRenderer;
+  readonly robots: RobotCrew | null;
+  readonly ticker: Ticker | null;
+}
+
+function buildBooths(
+  layout: VenueLayout,
+  icons: Map<IconId, Texture>,
+  layer: Container,
+): BoothView[] {
+  return layout.zones
+    .filter((zone) => zone.kind === "booth")
+    .map((zone) => {
+      const topic = TOPICS[zone.topic];
+      const icon = topic ? icons.get(topic.icon) : undefined;
+      if (!topic || !icon) throw new Error(`Booth zone ${zone.topic} has no topic or icon`);
+      const view = new BoothView(zone, topic, icon);
+      layer.addChild(view.container);
+      return view;
+    });
+}
+
+interface Gags {
+  readonly defi: Zone | null;
+  readonly ticker: Ticker | null;
+  readonly robots: RobotCrew | null;
+}
+
+function buildGags(layout: VenueLayout): Gags {
+  const zoneOf = (id: TopicId): Zone | null => layout.zones[topicIndex(id)] ?? null;
+  const prediction = zoneOf("prediction");
+  const ai = zoneOf("ai");
+  return {
+    defi: zoneOf("defi"),
+    ticker: prediction && new Ticker(prediction, DISPLAY_FONT),
+    robots: ai && new RobotCrew(ai, 7),
+  };
+}
+
+/** Builds the static venue (floor, stalls, gags) around the dynamic crowd layer. */
+function buildVenueLayers(
+  layout: VenueLayout,
+  world: World,
+  atlas: CrowdAtlas,
+  icons: Map<IconId, Texture>,
+): VenueLayers {
+  const { defi, ticker, robots } = buildGags(layout);
+  const worldLayer = new Container({ isRenderGroup: true, label: "world" });
+  worldLayer.addChild(buildFloor(layout));
+  if (defi) worldLayer.addChild(buildPool(defi));
+  const boothLayer = new Container({ label: "booths" });
+  const booths = buildBooths(layout, icons, boothLayer);
+  if (ticker) boothLayer.addChild(ticker.view);
+  boothLayer.addChild(buildChaiStall(plazaOf(layout), DISPLAY_FONT, iconOf(icons, "hot_beverage")));
+  worldLayer.addChild(boothLayer);
+
+  const pool = defi && poolRect(defi);
+  const gags = { shadesZone: topicIndex("privacy"), poolZone: topicIndex("defi"), pool, robots };
+  const crowd = new CrowdRenderer(atlas, world, gags, layout.width, layout.height);
+  worldLayer.addChild(crowd.container);
+  worldLayer.addChild(buildGarlands(layout));
+  if (defi) worldLayer.addChild(buildPoolSign(defi, DISPLAY_FONT));
+  worldLayer.addChild(buildGate(layout, DISPLAY_FONT));
+  return { worldLayer, booths, crowd, robots, ticker };
+}
+
+function plazaOf(layout: VenueLayout): Zone {
+  const plaza = layout.zones[layout.plazaIndex];
+  if (!plaza) throw new Error("Venue layout has no plaza zone");
+  return plaza;
+}
+
+function iconOf(icons: Map<IconId, Texture>, id: IconId): Texture {
+  const icon = icons.get(id);
+  if (!icon) throw new Error(`Icon texture "${id}" was not loaded`);
+  return icon;
+}
+
+export class CoiiEngine implements EngineApi {
+  private people: Person[] = [];
+  private readonly agentOf = new Map<string, number>();
+  private readonly personAt: (Person | undefined)[] = [];
+  private readonly interest: number[] = TOPICS.map(() => 0);
+  private scene: Scene | null = null;
+  private starting = false;
+  private readonly root: HTMLDivElement;
+  private host: HTMLElement | null = null;
+  private resizeObserver: ResizeObserver | null = null;
+  private readonly listeners: Listeners = {
+    select: new Set(),
+    boothTap: new Set(),
+    ready: new Set(),
+  };
+  private readonly queue: ((scene: Scene) => void)[] = [];
+  private paused = false;
+  private reducedMotion = false;
+  private accumulator = 0;
+  private follow = -1;
+  private youIndex = -1;
+  private insetTop = 0;
+  private readonly perf = { fps: 60, frameMs: 0, simMs: 0 };
+  private debugEl: HTMLDivElement | null = null;
+  private bubbleCount = 0;
+  private readonly director = new QuoteDirector(Math.random);
+  /** Beans with at least one one-liner. */
+  private readonly quoteable = new Set<number>();
+
+  constructor() {
+    this.root = document.createElement("div");
+    this.root.className = "map-root";
+    document.addEventListener("visibilitychange", this.onVisibility);
+  }
+
+  // ---- EngineApi -----------------------------------------------------------------------------
+
+  setPeople(people: readonly Person[]): void {
+    if (this.scene || this.starting)
+      throw new Error("setPeople must be called before the map is first mounted");
+    this.people = [...people];
+  }
+
+  mount(el: HTMLElement): void {
+    this.host = el;
+    el.append(this.root);
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = new ResizeObserver(() => this.resize());
+    this.resizeObserver.observe(el);
+    if (!this.scene && !this.starting) {
+      this.starting = true;
+      this.start(el).catch((error: unknown) => this.showFailure(error));
+    }
+  }
+
+  unmount(): void {
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
+    this.root.remove();
+    this.host = null;
+  }
+
+  spawn(person: Person, fromGate: boolean): void {
+    this.whenReady((scene) => {
+      const index = this.addAgent(scene, person, fromGate ? "gate" : "scatter");
+      if (!fromGate) return;
+      const gate = scene.layout.gate;
+      this.confetti(scene, gate.x, gate.y - 30, person.isYou ? 70 : 18);
+      if (person.isYou) {
+        scene.camera.flyTo(
+          gate.x,
+          gate.y - 160,
+          Math.max(0.9, scene.camera.fitZoom),
+          this.reducedMotion ? 0 : 1.1,
+        );
+        this.follow = index;
+      }
+    });
+  }
+
+  remove(personId: string): void {
+    this.whenReady((scene) => {
+      const index = this.agentOf.get(personId);
+      if (index === undefined) return;
+      const person = this.personAt[index];
+      scene.world.remove(index);
+      scene.crowd.forget(index);
+      scene.effects.clearFollowing(index);
+      this.quoteable.delete(index);
+      this.director.forget(index);
+      scene.quotes.hide(index);
+      if (scene.crowd.selected === index) scene.crowd.selected = -1;
+      if (this.follow === index) this.follow = -1;
+      if (this.youIndex === index) this.youIndex = -1;
+      this.agentOf.delete(personId);
+      this.personAt[index] = undefined;
+      for (const topic of person?.topics ?? []) this.bumpInterest(scene, topicIndex(topic), -1);
+    });
+  }
+
+  select(personId: string | null): void {
+    this.whenReady((scene) => {
+      scene.crowd.selected = personId === null ? -1 : (this.agentOf.get(personId) ?? -1);
+    });
+  }
+
+  locate(personId: string): void {
+    this.whenReady((scene) => {
+      const index = this.agentOf.get(personId);
+      if (index === undefined) return;
+      const a = scene.world.agent(index);
+      scene.crowd.selected = index;
+      scene.world.wave(index);
+      this.follow = -1;
+      const zoom = Math.max(scene.camera.zoom, 1.15);
+      scene.camera.flyTo(a.x, a.y - 30, zoom, this.reducedMotion ? 0 : 0.9);
+      this.waveBubble(scene, index);
+    });
+  }
+
+  focusBooth(topic: TopicId): void {
+    this.whenReady((scene) => {
+      const zone = scene.layout.zones[topicIndex(topic)];
+      if (!zone) return;
+      const span = zone.r1 * 2 + 160;
+      const zoom = Math.min(scene.camera.viewW / span, scene.camera.viewH / span);
+      scene.camera.flyTo(
+        zone.x,
+        zone.y,
+        Math.max(zoom, LOD_ZOOM + 0.05),
+        this.reducedMotion ? 0 : 0.8,
+      );
+    });
+  }
+
+  highlightTopics(topics: readonly TopicId[]): void {
+    this.whenReady((scene) => {
+      const set = new Set(topics.map(topicIndex));
+      scene.crowd.highlight = set;
+      scene.booths.forEach((booth, i) => {
+        const dimmed = set.size > 0 && !set.has(i);
+        booth.setDimmed(dimmed);
+        scene.boothLabels.setDimmed(i, dimmed);
+      });
+    });
+  }
+
+  highlightPeople(personIds: readonly string[]): void {
+    this.whenReady((scene) => {
+      scene.crowd.highlightIds = this.indexesOf(personIds);
+    });
+  }
+
+  setPicks(personIds: readonly string[]): void {
+    this.whenReady((scene) => {
+      scene.crowd.picks = this.indexesOf(personIds);
+    });
+  }
+
+  chaiMoment(aId: string, bId: string): void {
+    this.whenReady((scene) => {
+      const a = this.agentOf.get(aId);
+      const b = this.agentOf.get(bId);
+      if (a === undefined || b === undefined) return;
+      if (this.reducedMotion) {
+        this.clinkAt(scene, scene.world.agent(b));
+        return;
+      }
+      scene.world.rendezvous(a, b);
+    });
+  }
+
+  greet(personId: string): void {
+    this.whenReady((scene) => {
+      const index = this.agentOf.get(personId);
+      if (index === undefined) return;
+      scene.world.wave(index);
+      this.waveBubble(scene, index);
+    });
+  }
+
+  pointPop(personId: string): void {
+    this.whenReady((scene) => {
+      const index = this.agentOf.get(personId);
+      const a = index === undefined ? undefined : scene.world.agents[index];
+      if (index === undefined || !a?.active || !this.inView(scene, a.x, a.y)) return;
+      scene.crowd.impulse(index, 0.4);
+      const p = scene.camera.worldToScreen(a.x, a.y - a.z - 48);
+      scene.pops.show(p.x, p.y);
+    });
+  }
+
+  setCrowns(personIds: readonly string[]): void {
+    this.whenReady((scene) => {
+      scene.crowd.crowns = this.indexesOf(personIds);
+    });
+  }
+
+  fit(): void {
+    this.whenReady((scene) => {
+      this.follow = -1;
+      scene.camera.fit(this.reducedMotion ? 0 : 0.8);
+    });
+  }
+
+  setInsets(top: number): void {
+    this.insetTop = top;
+    this.scene?.camera.setInsets(top);
+  }
+
+  pause(): void {
+    this.paused = true;
+    this.scene?.app.ticker.stop();
+  }
+
+  resume(): void {
+    this.paused = false;
+    if (!document.hidden) this.scene?.app.ticker.start();
+  }
+
+  setReducedMotion(reduced: boolean): void {
+    this.reducedMotion = reduced;
+    if (this.scene) this.scene.world.reducedMotion = reduced;
+  }
+
+  stats(): EngineStats {
+    return {
+      fps: this.perf.fps,
+      frameMs: this.perf.frameMs,
+      simMs: this.perf.simMs,
+      beans: this.scene?.world.activeCount ?? 0,
+      particles: this.scene?.crowd.container.particleChildren.length ?? 0,
+      zoom: this.scene?.camera.zoom ?? 0,
+    };
+  }
+
+  on<K extends keyof EngineEvents>(event: K, listener: EngineEvents[K]): () => void {
+    const set = this.listeners[event] as Set<EngineEvents[K]>;
+    set.add(listener);
+    return () => set.delete(listener);
+  }
+
+  /** Screen position (CSS px, relative to the map) of a person's body; used by tests. */
+  screenPositionOf(personId: string): { x: number; y: number } | null {
+    const scene = this.scene;
+    const index = this.agentOf.get(personId);
+    if (!scene || index === undefined) return null;
+    const a = scene.world.agent(index);
+    return scene.camera.worldToScreen(a.x, a.y - 18 - a.z);
+  }
+
+  // ---- startup ---------------------------------------------------------------------------------
+
+  private async start(host: HTMLElement): Promise<void> {
+    await Promise.all([
+      document.fonts.load(`800 48px "${DISPLAY_FONT}"`),
+      document.fonts.load('400 16px "Mukta"'),
+    ]);
+    const rect = host.getBoundingClientRect();
+    const topicLists = this.people.map((p) => p.topics.map(topicIndex));
+    const capacities = zoneCapacities(topicLists, TOPICS.length);
+    const layout = computeLayout(
+      modeForAspect(rect.width / Math.max(1, rect.height)),
+      capacities.slice(0, TOPICS.length),
+      capacities[TOPICS.length] ?? 40,
+    );
+    const world = new World(layout, { seed: 2026, capacities, reducedMotion: this.reducedMotion });
+
+    const params = new URLSearchParams(location.search);
+    const resolution = Number(params.get("res")) || Math.min(window.devicePixelRatio || 1, 2);
+    const app = new Application();
+    await app.init({
+      width: Math.max(1, rect.width),
+      height: Math.max(1, rect.height),
+      preference: "webgl",
+      antialias: false,
+      resolution,
+      autoDensity: true,
+      background: FLOOR,
+      eventFeatures: { move: false, globalMove: false, click: false, wheel: false },
+    });
+    app.stage.eventMode = "none";
+    app.canvas.classList.add("map-canvas");
+    app.canvas.setAttribute("role", "img");
+    app.canvas.setAttribute(
+      "aria-label",
+      "Live map of the venue: topic booths with attendees moving around them. Use the People list for an accessible view.",
+    );
+    this.root.prepend(app.canvas);
+
+    const [atlas, icons] = await Promise.all([
+      buildCrowdAtlas(),
+      loadIconTextures([...TOPICS.map((t) => t.icon), "hot_beverage"], 96),
+    ]);
+    this.scene = this.buildScene({ app, world, layout, atlas, icons, rect });
+    this.starting = false;
+    for (const person of this.people) this.addAgent(this.scene, person, "scatter");
+    for (const run of this.queue.splice(0)) run(this.scene);
+    this.introCamera(this.scene);
+    app.ticker.add(() => this.frame(app.ticker.deltaMS));
+    if (params.has("debug")) this.showDebug();
+    for (const listener of this.listeners.ready) listener();
+  }
+
+  private buildScene(parts: SceneParts): Scene {
+    const { app, world, layout, atlas, icons, rect } = parts;
+    const venue = buildVenueLayers(layout, world, atlas, icons);
+    app.stage.addChild(venue.worldLayer);
+    const camera = new Camera();
+    camera.setWorld(layout.width, layout.height);
+    camera.setViewport(rect.width, rect.height);
+    camera.setInsets(this.insetTop);
+    const labels = new LabelLayer();
+    const boothLabels = new BoothLabels(
+      TOPICS,
+      (topic) => iconUrl(topic.icon),
+      (index) => {
+        const id = TOPICS[index]?.id;
+        if (id) this.tapBooth(id);
+      },
+    );
+    const quotes = new QuoteBubbles((agent) => {
+      if (this.scene) this.tapBean(this.scene, agent);
+    });
+    const pops = new PointPops(iconUrl("waving_hand"));
+    this.root.append(labels.el, boothLabels.el, quotes.el, pops.el);
+    const scene: Scene = {
+      app,
+      world,
+      layout,
+      camera,
+      labels,
+      boothLabels,
+      quotes,
+      pops,
+      atlas,
+      ...venue,
+      effects: new EffectPool(),
+      gestures: new Gestures(
+        app.canvas,
+        this.gestureTarget(() => scene),
+      ),
+    };
+    return scene;
+  }
+
+  private introCamera(scene: Scene): void {
+    const { camera, layout } = scene;
+    const plaza = layout.zones[layout.plazaIndex];
+    camera.fit(0);
+    if (layout.mode === "landscape" || !plaza) return;
+    // Phones: open on the whole street, then swoop in so both rows of stalls fill the width.
+    const booths = layout.zones.filter((zone) => zone.kind === "booth");
+    const minX = Math.min(...booths.map((zone) => zone.x)) - 130;
+    const maxX = Math.max(...booths.map((zone) => zone.x)) + 130;
+    const target = Math.max(LOD_ZOOM + 0.02, camera.viewW / (maxX - minX));
+    const x = (minX + maxX) / 2;
+    if (this.reducedMotion) {
+      camera.flyTo(x, plaza.y, target, 0);
+      return;
+    }
+    window.setTimeout(() => {
+      if (!camera.animating && camera.vx === 0) camera.flyTo(x, plaza.y, target, 1.8);
+    }, 900);
+  }
+
+  private showFailure(error: unknown): void {
+    this.starting = false;
+    console.error("coii venue map failed to start", error);
+    const message = document.createElement("p");
+    message.className = "map-error";
+    message.textContent =
+      "The live venue map couldn't start in this browser (WebGL may be turned off). The People list still works.";
+    this.root.append(message);
+  }
+
+  // ---- per frame -------------------------------------------------------------------------------
+
+  private frame(deltaMs: number): void {
+    const scene = this.scene;
+    if (!scene) return;
+    const start = performance.now();
+    const dt = Math.min(deltaMs, 100) / 1000;
+    this.accumulator += dt;
+    let steps = 0;
+    while (this.accumulator >= STEP && steps < MAX_STEPS) {
+      scene.world.step(STEP);
+      this.consumeEvents(scene);
+      scene.crowd.sortByDepth();
+      this.accumulator -= STEP;
+      steps++;
+    }
+    if (steps === MAX_STEPS && this.accumulator >= STEP) this.accumulator = 0;
+    const simDone = performance.now();
+    const alpha = this.accumulator / STEP;
+    this.followArrival(scene, dt);
+    scene.camera.update(dt);
+    const { camera, worldLayer } = scene;
+    worldLayer.scale.set(camera.zoom);
+    worldLayer.position.set(
+      camera.viewW / 2 - camera.x * camera.zoom,
+      camera.viewH / 2 - camera.y * camera.zoom,
+    );
+    scene.effects.update(dt);
+    scene.robots?.update(dt);
+    scene.ticker?.update(dt);
+    scene.crowd.zoom = camera.zoom;
+    scene.crowd.render(alpha, camera.view(), scene.world.time + alpha * STEP, dt, scene.effects);
+    this.updateLabels(scene, alpha);
+    this.positionBoothLabels(scene);
+    this.updateQuotes(scene, alpha);
+    const end = performance.now();
+    this.perf.fps = this.perf.fps * 0.95 + (1 / Math.max(dt, 0.001)) * 0.05;
+    this.perf.frameMs = this.perf.frameMs * 0.9 + (end - start) * 0.1;
+    this.perf.simMs = this.perf.simMs * 0.9 + (simDone - start) * 0.1;
+  }
+
+  private followArrival(scene: Scene, dt: number): void {
+    if (this.follow < 0 || scene.camera.animating) return;
+    const a = scene.world.agents[this.follow];
+    if (!a?.active || a.state === State.Idle) {
+      this.follow = -1;
+      return;
+    }
+    const k = 1 - Math.exp(-2.5 * dt);
+    scene.camera.x += (a.x - scene.camera.x) * k;
+    scene.camera.y += (a.y - 30 - scene.camera.y) * k;
+    scene.camera.clamp();
+  }
+
+  private updateLabels(scene: Scene, alpha: number): void {
+    this.updateYouLabel(scene, alpha);
+    const index = scene.crowd.selected;
+    const a = index >= 0 ? scene.world.agents[index] : undefined;
+    const person = index >= 0 ? this.personAt[index] : undefined;
+    if (!a?.active || !person || scene.camera.zoom < LOD_ZOOM) {
+      scene.labels.set("selected", "", null, "selected");
+      return;
+    }
+    const x = a.px + (a.x - a.px) * alpha;
+    const y = a.py + (a.y - a.py) * alpha - a.z - 70;
+    scene.labels.set("selected", person.name, scene.camera.worldToScreen(x, y), "selected");
+  }
+
+  private updateYouLabel(scene: Scene, alpha: number): void {
+    const you = this.youOnMap(scene);
+    if (!you) {
+      scene.labels.set("you", "", null, "you");
+      return;
+    }
+    const { a, person } = you;
+    const lift = scene.camera.zoom < LOD_ZOOM ? 40 : 66;
+    const x = a.px + (a.x - a.px) * alpha;
+    const y = a.py + (a.y - a.py) * alpha - a.z - lift;
+    const first = person.name.split(" ")[0] ?? person.name;
+    scene.labels.set("you", `You · ${first}`, scene.camera.worldToScreen(x, y), "you");
+  }
+
+  /** Your bean and profile when you have joined and are not the current selection. */
+  private youOnMap(scene: Scene): { a: Agent; person: Person } | null {
+    const index = this.youIndex;
+    if (index < 0 || scene.crowd.selected === index) return null;
+    const a = scene.world.agents[index];
+    const person = this.personAt[index];
+    return a?.active && person ? { a, person } : null;
+  }
+
+  // ---- one-liner bubbles -------------------------------------------------------------------
+
+  /** Screen point just above a bean's head, where a bubble's tail points. */
+  private quoteAnchor(scene: Scene, a: Agent, alpha: number): { x: number; y: number } {
+    const x = a.px + (a.x - a.px) * alpha;
+    const y = a.py + (a.y - a.py) * alpha - a.z - QUOTE_LIFT;
+    return scene.camera.worldToScreen(x, y);
+  }
+
+  /** Inside the map, below the HUD and with room for a bubble above the anchor. */
+  private quoteFits(scene: Scene, p: { x: number; y: number }): boolean {
+    const { viewW, viewH } = scene.camera;
+    return p.x > 20 && p.x < viewW - 20 && p.y > this.insetTop + 96 && p.y < viewH - 16;
+  }
+
+  /** With booth highlights on, only people at those booths speak. */
+  private matchesHighlight(scene: Scene, index: number): boolean {
+    const { highlight } = scene.crowd;
+    if (highlight.size === 0) return true;
+    return (this.personAt[index]?.topics ?? []).some((t) => highlight.has(topicIndex(t)));
+  }
+
+  private canSpeak(scene: Scene, index: number): boolean {
+    const a = scene.world.agents[index];
+    if (!a?.active || QUIET_STATES.has(a.state)) return false;
+    if (index === scene.crowd.selected || index === this.youIndex) return false;
+    return this.matchesHighlight(scene, index);
+  }
+
+  /** Beans that could say a line right now, favouring ones standing still (easier to read). */
+  private quoteSpots(scene: Scene, alpha: number): QuoteSpot[] {
+    const spots: QuoteSpot[] = [];
+    const tribe = scene.crowd.highlightIds;
+    for (const index of this.quoteable) {
+      const a = scene.world.agents[index];
+      if (!a || !this.canSpeak(scene, index)) continue;
+      const p = this.quoteAnchor(scene, a, alpha);
+      if (!this.quoteFits(scene, p)) continue;
+      const still = a.state === State.Idle || a.state === State.Chatting;
+      const weight = (still ? 3 : 1) * (tribe.has(index) ? 2 : 1);
+      spots.push({ agent: index, x: p.x, y: p.y, weight });
+    }
+    return spots;
+  }
+
+  /** Moves showing bubbles with their beans and ends any that can't stay up. */
+  private moveQuotes(scene: Scene, alpha: number): void {
+    const ended: number[] = [];
+    for (const quote of this.director.active) {
+      const a = scene.world.agents[quote.agent];
+      const p = a ? this.quoteAnchor(scene, a, alpha) : null;
+      if (!p || !this.canSpeak(scene, quote.agent) || !this.quoteFits(scene, p)) {
+        ended.push(quote.agent);
+        continue;
+      }
+      quote.box = bubbleBox(p.x, p.y, quote.line);
+      scene.quotes.move(quote.agent, p.x, p.y, scene.camera.viewW);
+    }
+    for (const agent of ended) {
+      this.director.end(agent);
+      scene.quotes.hide(agent);
+    }
+  }
+
+  /** Lets the next bean say a line, if one is due and someone suitable is on screen. */
+  private startQuote(scene: Scene, now: number, cap: number, alpha: number): void {
+    const linesOf = (agent: number): readonly string[] => this.personAt[agent]?.oneLiners ?? [];
+    const spots = this.quoteSpots(scene, alpha);
+    const quote = this.director.tryStart(now, cap, spots, linesOf, scene.boothLabels.boxes());
+    const person = quote ? this.personAt[quote.agent] : undefined;
+    const topic = person ? TOPICS[topicIndex(person.topics[0] ?? "ai")] : undefined;
+    if (!quote || !person || !topic) return;
+    const name = person.name.split(" ")[0] ?? person.name;
+    scene.quotes.show(quote.agent, { name, topic, line: quote.line });
+  }
+
+  private updateQuotes(scene: Scene, alpha: number): void {
+    const now = scene.world.time;
+    const cap = quoteCap(scene.camera.zoom, scene.camera.viewW);
+    for (const q of this.director.expire(now)) scene.quotes.hide(q.agent);
+    for (const q of this.director.trim(cap)) scene.quotes.hide(q.agent);
+    if (this.director.wantsSpeaker(now, cap)) this.startQuote(scene, now, cap, alpha);
+    this.moveQuotes(scene, alpha);
+  }
+
+  private readonly eventHandlers: Readonly<
+    Record<SimEventKind, (scene: Scene, e: SimEvent) => void>
+  > = {
+    bounce: (scene, e) => {
+      scene.crowd.impulse(e.agent, 0.55);
+      this.dust(scene, e.x, e.y, 3);
+    },
+    bump: (scene, e) => {
+      scene.crowd.impulse(e.agent, 0.4);
+      this.dust(scene, e.x, e.y, 2);
+    },
+    dizzy: (scene, e) => {
+      scene.crowd.impulse(e.agent, 0.7);
+      this.dust(scene, e.x, e.y, 4);
+    },
+    arrive: (scene, e) => {
+      scene.crowd.impulse(e.agent, 0.35);
+      if (scene.world.agents[e.agent]?.isYou) this.confetti(scene, e.x, e.y - 40, 60);
+    },
+    bubble: (scene, e) => this.chatBubble(scene, e.agent, e.x, e.y),
+    chat: () => undefined,
+    clink: (scene, e) => this.clinkAt(scene, { x: e.x, y: e.y }),
+  };
+
+  private consumeEvents(scene: Scene): void {
+    const { world } = scene;
+    for (let i = 0; i < world.eventCount; i++) {
+      const event = world.events[i];
+      if (event) this.eventHandlers[event.kind](scene, event);
+    }
+  }
+
+  // ---- effects -------------------------------------------------------------------------------
+
+  private inView(scene: Scene, x: number, y: number): boolean {
+    const v = scene.camera.view();
+    return x > v.x0 - 60 && x < v.x1 + 60 && y > v.y0 - 60 && y < v.y1 + 120;
+  }
+
+  private dust(scene: Scene, x: number, y: number, count: number): void {
+    if (this.reducedMotion || !this.inView(scene, x, y)) return;
+    for (let k = 0; k < count; k++) {
+      const e = scene.effects.spawn(
+        scene.atlas.dust,
+        x + (Math.random() - 0.5) * 16,
+        y - 2,
+        0.45 + Math.random() * 0.2,
+      );
+      e.vx = (Math.random() - 0.5) * 70;
+      e.vy = -14 - Math.random() * 22;
+      e.size = 0.7 + Math.random() * 0.5;
+      e.grow = 1.1;
+    }
+  }
+
+  private confetti(scene: Scene, x: number, y: number, count: number): void {
+    if (this.reducedMotion || !this.inView(scene, x, y)) return;
+    for (let k = 0; k < count; k++) {
+      const e = scene.effects.spawn(scene.atlas.confetti, x, y, 1.3 + Math.random() * 0.6);
+      e.vx = (Math.random() - 0.5) * 330;
+      e.vy = -210 - Math.random() * 230;
+      e.gravity = 560;
+      e.spin = (Math.random() - 0.5) * 18;
+      e.size = 1 + Math.random() * 0.6;
+      e.tint = TOPICS[k % TOPICS.length]?.color ?? 0xffffff;
+    }
+  }
+
+  /** Two chai cups clink above a meeting point, with a burst of confetti. */
+  private clinkAt(scene: Scene, at: { x: number; y: number }): void {
+    const cup = scene.atlas.icons.get("hot_beverage");
+    if (!cup) return;
+    for (const side of [-1, 1]) {
+      const e = scene.effects.spawn(cup, at.x + side * 14, at.y - 62, 2.2);
+      e.vx = -side * 12;
+      e.size = 0.9;
+      e.spin = side * 0.6;
+      e.pop = true;
+    }
+    this.confetti(scene, at.x, at.y - 50, 46);
+  }
+
+  private indexesOf(personIds: readonly string[]): ReadonlySet<number> {
+    const set = new Set<number>();
+    for (const id of personIds) {
+      const index = this.agentOf.get(id);
+      if (index !== undefined) set.add(index);
+    }
+    return set;
+  }
+
+  private chatBubble(scene: Scene, agent: number, x: number, y: number): void {
+    // Emoji chatter is the zoomed-out ambience; up close the one-liners do the talking.
+    const zoom = scene.camera.zoom;
+    if (this.bubbleCount >= MAX_BUBBLES || zoom < LOD_ZOOM || zoom >= QUOTE_ZOOM) return;
+    if (!this.inView(scene, x, y)) return;
+    const iconId = BUBBLE_ICONS[Math.floor(Math.random() * BUBBLE_ICONS.length)] ?? "light_bulb";
+    this.bubbleAt(scene, agent, iconId, 1.7);
+  }
+
+  private waveBubble(scene: Scene, agent: number): void {
+    this.bubbleAt(scene, agent, "waving_hand", 2.6);
+  }
+
+  private bubbleAt(scene: Scene, agent: number, iconId: IconId, life: number): void {
+    const icon = scene.atlas.icons.get(iconId);
+    if (!icon) return;
+    const bubble = scene.effects.spawn(scene.atlas.bubble, 9, 0, life);
+    bubble.follow = agent;
+    bubble.followDy = -60;
+    bubble.pop = true;
+    const glyph = scene.effects.spawn(icon, 9, 0, life);
+    glyph.follow = agent;
+    glyph.followDy = -62;
+    glyph.size = 0.62;
+    glyph.pop = true;
+    this.bubbleCount++;
+    window.setTimeout(() => this.bubbleCount--, life * 1000);
+  }
+
+  // ---- agents ----------------------------------------------------------------------------------
+
+  private addAgent(scene: Scene, person: Person, at: "scatter" | "gate"): number {
+    const topics = person.topics.map(topicIndex);
+    const index = scene.world.spawn({ id: person.id, topics, isYou: person.isYou }, at);
+    scene.crowd.setLook(index, this.lookFor(scene.atlas, person, topics[0] ?? 0));
+    this.agentOf.set(person.id, index);
+    this.personAt[index] = person;
+    if (person.oneLiners.length > 0) this.quoteable.add(index);
+    else this.quoteable.delete(index);
+    if (person.isYou) this.youIndex = index;
+    for (const topic of topics) this.bumpInterest(scene, topic, 1);
+    return index;
+  }
+
+  private lookFor(atlas: CrowdAtlas, person: Person, primary: number): BeanLook {
+    const { avatar } = person;
+    const lod = atlas.lod[primary * SKIN_TONES.length + avatar.skin] ?? atlas.lod[0];
+    if (!lod) throw new Error("Crowd atlas is missing far-zoom bean frames");
+    return {
+      shirt: bgr(TOPICS[primary]?.color ?? 0xffffff),
+      skin: bgr(SKIN_TONES[avatar.skin] ?? 0xd9a066),
+      hair: bgr(hairTint(avatar.hair, avatar.hairColor)),
+      hairFrame: atlas.hair[avatar.hair] ?? null,
+      accessory: atlas.accessories[avatar.accessory] ?? null,
+      intentProp: intentPropFor(atlas, person),
+      lod,
+      seed: seedOf(person.id),
+    };
+  }
+
+  private bumpInterest(scene: Scene, topic: number, delta: number): void {
+    this.interest[topic] = Math.max(0, (this.interest[topic] ?? 0) + delta);
+    const info = TOPICS[topic];
+    if (info) scene.boothLabels.setCount(topic, this.interest[topic] ?? 0, info);
+  }
+
+  // ---- input -----------------------------------------------------------------------------------
+
+  private gestureTarget(getScene: () => Scene): GestureTarget {
+    const world = (): World => getScene().world;
+    const toWorld = (sx: number, sy: number): { x: number; y: number } =>
+      getScene().camera.screenToWorld(sx, sy);
+    return {
+      get camera() {
+        return getScene().camera;
+      },
+      hitBean: (sx, sy, touch) => {
+        const p = toWorld(sx, sy);
+        return world().pick(p.x, p.y, (touch ? 26 : 16) / getScene().camera.zoom);
+      },
+      hitBooth: (sx, sy) => {
+        const p = toWorld(sx, sy);
+        return getScene().booths.findIndex((booth) => booth.contains(p.x, p.y));
+      },
+      tapBean: (index) => this.tapBean(getScene(), index),
+      tapBooth: (topic) => {
+        const id = TOPICS[topic]?.id;
+        if (id) this.tapBooth(id);
+      },
+      tapEmpty: () => {
+        const scene = getScene();
+        if (scene.crowd.selected < 0) return;
+        scene.crowd.selected = -1;
+        for (const listener of this.listeners.select) listener(null);
+      },
+      hold: (index) => world().hold(index),
+      unhold: (index) => world().unhold(index),
+      grab: (index) => {
+        this.follow = -1;
+        world().grab(index);
+        getScene().crowd.impulse(index, 0.5);
+      },
+      drag: (index, sx, sy) => {
+        const p = toWorld(sx, sy);
+        world().dragTo(index, p.x, p.y + 44);
+      },
+      release: (index, vx, vy) => {
+        const zoom = getScene().camera.zoom;
+        world().release(index, vx / zoom, vy / zoom);
+      },
+      interacted: () => {
+        this.follow = -1;
+      },
+    };
+  }
+
+  private tapBooth(id: TopicId): void {
+    this.focusBooth(id);
+    for (const listener of this.listeners.boothTap) listener(id);
+  }
+
+  private positionBoothLabels(scene: Scene): void {
+    const { camera, layout, boothLabels } = scene;
+    const scale = Math.min(1.12, Math.max(0.78, 0.62 + camera.zoom * 0.5));
+    for (const zone of layout.zones) {
+      if (zone.kind !== "booth") continue;
+      const p = camera.worldToScreen(zone.x, zone.y + BOOTH_LABEL_DY);
+      boothLabels.position(zone.topic, p.x, p.y, scale, camera.viewW);
+    }
+  }
+
+  private tapBean(scene: Scene, index: number): void {
+    const a = scene.world.agents[index];
+    const person = this.personAt[index];
+    if (!a || !person) return;
+    if (scene.camera.zoom < LOD_ZOOM) {
+      scene.camera.flyTo(a.x, a.y - 30, 0.85, this.reducedMotion ? 0 : 0.6);
+      return;
+    }
+    scene.crowd.selected = index;
+    scene.crowd.impulse(index, 0.45);
+    this.follow = -1;
+    scene.camera.flyTo(a.x, a.y - 30, scene.camera.zoom, this.reducedMotion ? 0 : 0.45);
+    for (const listener of this.listeners.select) listener(person.id);
+  }
+
+  // ---- housekeeping ----------------------------------------------------------------------------
+
+  private whenReady(run: (scene: Scene) => void): void {
+    if (this.scene) run(this.scene);
+    else this.queue.push(run);
+  }
+
+  private resize(): void {
+    const scene = this.scene;
+    const host = this.host;
+    if (!scene || !host) return;
+    const { width, height } = host.getBoundingClientRect();
+    if (width < 1 || height < 1) return;
+    scene.app.renderer.resize(width, height);
+    scene.camera.setViewport(width, height);
+  }
+
+  private readonly onVisibility = (): void => {
+    const ticker = this.scene?.app.ticker;
+    if (!ticker) return;
+    if (document.hidden) ticker.stop();
+    else if (!this.paused) {
+      this.accumulator = 0;
+      ticker.start();
+    }
+  };
+
+  private showDebug(): void {
+    this.debugEl = document.createElement("div");
+    this.debugEl.className = "map-debug";
+    this.root.append(this.debugEl);
+    window.setInterval(() => {
+      if (!this.debugEl) return;
+      const s = this.stats();
+      this.debugEl.textContent = `${s.fps.toFixed(0)} fps · frame ${s.frameMs.toFixed(1)}ms · sim ${s.simMs.toFixed(1)}ms · ${s.beans} beans · ${s.particles} particles · zoom ${s.zoom.toFixed(2)}`;
+    }, 500);
+  }
+}

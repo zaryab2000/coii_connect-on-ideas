@@ -1,0 +1,340 @@
+/* Heads-up display over the map. The wrapper lets map gestures through; only controls catch. */
+
+.hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: grid;
+  gap: 8px;
+  padding-top: calc(var(--safe-top) + 10px);
+  pointer-events: none;
+}
+
+.hud__top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 calc(var(--safe-right) + 12px) 0 calc(var(--safe-left) + 14px);
+}
+
+.wordmark {
+  position: relative;
+  display: inline-grid;
+  justify-items: start;
+  margin: 0 26px 0 0;
+  padding: 7px 14px 2px;
+  border: var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+  box-shadow: var(--pop);
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  white-space: nowrap;
+  rotate: -2deg;
+}
+
+.wordmark__gm {
+  color: var(--rani);
+}
+
+/* The tagline only fits beside the map on wider screens; the About overlay spells it out. */
+.wordmark__sub {
+  display: none;
+  margin: 1px 0 3px;
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.wordmark__tag {
+  position: absolute;
+  top: -14px;
+  right: -34px;
+  padding: 3px 7px 0;
+  border: var(--line-thin);
+  border-radius: var(--radius-pill);
+  background: var(--marigold);
+  box-shadow: var(--pop-sm);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.35;
+  rotate: 9deg;
+}
+
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  padding: 6px 12px 3px 10px;
+  border: var(--line-thin);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  box-shadow: var(--pop-sm);
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.live-pill__count {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.live-pill__dot {
+  position: relative;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-top: -2px;
+  border-radius: 50%;
+  background: var(--leaf);
+  box-shadow: 0 0 0 1.5px var(--ink);
+}
+
+.live-pill__dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--leaf);
+  animation: live-pulse 1.8s var(--ease-out) infinite;
+}
+
+@keyframes live-pulse {
+  from {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+.app[data-motion="reduced"] .live-pill__dot::after {
+  animation: none;
+  opacity: 0;
+}
+
+.hud__about {
+  margin-left: auto;
+  pointer-events: auto;
+}
+
+/* Phones show the info icon alone; the label still names the button for screen readers. */
+.hud__about-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.hud__fit {
+  pointer-events: auto;
+}
+
+.hud__chips-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding-left: calc(var(--safe-left) + 12px);
+}
+
+/* A phone sheet needs the room more than the highlight chips do. */
+.app[data-sheet] .hud__chips-row {
+  display: none;
+}
+
+/* Live wave-points standing: a marigold sticker that pops when the number changes. */
+.board-chip {
+  margin-right: 8px;
+  padding-right: 12px;
+  background: var(--marigold);
+  pointer-events: auto;
+}
+
+.board-chip__text {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+  animation: board-chip-pop 450ms var(--spring-pop);
+}
+
+@keyframes board-chip-pop {
+  from {
+    transform: scale(0.7);
+  }
+}
+
+.app[data-motion="reduced"] .board-chip__text {
+  animation: none;
+}
+
+.demo-chip {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 34px;
+  padding: 4px 9px 1px 12px;
+  border: 2px dashed var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: auto;
+}
+
+.demo-chip::after {
+  content: "";
+  position: absolute;
+  inset: -5px -2px;
+}
+
+.demo-chip .glyph {
+  margin-top: -3px;
+}
+
+.demo-chip:active {
+  background: var(--paper);
+}
+
+.demo-pop {
+  position: fixed;
+  inset: auto;
+  max-width: min(300px, calc(100vw - 24px));
+  margin: 0;
+  padding: 10px 14px 8px;
+  border: var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+  box-shadow: var(--pop);
+  color: var(--ink);
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.demo-pop p {
+  margin: 0;
+}
+
+.hud-chips {
+  display: flex;
+  flex: 0 1 auto;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px calc(var(--safe-right) + 16px) 8px 12px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  pointer-events: auto;
+  /* Chips scrolled past either end fade out instead of being sliced. */
+  mask-image: linear-gradient(90deg, transparent, #000 10px, #000 calc(100% - 28px), transparent);
+}
+
+.hud-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.tribe-chip {
+  margin-left: 8px;
+  padding-right: 6px;
+  pointer-events: auto;
+}
+
+.tribe-chip__count {
+  min-width: 1.6em;
+  padding: 3px 7px 1px;
+  border-radius: var(--radius-pill);
+  background: var(--floor);
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.tribe-chip[aria-pressed="true"] .tribe-chip__count {
+  background: var(--paper);
+}
+
+.chip--clear {
+  padding-left: 9px;
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.chip--clear .glyph {
+  margin-top: -2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .demo-chip:hover {
+    background: var(--paper);
+  }
+
+  .chip--clear:hover {
+    background: var(--ink-soft);
+  }
+}
+
+@media (min-width: 768px) {
+  .hud {
+    gap: 10px;
+    padding-top: 14px;
+  }
+
+  .hud__top {
+    padding-inline: 18px 16px;
+  }
+
+  .wordmark {
+    font-size: 1.75rem;
+  }
+
+  .wordmark__sub {
+    display: block;
+  }
+
+  .hud__about {
+    display: inline-flex;
+    gap: 6px;
+    width: auto;
+    padding: 3px 14px 0 10px;
+    font-family: var(--font-display);
+    font-size: 0.98rem;
+    font-weight: 800;
+  }
+
+  .hud__about .glyph {
+    margin-top: -3px;
+  }
+
+  .hud__about-label {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+
+  .hud__chips-row {
+    padding-left: 16px;
+  }
+}
