@@ -9,7 +9,8 @@ import type { ScoreContext } from "./match/score.ts";
 /** A bean as `hand_inputs()` returns it (public fields only, no handles). */
 export interface InputPerson {
   readonly id: string;
-  readonly name: string;
+  /** Only the viewer has one: dealing never reads candidates' names. */
+  readonly name?: string;
   readonly topics: readonly string[];
   readonly intents: readonly string[];
   readonly one_liners: readonly string[];
@@ -42,7 +43,7 @@ export const HAND_SIZE = 3;
 export function toPerson(p: InputPerson, isYou: boolean): Person {
   return {
     id: p.id,
-    name: p.name,
+    name: p.name ?? "",
     telegram: null,
     x: null,
     topics: p.topics as TopicId[],

@@ -9,22 +9,34 @@ const CROWNS = 3;
 
 const readers = new WeakMap<AppState, (person: Person) => number>();
 
+function demoReader(state: AppState): (person: Person) => number {
+  const waved = new Set(state.meet?.waved ?? []);
+  const yours = state.meet?.wavedAtYou ?? 0;
+  const { extra } = state.points;
+  return (person) => {
+    if (person.isYou) return yours;
+    return demoBasePoints(person) + (extra.get(person.id) ?? 0) + (waved.has(person.id) ? 1 : 0);
+  };
+}
+
 /**
- * Anyone's live wave points in this state: their starting points, plus waves the demo crowd
- * gave them, plus one if you waved. Yours are everyone who waved at you. Cached per state.
+ * Anyone's live wave points in this state. Backend mode: the database's count. Demo mode: their
+ * starting points, plus waves the demo crowd gave them, plus one if you waved; yours are
+ * everyone who waved at you. Cached per state.
  */
 export function pointsReader(state: AppState): (person: Person) => number {
   const cached = readers.get(state);
   if (cached) return cached;
-  const waved = new Set(state.meet?.waved ?? []);
-  const yours = state.meet?.wavedAtYou ?? 0;
-  const { extra } = state.points;
-  const reader = (person: Person): number => {
-    if (person.isYou) return yours;
-    return demoBasePoints(person) + (extra.get(person.id) ?? 0) + (waved.has(person.id) ? 1 : 0);
-  };
+  const scores = state.scores;
+  const reader = scores ? (person: Person) => scores.get(person.id)?.p ?? 0 : demoReader(state);
   readers.set(state, reader);
   return reader;
+}
+
+/** Points from waves received this Meet day (backend mode only; zero in demo mode). */
+export function todayPointsReader(state: AppState): (person: Person) => number {
+  const scores = state.scores;
+  return (person) => scores?.get(person.id)?.d ?? 0;
 }
 
 /** Demo waves remembered in this browser, so the board doesn't reset on reload. */
@@ -37,6 +49,15 @@ export function loadPoints(): PointsState {
     return { extra, lastBump: null };
   } catch {
     return { extra: new Map(), lastBump: null };
+  }
+}
+
+/** Forgets the demo waves this browser remembered (backend mode drops demo-mode data). */
+export function clearPoints(): void {
+  try {
+    window.localStorage.removeItem(KEY);
+  } catch {
+    // Storage blocked; nothing was saved.
   }
 }
 

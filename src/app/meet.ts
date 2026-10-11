@@ -18,7 +18,8 @@ const BONUS_MAX = 3;
 const SKIP_DAYS = 7;
 const DAY_MS = 86_400_000;
 
-export type WaveResult = "waved" | "chai" | "already" | "quota" | "unavailable";
+/** How a wave went. `failed`: the server couldn't be reached and you were already told why. */
+export type WaveResult = "waved" | "chai" | "already" | "quota" | "unavailable" | "failed";
 
 /** Time, randomness and timers, injectable so the Meet loop is testable. */
 export interface MeetClock {
@@ -37,11 +38,12 @@ export const realClock: MeetClock = {
   },
 };
 
+/** What the UI may ask of Meet. Waves resolve asynchronously: in backend mode the server decides. */
 export interface MeetActions {
   /** Flip one of today's cards. */
   revealCard(personId: string): void;
   /** Waves at someone: they get a wave point and you can see how to reach them. Final. */
-  wave(personId: string): WaveResult;
+  wave(personId: string): Promise<WaveResult>;
   /** Hide someone from your hands for a week. */
   skip(personId: string): void;
   /** Marks this person's "Chai's on!" moment as seen; no-op if that chai is gone or seen. */
@@ -54,7 +56,9 @@ export interface MeetActions {
   toggleTribe(): void;
 }
 
-export interface MeetController extends MeetActions {
+/** The demo-mode Meet loop: same actions, but a wave is decided on the spot. */
+export interface MeetController extends Omit<MeetActions, "wave"> {
+  wave(personId: string): WaveResult;
   /** You have waved at them (a chai means you have). */
   hasWaved(personId: string): boolean;
   /**

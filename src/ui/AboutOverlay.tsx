@@ -2,6 +2,7 @@ import "@/ui/about.css";
 import { useId } from "react";
 
 import { useActions, useApp } from "@/app/context";
+import { UNOFFICIAL } from "@/content/privacy";
 import type { Avatar, IconId, TopicId } from "@/data/types";
 import { BeanAvatar } from "@/ui/BeanAvatar";
 import { Glyph, Icon } from "@/ui/Icon";
@@ -168,6 +169,10 @@ function Footer({ onClose }: { readonly onClose: () => void }) {
         <strong>With love, from Decipher Club</strong>
         <Icon id="red_heart" size={20} />
       </p>
+      <p className="unofficial">{UNOFFICIAL}</p>
+      <button type="button" className="privacy-link" onClick={() => actions.openOverlay("privacy")}>
+        Privacy
+      </button>
     </footer>
   );
 }

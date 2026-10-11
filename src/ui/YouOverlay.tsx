@@ -1,8 +1,10 @@
 import "@/ui/join.css";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { useActions, useApp } from "@/app/context";
 import { pointsReader } from "@/app/points";
+import { widgetAttributes } from "@/backend/telegram";
+import { SIGN_OUT } from "@/content/privacy";
 import { topicById } from "@/data/topics";
 import type { Person, TopicId } from "@/data/types";
 import { rankOf } from "@/match/points";
@@ -54,6 +56,106 @@ function YourPoints({ you }: { readonly you: Person }) {
   );
 }
 
+/**
+ * Backend mode: your bean lives in this browser's session until Google is linked. Linking it
+ * means a cleared browser or a new phone can get it back.
+ */
+function SaveBean() {
+  const actions = useActions();
+  const account = useApp((s) => s.account);
+  if (!account || account.google) return null;
+  return (
+    <div className="you-note">
+      <p>
+        <strong>Save your bean.</strong> Link Google so you can get it back on another phone or if
+        this browser forgets you.
+      </p>
+      <button type="button" className="btn btn--secondary" onClick={() => void actions.saveBean()}>
+        Save my bean with Google
+      </button>
+    </div>
+  );
+}
+
+/** Telegram's own Login Widget (script + iframe); it sends you back to /telegram when done. */
+function TelegramWidget() {
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const host = box.current;
+    if (!host) return undefined;
+    const script = document.createElement("script");
+    script.async = true;
+    script.src = "https://telegram.org/js/telegram-widget.js?22";
+    for (const [name, value] of Object.entries(widgetAttributes(location.origin))) {
+      script.setAttribute(name, value);
+    }
+    host.append(script);
+    return () => host.replaceChildren();
+  }, []);
+  return <div ref={box} className="telegram-widget" />;
+}
+
+/**
+ * Backend mode: prove your Telegram username is yours and get the ✓ (optional, any time).
+ * The widget only works on the site's own domain (BotFather /setdomain).
+ */
+function TelegramVerify({ you }: { readonly you: Person }) {
+  const backend = useApp((s) => s.mode === "backend");
+  const [open, setOpen] = useState(false);
+  if (!backend) return null;
+  if (you.telegramVerified) {
+    return (
+      <p className="you-note" role="status">
+        <strong>Telegram verified ✓</strong> @{you.telegram}
+      </p>
+    );
+  }
+  if (!open) {
+    return (
+      <button type="button" className="btn btn--secondary" onClick={() => setOpen(true)}>
+        <Icon id="speech_balloon" size={20} />
+        Verify with Telegram
+      </button>
+    );
+  }
+  return (
+    <div className="you-note">
+      <p>
+        Tap the Telegram button and confirm in Telegram. You'll come straight back here, and your
+        Telegram username becomes your verified handle with a ✓.
+      </p>
+      <TelegramWidget />
+    </div>
+  );
+}
+
+/** Backend mode, Google linked: sign out and keep the bean (without Google it would be lost). */
+function SignOut() {
+  const actions = useActions();
+  const google = useApp((s) => s.account?.google ?? false);
+  if (!google) return null;
+  return (
+    <div className="you-note">
+      <p>{SIGN_OUT.hint}</p>
+      <button type="button" className="btn btn--secondary" onClick={() => void actions.signOut()}>
+        {SIGN_OUT.button}
+      </button>
+    </div>
+  );
+}
+
+/** Backend mode: your bean was hidden after reports, while a moderator takes a look. */
+function HiddenNote() {
+  const hidden = useApp((s) => s.account?.hidden ?? false);
+  if (!hidden) return null;
+  return (
+    <p className="you-note" role="status">
+      <strong>Your bean is hidden for now.</strong> A few people reported it, so nobody else can see
+      it until a moderator takes a look.
+    </p>
+  );
+}
+
 /** Your profile once you've joined: the card people see, plus what you can do with it. */
 function YouSummary({ you, onEdit }: { readonly you: Person; readonly onEdit: () => void }) {
   const actions = useActions();
@@ -61,6 +163,9 @@ function YouSummary({ you, onEdit }: { readonly you: Person; readonly onEdit: ()
     <div className="you-summary">
       <YouCard you={you} />
       <div className="you-summary__actions">
+        <HiddenNote />
+        <SaveBean />
+        <TelegramVerify you={you} />
         <YourPoints you={you} />
         <button type="button" className="btn btn--primary" onClick={() => actions.locate(you.id)}>
           <Glyph name="pin" size={20} />
@@ -87,7 +192,15 @@ function YouSummary({ you, onEdit }: { readonly you: Person; readonly onEdit: ()
         >
           Invite friends
         </button>
+        <SignOut />
         <LeaveButton />
+        <button
+          type="button"
+          className="privacy-link"
+          onClick={() => actions.openOverlay("privacy")}
+        >
+          Privacy
+        </button>
       </div>
     </div>
   );

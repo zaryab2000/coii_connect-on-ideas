@@ -96,6 +96,14 @@
   display: none;
 }
 
+.board__period {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 20px 0;
+}
+
 /* ---- podium ------------------------------------------------------------------------------- */
 
 .podium {

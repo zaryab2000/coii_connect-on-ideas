@@ -1,4 +1,4 @@
-import type { JoinInput } from "@/app/controller";
+import type { JoinField, JoinInput } from "@/app/joinTypes";
 import { cleanText, nameHasLink, normalizeTelegram, normalizeX } from "@/data/handles";
 import { INTENTS_MAX } from "@/data/intents";
 import { oneLinerError, ONE_LINERS_MAX } from "@/data/oneLinerRules";
@@ -20,7 +20,7 @@ export interface JoinDraft {
   readonly consent: boolean;
 }
 
-export type JoinField = "name" | "handles" | "telegram" | "x" | "topics" | "oneLiners" | "consent";
+export type { JoinField };
 
 export type JoinErrors = Partial<Record<JoinField, string>>;
 

@@ -11,6 +11,7 @@ import { Glyph, Icon } from "@/ui/Icon";
 import { contactUnlocked, firstName, pointsText } from "@/ui/meet";
 import { Awning, IntentChips, OneLiners, PanelNav, TopicChips, topicVars } from "@/ui/PanelChrome";
 import type { PanelChrome } from "@/ui/PanelChrome";
+import { SafetyMenu } from "@/ui/SafetyMenu";
 import { WaveButton } from "@/ui/WaveButton";
 
 const DEMO_CONTACT = "Demo profile — real people coming soon";
@@ -191,6 +192,7 @@ export function ProfileCard({
           <Icon id="shield" size={18} />
           Tip: nobody legit will ask for your seed phrase or funds.
         </p>
+        <SafetyMenu person={person} />
       </div>
     </article>
   );

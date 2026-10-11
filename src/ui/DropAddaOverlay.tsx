@@ -38,9 +38,10 @@ export function DropAddaOverlay({
   if (!person || !adda) return null;
   const name = firstName(person.name);
   const go = (): void => {
-    const result = actions.waveAndAdd(person.id, adda.id);
-    const text = inviteToast(result, name, adda.name);
-    if (text) actions.pushToast(text, "circus_tent", result === "invited" ? "success" : "info");
+    void actions.waveAndAdd(person.id, adda.id).then((result) => {
+      const text = inviteToast(result, name, adda.name);
+      if (text) actions.pushToast(text, "circus_tent", result === "invited" ? "success" : "info");
+    });
   };
   return (
     <Overlay kind="drop" labelledBy={titleId} leaving={leaving} onClose={close}>

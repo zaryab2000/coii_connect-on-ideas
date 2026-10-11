@@ -3,7 +3,7 @@ import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 
 import { useActions, useApp } from "@/app/context";
-import { pointsReader } from "@/app/points";
+import { pointsReader, todayPointsReader } from "@/app/points";
 import type { AppState } from "@/app/store";
 import { TOPICS, topicById } from "@/data/topics";
 import type { Person, TopicId } from "@/data/types";
@@ -19,9 +19,42 @@ import { topicVars } from "@/ui/PanelChrome";
 /** Ranks shown below the podium. */
 const LIST_TO = 20;
 
-function rowsFor(state: AppState, topic: TopicId | null): BoardRow[] {
+/** All-time points, or points from waves received this Meet day (backend mode only). */
+type Period = "all" | "today";
+
+function rowsFor(state: AppState, topic: TopicId | null, period: Period): BoardRow[] {
   const people = topic ? state.people.filter((p) => p.topics.includes(topic)) : state.people;
-  return leaderboard(people, pointsReader(state));
+  return leaderboard(people, period === "today" ? todayPointsReader(state) : pointsReader(state));
+}
+
+/** All-time / Today switch; the database keeps both counts. */
+function PeriodToggle({
+  period,
+  onPeriod,
+}: {
+  readonly period: Period;
+  readonly onPeriod: (period: Period) => void;
+}) {
+  return (
+    <div className="board__period" role="group" aria-label="Which points to rank by">
+      <button
+        type="button"
+        className="chip"
+        aria-pressed={period === "all"}
+        onClick={() => onPeriod("all")}
+      >
+        All-time
+      </button>
+      <button
+        type="button"
+        className="chip"
+        aria-pressed={period === "today"}
+        onClick={() => onPeriod("today")}
+      >
+        Today
+      </button>
+    </div>
+  );
 }
 
 /**
@@ -241,13 +274,18 @@ export function BoardOverlay({
 }) {
   const titleId = useId();
   const [topic, setTopic] = useState<TopicId | null>(null);
+  const [period, setPeriod] = useState<Period>("all");
   const state = useApp((s) => s);
-  const rows = useMemo(() => rowsFor(state, topic), [state, topic]);
-  const overall = useMemo(() => (topic ? rowsFor(state, null) : rows), [state, topic, rows]);
+  const rows = useMemo(() => rowsFor(state, topic, period), [state, topic, period]);
+  const overall = useMemo(
+    () => (topic ? rowsFor(state, null, period) : rows),
+    [state, topic, period, rows],
+  );
   return (
     <Overlay kind="board" labelledBy={titleId} leaving={leaving} onClose={onClose}>
       <div className="overlay__scroll board">
         <Hero titleId={titleId} onClose={onClose} />
+        {state.mode === "backend" ? <PeriodToggle period={period} onPeriod={setPeriod} /> : null}
         <TopicFilter topic={topic} onTopic={setTopic} />
         <Podium rows={rows.slice(0, 3)} />
         <BoardList rows={rows.slice(3, LIST_TO)} />

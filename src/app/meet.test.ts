@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createController } from "@/app/controller";
-import type { JoinInput } from "@/app/controller";
+import type { JoinInput } from "@/app/joinTypes";
 import { WAVES_PER_DAY } from "@/app/meet";
 import type { MeetClock } from "@/app/meet";
 import { pointsReader } from "@/app/points";
@@ -81,7 +81,7 @@ describe("Meet", () => {
   it("has nothing to show until you join, then deals three picks", () => {
     const { store, actions } = setup();
     expect(store.get().meet).toBeNull();
-    actions.join(JOIN);
+    actions.join(JOIN, null);
     const meet = store.get().meet;
     expect(meet?.hand).toHaveLength(3);
     expect(meet?.wavesLeft).toBe(WAVES_PER_DAY);
@@ -90,26 +90,26 @@ describe("Meet", () => {
 
   it("shows sparkles only for cards you have revealed", () => {
     const { store, actions, engine } = setup();
-    actions.join(JOIN);
+    actions.join(JOIN, null);
     const first = store.get().meet?.hand[0]?.personId ?? "";
     actions.revealCard(first);
     expect(store.get().meet?.revealed).toEqual([first]);
     expect(lastCall(engine, "setPicks")).toEqual([first]);
   });
 
-  it("enforces the daily wave quota and refuses double waves", () => {
+  it("enforces the daily wave quota and refuses double waves", async () => {
     const { store, actions } = setup();
-    actions.join(JOIN);
+    actions.join(JOIN, null);
     const targets = CROWD.slice(0, WAVES_PER_DAY + 1);
-    const results = targets.map((p) => actions.wave(p.id));
+    const results = await Promise.all(targets.map((p) => actions.wave(p.id)));
     expect(results.at(-1)).toBe("quota");
-    expect(actions.wave(targets[0]?.id ?? "")).toBe("already");
+    expect(await actions.wave(targets[0]?.id ?? "")).toBe("already");
     expect(store.get().meet?.wavesLeft).toBe(0);
   });
 
   it("turns waves at demo people into a chai after their simulated reply", () => {
     const { store, actions, advance, engine } = setup();
-    actions.join(JOIN);
+    actions.join(JOIN, null);
     for (const p of CROWD.slice(0, 15)) actions.wave(p.id);
     advance(30_000);
     const chais = store.get().meet?.chais ?? [];
@@ -121,7 +121,7 @@ describe("Meet", () => {
 
   it("never reveals who waved at you, only how many", () => {
     const { store, actions } = setup();
-    actions.join(JOIN);
+    actions.join(JOIN, null);
     const meet = store.get().meet;
     expect(typeof meet?.inbound).toBe("number");
     expect(Object.keys(meet ?? {})).not.toContain("inboundIds");
@@ -129,7 +129,7 @@ describe("Meet", () => {
 
   it("gives a wave point to whoever you wave at, and one to you when they wave back", () => {
     const { store, actions, advance, engine } = setup();
-    actions.join(JOIN);
+    actions.join(JOIN, null);
     const target = CROWD[0];
     if (!target) throw new Error("expected a demo crowd");
     const before = pointsReader(store.get())(target);
@@ -148,7 +148,7 @@ describe("Meet", () => {
 
   it("now and then someone waves at you: a point and a toast, never who", () => {
     const { store, actions, advance } = setup();
-    actions.join(JOIN);
+    actions.join(JOIN, null);
     const before = meetOf(store).wavedAtYou;
     advance(115_000);
     expect(meetOf(store).wavedAtYou).toBe(before + 1);
@@ -157,7 +157,7 @@ describe("Meet", () => {
 
   it("rewards meeting in person with a bonus card in today's hand", () => {
     const { store, actions, advance } = setup();
-    actions.join(JOIN);
+    actions.join(JOIN, null);
     for (const p of CROWD.slice(0, 15)) actions.wave(p.id);
     advance(30_000);
     const [chai] = meetOf(store).chais;
@@ -173,7 +173,7 @@ describe("Meet", () => {
 
   it("deals a new hand at 06:00 IST and keeps skipped people out of it", () => {
     const { store, actions, advance } = setup();
-    actions.join(JOIN);
+    actions.join(JOIN, null);
     const dayOne = store.get().meet;
     const skipped = dayOne?.hand[0]?.personId ?? "";
     actions.skip(skipped);
@@ -185,7 +185,7 @@ describe("Meet", () => {
 
   it("toggles My tribe on the map and clears everything when you leave", () => {
     const { store, actions, engine } = setup();
-    actions.join(JOIN);
+    actions.join(JOIN, null);
     actions.toggleTribe();
     expect(store.get().tribe).toBe(true);
     const lit = lastCall(engine, "highlightPeople") as string[];
@@ -197,7 +197,7 @@ describe("Meet", () => {
 
   it("unmatching removes the chai and your wave, and dismissing is per person", () => {
     const { store, actions, advance } = setup();
-    actions.join(JOIN);
+    actions.join(JOIN, null);
     for (const p of CROWD.slice(0, 30)) actions.wave(p.id);
     advance(30_000);
     const [first, second] = meetOf(store).chais;
