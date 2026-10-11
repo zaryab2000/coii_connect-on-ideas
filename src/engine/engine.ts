@@ -10,6 +10,8 @@ import { AddaPlots } from "@/engine/addaPlots";
 import type { AddaPlotsHost } from "@/engine/addaPlots";
 import { BUBBLE_ICONS, buildCrowdAtlas } from "@/engine/atlas";
 import type { CrowdAtlas, Frame } from "@/engine/atlas";
+import { Backdrop } from "@/engine/backdrop";
+import type { BackdropHome, BackdropScreen } from "@/engine/backdropLayout";
 import { BOOTH_LABEL_DY, BoothView } from "@/engine/booths";
 import { Camera } from "@/engine/camera";
 import { CrowdRenderer, LOD_ZOOM } from "@/engine/crowd";
@@ -57,6 +59,7 @@ interface Scene {
   readonly robots: RobotCrew | null;
   readonly ticker: Ticker | null;
   readonly plots: AddaPlots;
+  readonly backdrop: Backdrop;
 }
 
 type Listeners = { [K in keyof EngineEvents]: Set<EngineEvents[K]> };
@@ -96,6 +99,7 @@ interface SceneParts {
 
 interface VenueLayers {
   readonly worldLayer: Container;
+  readonly backdrop: Backdrop;
   readonly booths: readonly BoothView[];
   readonly crowd: CrowdRenderer;
   readonly robots: RobotCrew | null;
@@ -147,7 +151,8 @@ function buildVenueLayers(
 ): VenueLayers {
   const { defi, ticker, robots } = buildGags(layout);
   const worldLayer = new Container({ isRenderGroup: true, label: "world" });
-  worldLayer.addChild(buildFloor(layout));
+  const backdrop = new Backdrop();
+  worldLayer.addChild(buildFloor(layout, backdrop.container));
   const boothLayer = new Container({ label: "booths" });
   const plots = new AddaPlots(world, layout, DISPLAY_FONT, host);
   plots.addTo(worldLayer, boothLayer);
@@ -164,7 +169,30 @@ function buildVenueLayers(
   worldLayer.addChild(buildGarlands(layout));
   if (defi) worldLayer.addChild(buildPoolSign(defi, DISPLAY_FONT));
   worldLayer.addChild(buildGate(layout, DISPLAY_FONT));
-  return { worldLayer, booths, crowd, robots, ticker, plots };
+  return { worldLayer, backdrop, booths, crowd, robots, ticker, plots };
+}
+
+/** Phones: the view the map swoops to after the intro, with both rows of stalls filling the width. */
+function streetView(layout: VenueLayout, viewW: number): { x: number; zoom: number } {
+  const booths = layout.zones.filter((zone) => zone.kind === "booth");
+  const minX = Math.min(...booths.map((zone) => zone.x)) - 130;
+  const maxX = Math.max(...booths.map((zone) => zone.x)) + 130;
+  return { x: (minX + maxX) / 2, zoom: Math.max(LOD_ZOOM + 0.02, viewW / (maxX - minX)) };
+}
+
+/** The default view the backdrop is composed for: the framed venue, or the street on phones. */
+function homeView(layout: VenueLayout, camera: Camera): BackdropHome {
+  const plaza = plazaOf(layout);
+  const view =
+    layout.mode === "portrait"
+      ? { ...streetView(layout, camera.viewW), y: plaza.y }
+      : {
+          x: layout.fit.x + layout.fit.w / 2,
+          y: layout.fit.y + layout.fit.h / 2,
+          zoom: camera.fitZoom,
+        };
+  // As Camera.flyTo frames it: the middle of the area below the HUD.
+  return { ...view, y: view.y - camera.insetTop / 2 / view.zoom };
 }
 
 function plazaOf(layout: VenueLayout): Zone {
@@ -204,6 +232,7 @@ export class CoiiEngine implements EngineApi {
   private follow = -1;
   private youIndex = -1;
   private insetTop = 0;
+  private insetBottom = 0;
   private readonly perf = { fps: 60, frameMs: 0, simMs: 0 };
   private debugEl: HTMLDivElement | null = null;
   private bubbleCount = 0;
@@ -412,9 +441,13 @@ export class CoiiEngine implements EngineApi {
     });
   }
 
-  setInsets(top: number): void {
+  setInsets(top: number, bottom = 0): void {
     this.insetTop = top;
-    this.scene?.camera.setInsets(top);
+    this.insetBottom = bottom;
+    const scene = this.scene;
+    if (!scene) return;
+    scene.camera.setInsets(top);
+    scene.backdrop.place(this.screenOf(scene.camera), homeView(scene.layout, scene.camera));
   }
 
   pause(): void {
@@ -509,7 +542,7 @@ export class CoiiEngine implements EngineApi {
     app.canvas.setAttribute("role", "img");
     app.canvas.setAttribute(
       "aria-label",
-      "Live map of the venue: topic booths with attendees moving around them. Use the People list for an accessible view.",
+      "Live Mumbai-themed venue map: topic booths with attendees moving around them. Use the People list for an accessible view.",
     );
     this.root.prepend(app.canvas);
 
@@ -525,6 +558,28 @@ export class CoiiEngine implements EngineApi {
     app.ticker.add(() => this.frame(app.ticker.deltaMS));
     if (params.has("debug")) this.showDebug();
     for (const listener of this.listeners.ready) listener();
+    this.loadBackdrop(this.scene, params);
+  }
+
+  /** The painted scenery comes last, once the map is up and idle; `?backdrop=0` leaves it out. */
+  private loadBackdrop(scene: Scene, params: URLSearchParams): void {
+    if (params.get("backdrop") === "0") return;
+    const load = (): void => {
+      scene.backdrop
+        .load(scene.layout.mode, this.screenOf(scene.camera), homeView(scene.layout, scene.camera))
+        .catch((error: unknown) => {
+          console.warn("The map's backdrop didn't load; carrying on without it", error);
+        });
+    };
+    // Safari has no requestIdleCallback.
+    if (typeof window.requestIdleCallback === "function") {
+      window.requestIdleCallback(load, { timeout: 2000 });
+    } else setTimeout(load, 500);
+  }
+
+  /** The map's screen for the backdrop: its size, less the UI over its top and bottom. */
+  private screenOf(camera: Camera): BackdropScreen {
+    return { w: camera.viewW, h: camera.viewH - this.insetBottom, top: camera.insetTop };
   }
 
   private buildScene(parts: SceneParts): Scene {
@@ -583,11 +638,7 @@ export class CoiiEngine implements EngineApi {
     camera.fit(0);
     if (layout.mode === "landscape" || !plaza) return;
     // Phones: open on the whole street, then swoop in so both rows of stalls fill the width.
-    const booths = layout.zones.filter((zone) => zone.kind === "booth");
-    const minX = Math.min(...booths.map((zone) => zone.x)) - 130;
-    const maxX = Math.max(...booths.map((zone) => zone.x)) + 130;
-    const target = Math.max(LOD_ZOOM + 0.02, camera.viewW / (maxX - minX));
-    const x = (minX + maxX) / 2;
+    const { x, zoom: target } = streetView(layout, camera.viewW);
     if (this.reducedMotion) {
       camera.flyTo(x, plaza.y, target, 0);
       return;
@@ -634,6 +685,7 @@ export class CoiiEngine implements EngineApi {
       camera.viewW / 2 - camera.x * camera.zoom,
       camera.viewH / 2 - camera.y * camera.zoom,
     );
+    scene.backdrop.update(dt, camera, this.reducedMotion);
     scene.effects.update(dt);
     scene.robots?.update(dt);
     scene.ticker?.update(dt);
@@ -1108,6 +1160,7 @@ export class CoiiEngine implements EngineApi {
     if (width < 1 || height < 1) return;
     scene.app.renderer.resize(width, height);
     scene.camera.setViewport(width, height);
+    scene.backdrop.place(this.screenOf(scene.camera), homeView(scene.layout, scene.camera));
   }
 
   private readonly onVisibility = (): void => {

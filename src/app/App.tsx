@@ -51,15 +51,22 @@ function useEscapeCloses(): void {
   }, [panel, actions]);
 }
 
-/** Tells the engine how much of the map's top the HUD covers, so framing stays below it. */
-function useHudInset(engine: EngineApi, hud: RefObject<HTMLElement | null>): void {
+/**
+ * Tells the engine how much of the map the HUD covers at the top, so framing stays below it, and the phone's
+ * tab bar at the bottom, so the backdrop sits above it.
+ */
+function useHudInset(engine: EngineApi, hud: RefObject<HTMLElement | null>, phone: boolean): void {
   useEffect(() => {
     const el = hud.current;
     if (!el) return undefined;
-    const observer = new ResizeObserver(() => engine.setInsets(el.offsetTop + el.offsetHeight + 8));
+    const bar = phone ? document.querySelector<HTMLElement>(".tabbar") : null;
+    const update = (): void =>
+      engine.setInsets(el.offsetTop + el.offsetHeight + 8, bar?.offsetHeight ?? 0);
+    const observer = new ResizeObserver(update);
     observer.observe(el);
+    if (bar) observer.observe(bar);
     return () => observer.disconnect();
-  }, [engine, hud]);
+  }, [engine, hud, phone]);
 }
 
 /** Pauses the venue while a phone sheet covers most of it, to save battery. */
@@ -166,7 +173,7 @@ export function App({ engine }: { readonly engine: EngineApi }) {
   const appRef = useRef<HTMLDivElement>(null);
   const hudRef = useRef<HTMLDivElement>(null);
   useHeightVar(hudRef, appRef, "--hud-h");
-  useHudInset(engine, hudRef);
+  useHudInset(engine, hudRef, !flags.isDesktop);
   useEscapeCloses();
   usePauseWhileCovered(engine, flags.covered);
   const onSheetHeight = useCallback((height: number) => {

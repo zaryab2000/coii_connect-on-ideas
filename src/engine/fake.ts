@@ -82,8 +82,8 @@ export class FakeEngine implements EngineApi {
   dropIn(addaId: string, personId: string): void {
     this.log("dropIn", addaId, personId);
   }
-  setInsets(top: number): void {
-    this.log("setInsets", top);
+  setInsets(top: number, bottom = 0): void {
+    this.log("setInsets", top, bottom);
   }
   pause(): void {
     this.log("pause");

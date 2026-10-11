@@ -81,8 +81,11 @@ export interface EngineApi {
   focusAdda(addaId: string): void;
   /** Their stand-in drops into the tent from above and the camera follows (just added). */
   dropIn(addaId: string, personId: string): void;
-  /** Screen pixels at the top of the map covered by UI, so framing keeps content visible. */
-  setInsets(top: number): void;
+  /**
+   * Screen pixels at the top of the map covered by UI, so framing keeps content visible, and at the bottom
+   * (the phone's tab bar), which the backdrop sits above.
+   */
+  setInsets(top: number, bottom?: number): void;
   pause(): void;
   resume(): void;
   setReducedMotion(reduced: boolean): void;
