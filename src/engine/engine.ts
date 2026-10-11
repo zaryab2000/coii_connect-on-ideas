@@ -447,7 +447,7 @@ export class CoiiEngine implements EngineApi {
     const scene = this.scene;
     if (!scene) return;
     scene.camera.setInsets(top);
-    scene.backdrop.place(this.screenOf(scene.camera), homeView(scene.layout, scene.camera));
+    this.placeBackdrop(scene);
   }
 
   pause(): void {
@@ -577,9 +577,18 @@ export class CoiiEngine implements EngineApi {
     } else setTimeout(load, 500);
   }
 
-  /** The map's screen for the backdrop: its size, less the UI over its top and bottom. */
+  /**
+   * The map's screen for the backdrop: its size, less the UI over its top and bottom. The bottom inset is capped
+   * like the camera caps the top one, so a short window never leaves the harbour no room.
+   */
   private screenOf(camera: Camera): BackdropScreen {
-    return { w: camera.viewW, h: camera.viewH - this.insetBottom, top: camera.insetTop };
+    const bottom = Math.min(this.insetBottom, camera.viewH * 0.5);
+    return { w: camera.viewW, h: Math.max(1, camera.viewH - bottom), top: camera.insetTop };
+  }
+
+  /** Recomposes the backdrop for the current screen and default view. */
+  private placeBackdrop(scene: Scene): void {
+    scene.backdrop.place(this.screenOf(scene.camera), homeView(scene.layout, scene.camera));
   }
 
   private buildScene(parts: SceneParts): Scene {
@@ -1160,7 +1169,7 @@ export class CoiiEngine implements EngineApi {
     if (width < 1 || height < 1) return;
     scene.app.renderer.resize(width, height);
     scene.camera.setViewport(width, height);
-    scene.backdrop.place(this.screenOf(scene.camera), homeView(scene.layout, scene.camera));
+    this.placeBackdrop(scene);
   }
 
   private readonly onVisibility = (): void => {

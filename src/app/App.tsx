@@ -55,18 +55,23 @@ function useEscapeCloses(): void {
  * Tells the engine how much of the map the HUD covers at the top, so framing stays below it, and the phone's
  * tab bar at the bottom, so the backdrop sits above it.
  */
-function useHudInset(engine: EngineApi, hud: RefObject<HTMLElement | null>, phone: boolean): void {
+function useHudInset(
+  engine: EngineApi,
+  hud: RefObject<HTMLElement | null>,
+  tabBar: RefObject<HTMLElement | null>,
+  phone: boolean,
+): void {
   useEffect(() => {
     const el = hud.current;
     if (!el) return undefined;
-    const bar = phone ? document.querySelector<HTMLElement>(".tabbar") : null;
+    const bar = phone ? tabBar.current : null;
     const update = (): void =>
       engine.setInsets(el.offsetTop + el.offsetHeight + 8, bar?.offsetHeight ?? 0);
     const observer = new ResizeObserver(update);
     observer.observe(el);
     if (bar) observer.observe(bar);
     return () => observer.disconnect();
-  }, [engine, hud, phone]);
+  }, [engine, hud, tabBar, phone]);
 }
 
 /** Pauses the venue while a phone sheet covers most of it, to save battery. */
@@ -112,11 +117,12 @@ function useLayoutFlags(): LayoutFlags {
 
 interface PanelAreaProps {
   readonly flags: LayoutFlags;
+  readonly tabBar: RefObject<HTMLElement | null>;
   readonly query: QueryState;
   readonly onSheetHeight: (height: number) => void;
 }
 
-function PanelArea({ flags, query, onSheetHeight }: PanelAreaProps) {
+function PanelArea({ flags, tabBar, query, onSheetHeight }: PanelAreaProps) {
   if (flags.isDesktop) return <SidePanel query={query} />;
   return (
     <>
@@ -125,7 +131,7 @@ function PanelArea({ flags, query, onSheetHeight }: PanelAreaProps) {
         onSheetHeight={onSheetHeight}
         reducedMotion={flags.reducedMotion}
       />
-      <TabBar />
+      <TabBar ref={tabBar} />
     </>
   );
 }
@@ -172,8 +178,9 @@ export function App({ engine }: { readonly engine: EngineApi }) {
   const [query, setQuery] = useState<PeopleQuery>(DEFAULT_QUERY);
   const appRef = useRef<HTMLDivElement>(null);
   const hudRef = useRef<HTMLDivElement>(null);
+  const tabBarRef = useRef<HTMLElement>(null);
   useHeightVar(hudRef, appRef, "--hud-h");
-  useHudInset(engine, hudRef, !flags.isDesktop);
+  useHudInset(engine, hudRef, tabBarRef, !flags.isDesktop);
   useEscapeCloses();
   usePauseWhileCovered(engine, flags.covered);
   const onSheetHeight = useCallback((height: number) => {
@@ -205,6 +212,7 @@ export function App({ engine }: { readonly engine: EngineApi }) {
           <Toasts />
         </main>
         <PanelArea
+          tabBar={tabBarRef}
           flags={flags}
           query={{ query, onQuery: setQuery }}
           onSheetHeight={onSheetHeight}

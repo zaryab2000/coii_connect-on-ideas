@@ -41,11 +41,14 @@ export class Backdrop {
     image.decoding = "async";
     image.src = PLATE_URLS[mode];
     await image.decode();
+    // No mipmaps: the atlases aren't powers of two, which WebGL1 can't mipmap, and the backdrop stays near
+    // its painted size on screen anyway (it barely scales with zoom).
     const source = new ImageSource({
       resource: image,
-      autoGenerateMipmaps: true,
+      autoGenerateMipmaps: false,
       scaleMode: "linear",
     });
+    this.clear();
     const plate = plates[mode];
     for (const frame of [plate.band, plate.sun]) {
       const texture = new Texture({
@@ -60,6 +63,14 @@ export class Backdrop {
     this.place(this.screen, this.home);
   }
 
+  /** Drops sprites from an earlier load, so sprites and pieces stay paired by index. */
+  private clear(): void {
+    const old = this.sprites.splice(0);
+    const source = old[0]?.texture.source;
+    for (const sprite of old) sprite.destroy({ texture: true });
+    source?.destroy();
+  }
+
   /** Recomposes for a new screen size or default view (the window changed). */
   place(screen: BackdropScreen, home: BackdropHome): void {
     this.screen = screen;
@@ -69,15 +80,15 @@ export class Backdrop {
 
   /** Each frame: keeps the painting behind the venue for the camera now, fading in once and out up close. */
   update(dt: number, camera: BackdropCamera, reducedMotion: boolean): void {
-    const home = this.home;
-    if (!home || this.pieces.length === 0) return;
+    const { home, screen } = this;
+    if (!home || !screen || this.pieces.length === 0) return;
     this.shown = reducedMotion ? 1 : Math.min(1, this.shown + dt / FADE_IN);
     const alpha = this.shown * backdropAlpha(camera.zoom, home.zoom);
     this.container.alpha = alpha;
     this.container.visible = alpha > 0.01;
     if (!this.container.visible) return;
     this.pieces.forEach((piece, i) => {
-      const at = backdropInWorld(piece, camera, home);
+      const at = backdropInWorld(piece, camera, home, screen.h);
       this.sprites[i]?.position.set(at.x, at.y);
       this.sprites[i]?.scale.set(at.scale);
     });

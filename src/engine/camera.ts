@@ -19,6 +19,12 @@ function clampTo(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+/** Hermite ease from 0 to 1 over t in [0, 1], clamped outside it. */
+export function smoothstep(t: number): number {
+  const u = clampTo(t, 0, 1);
+  return u * u * (3 - 2 * u);
+}
+
 function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
 }

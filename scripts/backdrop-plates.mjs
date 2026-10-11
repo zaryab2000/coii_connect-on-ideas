@@ -1,4 +1,5 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 // Turns the painted Mumbai plates (docs/brand/mumbai-backdrop/*.webp, painted on a lilac sky) into what the map
 // draws. The map lays them on the venue floor with a multiply blend, like ink on paper, so each plate is divided
@@ -12,7 +13,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 // Output: src/assets/backdrop/mumbai-{landscape,portrait}.webp and src/assets/backdrop/mumbai.json
 import { chromium } from "@playwright/test";
 
-const ROOT = decodeURIComponent(new URL("../", import.meta.url).pathname);
+const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const SOURCE_DIR = `${ROOT}docs/brand/mumbai-backdrop/`;
 const OUT_DIR = `${ROOT}src/assets/backdrop/`;
 
@@ -75,7 +76,9 @@ function toneGain(dark) {
 }
 
 /** Divides by the sky: multiplied onto the floor, a pixel comes out as floor x pixel / sky, its painted colour. */
-function divideBySky(data, sky) {
+function divideBySky(data, rawSky) {
+  // A sky channel of 0 (a pure-colour sky) would divide by zero; 1 keeps the maths finite.
+  const sky = rawSky.map((c) => Math.max(1, c));
   const out = new Uint8ClampedArray(data.length);
   for (let i = 0; i < data.length; i += 4) {
     const dark = [0, 1, 2].map((c) => Math.max(0, 1 - data[i + c] / sky[c]));
@@ -100,7 +103,8 @@ function rowInk(out, width, y) {
 function findBandTop(out, width, height) {
   let y = height - 1;
   for (let gap = 0; y > 0 && gap < GAP; y--) gap = rowInk(out, width, y) < INK ? gap + 1 : 0;
-  return y + GAP;
+  // The loop steps past the last of the GAP empty rows, so the harbour starts GAP + 1 below.
+  return y + GAP + 1;
 }
 
 function rowInkRight(out, width, y) {

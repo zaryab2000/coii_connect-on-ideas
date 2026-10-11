@@ -76,6 +76,14 @@ describe("backdropInWorld", () => {
     expect(p.sx - 200).toBeGreaterThan(venueShift * 0.3);
   });
 
+  it("zooms about the bottom of the visible map, so the shore stays above a phone's tab bar", () => {
+    const bottom = 820; // 80 px of tab bar under the map
+    const shore = { ...piece, y: bottom };
+    const camera = at({ zoom: home.zoom * 1.4 });
+    const p = backdropInWorld(shore, camera, home, bottom);
+    expect((p.y - camera.y) * camera.zoom + camera.viewH / 2).toBeCloseTo(bottom);
+  });
+
   it("barely changes size when you zoom, where the venue doubles", () => {
     expect(onScreen(at({ zoom: home.zoom * 2 })).size / 0.6).toBeLessThan(1.15);
     expect(onScreen(at({ zoom: home.zoom / 2 })).size / 0.6).toBeGreaterThan(0.85);

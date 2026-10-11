@@ -1,5 +1,5 @@
 import "@/ui/tabbar.css";
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 
 import { useActions, useApp } from "@/app/context";
 import type { Overlay, Panel } from "@/app/store";
@@ -40,7 +40,7 @@ function TabButton(props: {
 }
 
 /** Phone navigation: Map, Meet, Adda, People, and Join / You (which opens your profile overlay). */
-export function TabBar() {
+export function TabBar({ ref }: { readonly ref?: Ref<HTMLElement> }) {
   const actions = useActions();
   const panel = useApp((s) => s.panel);
   const overlay = useApp((s) => s.overlay);
@@ -49,7 +49,7 @@ export function TabBar() {
   const invites = useApp((s) => addaBadgeCount(s.adda));
   const tab = activeTab(panel, overlay);
   return (
-    <nav className="tabbar" aria-label="Main">
+    <nav ref={ref} className="tabbar" aria-label="Main">
       <TabButton
         active={tab === "map"}
         label="Map"
