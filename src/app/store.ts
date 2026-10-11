@@ -4,11 +4,12 @@ import type { AddaInvite, AddaRef, JoinedAdda, MyAdda } from "@/adda/storage";
 import type { IconId, Person, TopicId } from "@/data/types";
 import type { Card } from "@/match/hand";
 import type { Chai } from "@/match/storage";
+import type { TrendRow } from "@/match/trends";
 
 export type Panel = "none" | "profile" | "booth" | "people" | "meet" | "adda";
 
 /** Centred cards above everything else; the venue keeps moving behind them. */
-export type Overlay = "none" | "about" | "you" | "board" | "share" | "drop" | "invite";
+export type Overlay = "none" | "about" | "you" | "board" | "share" | "drop" | "invite" | "trends";
 
 export interface Toast {
   readonly id: number;
@@ -67,6 +68,23 @@ export interface PointsState {
   readonly lastBump: { readonly id: string; readonly at: number } | null;
 }
 
+/** The narrative race over the last 24 hours (recounted whenever someone joins or leaves). */
+export interface RaceView {
+  /** Every booth by people, with joins in the last 24 hours. */
+  readonly rows: readonly TrendRow[];
+  /** The fastest-rising booth, or null while nothing is moving. */
+  readonly hot: TopicId | null;
+}
+
+/** The latest person to walk in, so the narrative race can flash "+1" on their booths. */
+export interface Arrival {
+  readonly id: string;
+  /** First name, or "You". */
+  readonly name: string;
+  readonly topics: readonly TopicId[];
+  readonly at: number;
+}
+
 export interface AppState {
   /** Everyone currently in the venue: demo crowd, live arrivals and you. */
   readonly people: readonly Person[];
@@ -91,6 +109,10 @@ export interface AppState {
   readonly adda: AddaView | null;
   /** What the "wave + add first" popup is about. */
   readonly addaDrop: AddaDrop | null;
+  /** Booth the invite link starts at, when the invite card opens from a booth's race row. */
+  readonly inviteTopic: TopicId | null;
+  readonly lastArrival: Arrival | null;
+  readonly race: RaceView;
   /** Which of your addas the share card shows. */
   readonly shareAddaId: string | null;
   /** "My tribe" map mode: everyone sharing your topics glows, the rest dim. */

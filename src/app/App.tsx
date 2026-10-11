@@ -21,6 +21,7 @@ import { DEFAULT_QUERY } from "@/ui/PeopleList";
 import { ShareAddaOverlay } from "@/ui/ShareAddaOverlay";
 import { TabBar } from "@/ui/TabBar";
 import { Toasts } from "@/ui/Toasts";
+import { TrendsOverlay } from "@/ui/TrendsOverlay";
 import { YouOverlay } from "@/ui/YouOverlay";
 
 const DESKTOP = "(min-width: 768px)";
@@ -157,6 +158,8 @@ function OverlayFor(props: {
       return <DropAddaOverlay {...rest} />;
     case "invite":
       return <InviteOverlay {...rest} />;
+    case "trends":
+      return <TrendsOverlay {...rest} />;
   }
 }
 

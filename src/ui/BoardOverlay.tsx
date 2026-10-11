@@ -1,6 +1,5 @@
 import "@/ui/board.css";
-import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { RefObject } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 
 import { useActions, useApp } from "@/app/context";
 import { pointsReader } from "@/app/points";
@@ -15,6 +14,7 @@ import { firstName, pointsText } from "@/ui/meet";
 import { useReducedMotion } from "@/ui/meetHooks";
 import { CloseButton, Overlay } from "@/ui/Overlay";
 import { topicVars } from "@/ui/PanelChrome";
+import { useFlip } from "@/ui/useFlip";
 
 /** Ranks shown below the podium. */
 const LIST_TO = 20;
@@ -22,31 +22,6 @@ const LIST_TO = 20;
 function rowsFor(state: AppState, topic: TopicId | null): BoardRow[] {
   const people = topic ? state.people.filter((p) => p.topics.includes(topic)) : state.people;
   return leaderboard(people, pointsReader(state));
-}
-
-/**
- * Slides rows to their new places when ranks change (FLIP), unless motion is reduced. Runs
- * after every render: it is a cheap measure of 17 rows and only animates rows that moved.
- */
-function useFlip(list: RefObject<HTMLOListElement | null>, reduced: boolean): void {
-  const tops = useRef(new Map<string, number>());
-  useLayoutEffect(() => {
-    const el = list.current;
-    if (!el) return;
-    const next = new Map<string, number>();
-    for (const child of el.querySelectorAll<HTMLElement>(":scope > [data-id]")) {
-      const id = child.dataset["id"] ?? "";
-      const top = child.offsetTop;
-      next.set(id, top);
-      const before = tops.current.get(id);
-      if (reduced || before === undefined || before === top) continue;
-      child.animate([{ transform: `translateY(${before - top}px)` }, { transform: "none" }], {
-        duration: 420,
-        easing: "cubic-bezier(0.23, 1, 0.32, 1)",
-      });
-    }
-    tops.current = next;
-  });
 }
 
 function Hero({ titleId, onClose }: { readonly titleId: string; readonly onClose: () => void }) {

@@ -1,5 +1,11 @@
 import type { Topic } from "@/data/types";
 import type { QuoteBox } from "@/engine/quotes";
+import type { BoothHeat } from "@/engine/types";
+
+/** How long a booth's "+1 Name" floats up before it goes. */
+const BOOTH_POP_MS = 1600;
+/** Booth pops alive at once per booth; a rush of joins doesn't stack a tower. */
+const BOOTH_POPS_MAX = 2;
 
 /** Crisp DOM name tags that follow beans in screen space (selected person and you). */
 export class LabelLayer {
@@ -45,11 +51,16 @@ export class BoothLabels {
   private readonly counts: HTMLSpanElement[] = [];
   private readonly last: string[] = [];
   private readonly halfWidths: number[] = [];
+  private readonly heats: HTMLSpanElement[] = [];
+  private readonly people: number[] = [];
+  private readonly today: number[] = [];
+  private readonly livePops: number[] = [];
 
   constructor(
-    topics: readonly Topic[],
+    private readonly topics: readonly Topic[],
     iconUrl: (topic: Topic) => string,
     onTap: (index: number) => void,
+    private readonly fireIcon = "",
   ) {
     this.el = document.createElement("div");
     this.el.className = "map-booth-labels";
@@ -69,7 +80,15 @@ export class BoothLabels {
       const count = document.createElement("span");
       count.className = "booth-label__count";
       count.textContent = "0";
-      button.append(icon, name, count);
+      const heat = document.createElement("span");
+      heat.className = "booth-heat";
+      heat.hidden = true;
+      heat.setAttribute("aria-hidden", "true");
+      button.append(icon, name, count, heat);
+      this.heats.push(heat);
+      this.people.push(0);
+      this.today.push(0);
+      this.livePops.push(0);
       button.addEventListener("click", () => onTap(index));
       this.el.append(button);
       this.buttons.push(button);
@@ -85,10 +104,61 @@ export class BoothLabels {
     if (!el || !button) return;
     el.textContent = count >= 1000 ? `${(count / 1000).toFixed(1)}k` : String(count);
     this.halfWidths[index] = 0;
-    button.setAttribute(
+    this.people[index] = count;
+    this.describe(index, topic);
+  }
+
+  private describe(index: number, topic: Topic): void {
+    const today = this.today[index] ?? 0;
+    const joins = today > 0 ? `, ${today} joined today` : "";
+    this.buttons[index]?.setAttribute(
       "aria-label",
-      `${topic.label} booth, ${count} people interested. Open booth.`,
+      `${topic.label} booth, ${this.people[index] ?? 0} people interested${joins}. Open booth.`,
     );
+  }
+
+  /**
+   * The narrative race on the sign: flames for how busy the booth is today, its joins, and a glow
+   * on the fastest-rising booth. Sits outside the label's box, so placement doesn't shift.
+   */
+  setHeat(index: number, heat: BoothHeat): void {
+    const el = this.heats[index];
+    const button = this.buttons[index];
+    const topic = this.topics[index];
+    if (!el || !button || !topic) return;
+    this.today[index] = heat.today;
+    this.describe(index, topic);
+    button.classList.toggle("is-hot", heat.hottest);
+    el.hidden = heat.today <= 0;
+    el.classList.toggle("booth-heat--hot", heat.hottest);
+    const key = `${heat.level}|${heat.today}|${heat.hottest}`;
+    if (el.dataset["key"] === key) return;
+    el.dataset["key"] = key;
+    const flames = Array.from({ length: heat.level }, () => {
+      const img = document.createElement("img");
+      img.src = this.fireIcon;
+      img.alt = "";
+      img.width = 14;
+      img.height = 14;
+      return img;
+    });
+    el.replaceChildren(...flames, `+${heat.today}`);
+  }
+
+  /** "+1 Asha" floating up off a booth's sign when someone joins it. */
+  pop(index: number, text: string): void {
+    const button = this.buttons[index];
+    if (!button || (this.livePops[index] ?? 0) >= BOOTH_POPS_MAX) return;
+    const pop = document.createElement("span");
+    pop.className = "booth-pop";
+    pop.setAttribute("aria-hidden", "true");
+    pop.textContent = text;
+    button.append(pop);
+    this.livePops[index] = (this.livePops[index] ?? 0) + 1;
+    window.setTimeout(() => {
+      pop.remove();
+      this.livePops[index] = Math.max(0, (this.livePops[index] ?? 1) - 1);
+    }, BOOTH_POP_MS);
   }
 
   /** Where the booth signs are on screen, relative to the map. */

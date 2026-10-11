@@ -25,7 +25,7 @@ import { BoothLabels, LabelLayer, PointPops, QuoteBubbles } from "@/engine/label
 import { bgr, FLOOR } from "@/engine/palette";
 import { bubbleBox, QUOTE_ZOOM, QuoteDirector, quoteCap } from "@/engine/quotes";
 import type { QuoteSpot } from "@/engine/quotes";
-import type { AddaMapView, EngineApi, EngineEvents, EngineStats } from "@/engine/types";
+import type { AddaMapView, BoothHeat, EngineApi, EngineEvents, EngineStats } from "@/engine/types";
 import { buildChaiStall, buildFloor, buildGarlands, buildGate } from "@/engine/venue";
 import { zoneCapacities } from "@/sim/capacity";
 import { computeLayout, modeForAspect } from "@/sim/layout";
@@ -358,6 +358,18 @@ export class CoiiEngine implements EngineApi {
     });
   }
 
+  setBoothHeat(heat: readonly BoothHeat[]): void {
+    this.whenReady((scene) => {
+      for (const h of heat) scene.boothLabels.setHeat(topicIndex(h.topic), h);
+    });
+  }
+
+  boothPop(topic: TopicId, text: string): void {
+    // A pop is a moment: before the map is up there is nobody to see it, so it isn't queued.
+    if (this.reducedMotion) return;
+    this.scene?.boothLabels.pop(topicIndex(topic), text);
+  }
+
   highlightPeople(personIds: readonly string[]): void {
     this.whenReady((scene) => {
       scene.crowd.highlightIds = this.indexesOf(personIds);
@@ -615,6 +627,7 @@ export class CoiiEngine implements EngineApi {
         const id = TOPICS[index]?.id;
         if (id) this.tapBooth(id);
       },
+      iconUrl("fire"),
     );
     const quotes = new QuoteBubbles((agent) => {
       if (this.scene) this.tapBean(this.scene, agent);

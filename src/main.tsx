@@ -11,7 +11,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "@/app/App";
 import { ControllerContext } from "@/app/context";
 import { createController } from "@/app/controller";
-import { readJoinLink, withoutJoinLink } from "@/app/joinLink";
+import { readJoinLink, readTrendsLink, withoutShareLink } from "@/app/joinLink";
 import { generateDemo } from "@/data/generateDemo";
 import { loadYou } from "@/data/localUser";
 import { demoSource } from "@/data/source";
@@ -32,12 +32,14 @@ if (!params.has("still")) {
 }
 
 const joinLink = readJoinLink(location.pathname, location.search);
-if (joinLink) {
-  controller.openJoinLink(joinLink.topic);
+const trendsLink = readTrendsLink(location.pathname, location.search);
+if (joinLink) controller.openJoinLink(joinLink.topic);
+else if (trendsLink) controller.actions.openOverlay("trends");
+if (joinLink || trendsLink) {
   history.replaceState(
     null,
     "",
-    withoutJoinLink(location.pathname, location.search, location.hash),
+    withoutShareLink(location.pathname, location.search, location.hash),
   );
 }
 

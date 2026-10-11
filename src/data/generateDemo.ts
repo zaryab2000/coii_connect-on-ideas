@@ -30,6 +30,29 @@ const TOPIC_POPULARITY: Readonly<Record<TopicId, number>> = {
   jobs: 5,
 };
 
+/**
+ * How recently each booth's demo crowd signed up, as a skew on their join day: above 1 bunches
+ * sign-ups into the last few days (a narrative picking up), below 1 spreads them back. Real
+ * sign-ups won't arrive evenly either, and an even demo makes the narrative race a dead heat.
+ */
+const TOPIC_MOMENTUM: Readonly<Record<TopicId, number>> = {
+  ai: 1,
+  defi: 1.35,
+  stablecoins: 0.9,
+  privacy: 1,
+  prediction: 2.2,
+  core: 0.85,
+  security: 1.5,
+  wallets: 1,
+  consumer: 0.8,
+  jobs: 1,
+};
+
+/** Days ago someone joined: up to 10, skewed by their first booth's momentum. */
+function joinDaysAgo(u: number, topics: readonly TopicId[]): number {
+  return 10 * u ** TOPIC_MOMENTUM[topics[0] ?? "ai"];
+}
+
 const TOPIC_COUNT_WEIGHTS = [35, 45, 20];
 
 function pickTopics(rng: Rng): TopicId[] {
@@ -160,7 +183,7 @@ function generatePerson(ctx: PersonContext, index: number, origin: Origin): Pers
     isDemo: true,
     isYou: false,
     origin,
-    joinedAt: Math.round(ctx.now - rng.range(0, 10) * DAY_MS),
+    joinedAt: Math.round(ctx.now - joinDaysAgo(rng.range(0, 1), topics) * DAY_MS),
   };
 }
 

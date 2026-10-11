@@ -7,6 +7,17 @@ export interface AddaMapMember {
   readonly pending: boolean;
 }
 
+/** A booth's place in the narrative race, drawn on its sign. */
+export interface BoothHeat {
+  readonly topic: TopicId;
+  /** People who joined it in the last 24 hours. */
+  readonly today: number;
+  /** 0 (quiet) to 3 flames. */
+  readonly level: 0 | 1 | 2 | 3;
+  /** The fastest-rising booth: its sign glows. */
+  readonly hottest: boolean;
+}
+
 /** An adda tent drawn on the map: one of yours or one you joined. */
 export interface AddaMapView {
   readonly id: string;
@@ -59,6 +70,10 @@ export interface EngineApi {
   locate(personId: string): void;
   focusBooth(topic: TopicId): void;
   highlightTopics(topics: readonly TopicId[]): void;
+  /** Narrative race badges on the booth signs (flames, joins today, the hottest glows). */
+  setBoothHeat(heat: readonly BoothHeat[]): void;
+  /** A "+1 Name" floats off a booth's sign (someone just joined it). */
+  boothPop(topic: TopicId, text: string): void;
   fit(): void;
   /** "My tribe": these people glow and everyone else dims; an empty list clears it. */
   highlightPeople(personIds: readonly string[]): void;

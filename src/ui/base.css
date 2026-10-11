@@ -345,3 +345,87 @@ select {
 .booth-label.is-dimmed {
   opacity: 0.4;
 }
+
+/* ---- narrative race on the booth signs: flames, joins today, the hottest glows ---------------- */
+
+.booth-heat {
+  position: absolute;
+  top: -14px;
+  right: -12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 2px 7px 0 5px;
+  border: var(--line-thin);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  box-shadow: var(--pop-sm);
+  color: var(--ink);
+  font-size: 0.72rem;
+  line-height: 1.25;
+  pointer-events: none;
+}
+
+.booth-heat[hidden] {
+  display: none;
+}
+
+.booth-heat--hot {
+  background: var(--rani);
+  color: var(--paper);
+}
+
+.booth-label.is-hot {
+  box-shadow:
+    var(--pop-sm),
+    0 0 0 4px color-mix(in srgb, var(--rani) 45%, transparent);
+  animation: booth-hot 1.8s var(--ease-in-out) infinite;
+}
+
+@keyframes booth-hot {
+  50% {
+    box-shadow:
+      var(--pop-sm),
+      0 0 0 8px color-mix(in srgb, var(--rani) 18%, transparent);
+  }
+}
+
+.booth-pop {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  padding: 3px 9px 1px;
+  border: var(--line-thin);
+  border-radius: var(--radius-sm);
+  background: var(--marigold);
+  box-shadow: var(--pop-sm);
+  color: var(--ink);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: booth-pop 1.6s var(--ease-out) forwards;
+}
+
+@keyframes booth-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 6px) scale(0.6);
+  }
+  18% {
+    opacity: 1;
+    transform: translate(-50%, -8px) scale(1);
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -34px) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .booth-label.is-hot {
+    animation: none;
+  }
+}

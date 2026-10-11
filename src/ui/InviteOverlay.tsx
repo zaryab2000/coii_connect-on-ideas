@@ -1,7 +1,7 @@
 import "@/ui/invite.css";
 import { useId, useState } from "react";
 
-import { useActions } from "@/app/context";
+import { useActions, useApp } from "@/app/context";
 import { joinUrl } from "@/app/joinLink";
 import { TOPICS } from "@/data/topics";
 import type { TopicId } from "@/data/types";
@@ -103,7 +103,8 @@ export function InviteOverlay({
   const actions = useActions();
   const titleId = useId();
   const linkId = useId();
-  const [topic, setTopic] = useState<TopicId | null>(null);
+  const preset = useApp((s) => s.inviteTopic);
+  const [topic, setTopic] = useState<TopicId | null>(preset);
   const link = joinUrl(topic);
   const copy = (): void => {
     void copyText(link).then((ok) =>

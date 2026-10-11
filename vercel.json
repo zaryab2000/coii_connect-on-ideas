@@ -6,7 +6,8 @@
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/join", "destination": "/index.html" },
-    { "source": "/join/:topic", "destination": "/index.html" }
+    { "source": "/join/:topic", "destination": "/index.html" },
+    { "source": "/trends", "destination": "/index.html" }
   ],
   "headers": [
     {

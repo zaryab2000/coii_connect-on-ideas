@@ -1,6 +1,6 @@
 import type { AddaSpot, PlotMode } from "@/data/adda";
 import type { Person, TopicId } from "@/data/types";
-import type { AddaMapView, EngineApi, EngineEvents, EngineStats } from "@/engine/types";
+import type { AddaMapView, BoothHeat, EngineApi, EngineEvents, EngineStats } from "@/engine/types";
 
 /** In-memory stand-in for the venue engine, for UI work and tests without WebGL. */
 export class FakeEngine implements EngineApi {
@@ -49,6 +49,12 @@ export class FakeEngine implements EngineApi {
   }
   highlightTopics(topics: readonly TopicId[]): void {
     this.log("highlightTopics", [...topics]);
+  }
+  setBoothHeat(heat: readonly BoothHeat[]): void {
+    this.log("setBoothHeat", [...heat]);
+  }
+  boothPop(topic: TopicId, text: string): void {
+    this.log("boothPop", topic, text);
   }
   fit(): void {
     this.log("fit");

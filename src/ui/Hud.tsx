@@ -11,6 +11,7 @@ import { tribeOf } from "@/match/tribe";
 import { Glyph, Icon } from "@/ui/Icon";
 import { firstName } from "@/ui/meet";
 import { topicVars } from "@/ui/PanelChrome";
+import { useRaceToday } from "@/ui/trends";
 
 const numberFormat = new Intl.NumberFormat("en-IN");
 
@@ -109,6 +110,29 @@ function BoardPill() {
   );
 }
 
+/** The narrative race at a glance: the fastest-rising booth (or the biggest); opens the race. */
+function TrendingChip() {
+  const actions = useActions();
+  const { rows, hot } = useRaceToday();
+  const topic = hot ?? rows[0]?.topic;
+  if (!topic) return null;
+  const name = TOPICS.find((t) => t.id === topic)?.short ?? topic;
+  return (
+    <button
+      type="button"
+      className="chip trend-chip"
+      aria-haspopup="dialog"
+      aria-label={`Narrative race. ${name} is ${hot ? "rising fastest" : "leading"}. Open the race.`}
+      onClick={() => actions.openOverlay("trends")}
+    >
+      <Icon id="fire" size={20} />
+      <span key={name} className="trend-chip__text">
+        {name}
+      </span>
+    </button>
+  );
+}
+
 const TRIBE_VARS = { "--topic": "var(--rani)", "--on-topic": "var(--paper)" } as CSSProperties;
 
 /** "My tribe" map mode: everyone who shares your topics glows. Shown once you've joined. */
@@ -191,6 +215,7 @@ export function Hud({ ref }: { readonly ref: Ref<HTMLDivElement> }) {
       </div>
       <div className="hud__chips-row">
         <BoardPill />
+        <TrendingChip />
         <DemoChip />
         <TribeToggle />
         <TopicHighlights />

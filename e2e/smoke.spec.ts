@@ -559,3 +559,53 @@ test("?join opens the form too, and About hands out the join link", async ({ pag
     "https://coii.decipherclub.com/join/privacy",
   );
 });
+
+test("the trending chip opens a live narrative race of all ten booths", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto("/?still");
+  await waitForCrowd(page);
+  // The booth signs carry the race too: flames and joins today.
+  await expect(page.locator(".booth-heat:not([hidden])").first()).toBeVisible();
+  await page.getByRole("button", { name: /^Narrative race/ }).click();
+  const race = page.getByRole("dialog", { name: "Narrative race" });
+  await expect(race).toBeVisible();
+  const rows = race.getByRole("list", { name: "Booths in the race" }).getByRole("listitem");
+  await expect(rows).toHaveCount(10);
+  await expect(rows.first()).toContainText("AI Agents");
+  await race.getByRole("button", { name: "Rising fastest · 24h" }).click();
+  await expect(race.getByRole("button", { name: "Rising fastest · 24h" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  // Exactly one booth is the hottest (the fastest-rising one).
+  await expect(race.getByRole("button", { name: /rising fastest/ })).toHaveCount(1);
+  expect(errors).toEqual([]);
+});
+
+test("a /trends link opens the race, and a row opens its booth", async ({ page }) => {
+  await page.goto("/trends?still");
+  const race = page.getByRole("dialog", { name: "Narrative race" });
+  await expect(race).toBeVisible();
+  await expect(page).toHaveURL(/\/\?still$/);
+  await waitForCrowd(page);
+  await race.getByRole("button", { name: /^#\d+ DeFi:/ }).click();
+  await expect(race).toBeHidden();
+  await expect(page.getByRole("heading", { name: "DeFi" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /in the narrative race/ })).toBeVisible();
+});
+
+test("once joined, the race shows your booth's place and invites people to it", async ({
+  page,
+}) => {
+  await page.goto("/?still");
+  await waitForCrowd(page);
+  await joinQuickly(page);
+  await page.getByRole("button", { name: /^Narrative race/ }).click();
+  const race = page.getByRole("dialog", { name: "Narrative race" });
+  await expect(race.getByText(/Privacy is #\d+\. \d+ more people and it passes/)).toBeVisible();
+  await race.getByRole("button", { name: "Invite to Privacy" }).click();
+  const invite = page.getByRole("dialog", { name: "Invite people to coii" });
+  await expect(invite.getByLabel("Join link")).toHaveValue(
+    "https://coii.decipherclub.com/join/privacy",
+  );
+});

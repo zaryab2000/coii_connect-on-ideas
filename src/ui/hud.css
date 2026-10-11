@@ -162,6 +162,23 @@
   pointer-events: auto;
 }
 
+.trend-chip {
+  margin-right: 8px;
+  padding-right: 12px;
+  background: var(--rani);
+  color: var(--paper);
+  pointer-events: auto;
+}
+
+.trend-chip__text {
+  display: inline-block;
+  animation: board-chip-pop 450ms var(--spring-pop);
+}
+
+.app[data-motion="reduced"] .trend-chip__text {
+  animation: none;
+}
+
 .board-chip__text {
   display: inline-block;
   font-variant-numeric: tabular-nums;
