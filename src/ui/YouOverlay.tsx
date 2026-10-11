@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 
 import { useActions, useApp } from "@/app/context";
 import { pointsReader } from "@/app/points";
+import { SIGN_OUT } from "@/content/privacy";
 import { topicById } from "@/data/topics";
 import type { Person, TopicId } from "@/data/types";
 import { rankOf } from "@/match/points";
@@ -75,6 +76,21 @@ function SaveBean() {
   );
 }
 
+/** Backend mode, Google linked: sign out and keep the bean (without Google it would be lost). */
+function SignOut() {
+  const actions = useActions();
+  const google = useApp((s) => s.account?.google ?? false);
+  if (!google) return null;
+  return (
+    <div className="you-note">
+      <p>{SIGN_OUT.hint}</p>
+      <button type="button" className="btn btn--secondary" onClick={() => void actions.signOut()}>
+        {SIGN_OUT.button}
+      </button>
+    </div>
+  );
+}
+
 /** Backend mode: your bean was hidden after reports, while a moderator takes a look. */
 function HiddenNote() {
   const hidden = useApp((s) => s.account?.hidden ?? false);
@@ -122,7 +138,15 @@ function YouSummary({ you, onEdit }: { readonly you: Person; readonly onEdit: ()
         >
           Invite friends
         </button>
+        <SignOut />
         <LeaveButton />
+        <button
+          type="button"
+          className="privacy-link"
+          onClick={() => actions.openOverlay("privacy")}
+        >
+          Privacy
+        </button>
       </div>
     </div>
   );

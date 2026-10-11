@@ -12,7 +12,7 @@ import { App } from "@/app/App";
 import { ControllerContext } from "@/app/context";
 import { createController } from "@/app/controller";
 import type { AppController } from "@/app/controller";
-import { readJoinLink, withoutJoinLink } from "@/app/joinLink";
+import { isPrivacyLink, readJoinLink, withoutJoinLink } from "@/app/joinLink";
 import { backendConfig } from "@/backend/config";
 import type { BackendConfig } from "@/backend/config";
 import { generateDemo } from "@/data/generateDemo";
@@ -53,6 +53,10 @@ function render(controller: AppController): void {
       "",
       withoutJoinLink(location.pathname, location.search, location.hash),
     );
+  }
+  if (isPrivacyLink(location.pathname)) {
+    controller.actions.openOverlay("privacy");
+    history.replaceState(null, "", `/${location.search}${location.hash}`);
   }
   if (import.meta.env.DEV) {
     Object.assign(window, { __coii: { engine, controller } });

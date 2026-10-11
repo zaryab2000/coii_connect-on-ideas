@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 
@@ -18,6 +19,7 @@ import { PhoneSheets, SidePanel } from "@/ui/Panels";
 import type { QueryState } from "@/ui/Panels";
 import type { PeopleQuery } from "@/ui/people";
 import { DEFAULT_QUERY } from "@/ui/PeopleList";
+import { PrivacyOverlay } from "@/ui/PrivacyOverlay";
 import { ShareAddaOverlay } from "@/ui/ShareAddaOverlay";
 import { TabBar } from "@/ui/TabBar";
 import { Toasts } from "@/ui/Toasts";
@@ -157,6 +159,8 @@ function OverlayFor(props: {
       return <DropAddaOverlay {...rest} />;
     case "invite":
       return <InviteOverlay {...rest} />;
+    case "privacy":
+      return <PrivacyOverlay {...rest} />;
   }
 }
 
@@ -219,6 +223,8 @@ export function App({ engine }: { readonly engine: EngineApi }) {
         />
         <Overlays />
         <ChaiOverlay viewing={viewingChai} onClose={closeChai} />
+        {/* Cookie-free visit counts on Vercel (named on the privacy page); dev builds skip it. */}
+        {import.meta.env.PROD ? <Analytics /> : null}
       </div>
     </OpenChaiContext.Provider>
   );

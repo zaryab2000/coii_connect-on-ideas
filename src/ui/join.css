@@ -688,3 +688,7 @@ fieldset.q-card > .q-card__title + * {
 .you-note p {
   margin: 0;
 }
+
+.consent__more {
+  margin: 8px 0 0 44px;
+}

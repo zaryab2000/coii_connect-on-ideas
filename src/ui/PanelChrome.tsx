@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
-import { useActions } from "@/app/context";
+import { useActions, useApp } from "@/app/context";
+import { LEAVE } from "@/content/privacy";
 import { intentById } from "@/data/intents";
 import { topicById } from "@/data/topics";
 import type { IntentId, TopicId } from "@/data/types";
@@ -121,6 +122,8 @@ export function OneLiners({
 export function LeaveButton() {
   const actions = useActions();
   const [confirming, setConfirming] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const backend = useApp((s) => s.mode === "backend");
   const stayRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (confirming) stayRef.current?.focus();
@@ -128,18 +131,27 @@ export function LeaveButton() {
   if (!confirming) {
     return (
       <button type="button" className="btn btn--quiet" onClick={() => setConfirming(true)}>
-        Leave coii
+        {LEAVE.button}
       </button>
     );
   }
   return (
     <div className="confirm" role="group" aria-labelledby="leave-question">
       <p id="leave-question" className="confirm__text">
-        Leave coii? Your bean walks out and this browser forgets your profile.
+        {backend ? LEAVE.question : LEAVE.demoQuestion}
       </p>
       <div className="confirm__actions">
-        <button type="button" className="btn btn--danger" onClick={() => actions.leave()}>
-          Yes, leave
+        <button
+          type="button"
+          className="btn btn--danger"
+          aria-disabled={leaving || undefined}
+          onClick={() => {
+            if (leaving) return;
+            setLeaving(true);
+            void actions.leave().finally(() => setLeaving(false));
+          }}
+        >
+          {leaving ? "Leaving…" : LEAVE.confirm}
         </button>
         <button
           ref={stayRef}
@@ -147,7 +159,7 @@ export function LeaveButton() {
           className="btn btn--secondary"
           onClick={() => setConfirming(false)}
         >
-          Stay
+          {LEAVE.cancel}
         </button>
       </div>
     </div>

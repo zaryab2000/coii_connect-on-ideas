@@ -3,6 +3,7 @@ import type { CSSProperties, FormEvent, ReactNode } from "react";
 
 import { useActions, useApp } from "@/app/context";
 import type { JoinInput } from "@/app/joinTypes";
+import { CONSENT, UNOFFICIAL } from "@/content/privacy";
 import { INTENTS, INTENTS_MAX } from "@/data/intents";
 import { ONE_LINER_MAX, ONE_LINERS_MAX } from "@/data/oneLinerRules";
 import { TOPICS } from "@/data/topics";
@@ -465,6 +466,8 @@ function OneLinersQuestion({
 }
 
 function ConsentCard({ ids, draft, errors, update }: Omit<FieldsProps, "touch">) {
+  // The only consent step (joining always sends consent: true), so the copy sits right here.
+  const actions = useActions();
   return (
     <div className="q-card" data-invalid={errors.consent ? true : undefined}>
       <label className="consent">
@@ -480,10 +483,17 @@ function ConsentCard({ ids, draft, errors, update }: Omit<FieldsProps, "touch">)
           <Glyph name="check" size={18} />
         </span>
         <span>
-          Show my name, topics and one-liners on this map, and my handles to people who wave at me
+          {CONSENT.label}
           <RequiredMark />
         </span>
       </label>
+      <button
+        type="button"
+        className="privacy-link consent__more"
+        onClick={() => actions.openOverlay("privacy")}
+      >
+        {CONSENT.link}
+      </button>
       {errors.consent ? (
         <p className="q-card__error" id={`${ids.consent}-error`}>
           {errors.consent}
@@ -701,6 +711,7 @@ function JoinSubmit({ editing, pending, problem, demo, onCancel }: JoinSubmitPro
           Saved in this browser only for now. You can leave anytime.
         </p>
       ) : null}
+      <p className="unofficial">{UNOFFICIAL}</p>
     </div>
   );
 }

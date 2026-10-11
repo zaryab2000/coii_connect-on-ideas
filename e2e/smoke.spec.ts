@@ -524,3 +524,26 @@ test("?join opens the form too, and About hands out the join link", async ({ pag
     "https://coii.decipherclub.com/join/privacy",
   );
 });
+
+test("/privacy opens the privacy notice; the join form and About link to it", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto("/privacy?still");
+  const notice = page.getByRole("dialog", { name: "Privacy" });
+  await expect(notice).toBeVisible();
+  await expect(notice.getByText("zartaj.afsar@gmail.com").first()).toBeVisible();
+  await expect(notice.getByText(/unofficial community project/)).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe("/");
+  await page.keyboard.press("Escape");
+  await expect(notice).toBeHidden();
+
+  await page.goto("/join?still");
+  const form = page.getByRole("dialog", { name: "Join coii" });
+  await expect(
+    form.getByText(
+      "Your bean, name, topics and one-liners are public. Your handles show only to people who wave at you.",
+    ),
+  ).toBeVisible();
+  await form.getByRole("button", { name: "How coii uses your data" }).click();
+  await expect(page.getByRole("dialog", { name: "Privacy" })).toBeVisible();
+  expect(errors).toEqual([]);
+});

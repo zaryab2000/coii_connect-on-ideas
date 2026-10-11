@@ -77,7 +77,7 @@ export async function join(browser: Browser, name: string, topic = "Privacy"): P
   await form.getByLabel("Your name").fill(name);
   await form.getByLabel("Telegram username").fill(telegram);
   await form.locator(".topic-picker").first().getByRole("button", { name: topic }).click();
-  await form.getByText("Show my name, topics and one-liners").click();
+  await form.getByText("Your bean, name, topics and one-liners are public.").click();
   // The always-pass test widget fills in its token after a moment.
   await expect(form.locator('input[name="cf-turnstile-response"]')).not.toHaveValue("", {
     timeout: 20_000,

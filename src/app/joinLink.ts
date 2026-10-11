@@ -31,6 +31,13 @@ export function readJoinLink(pathname: string, search: string): { topic: TopicId
   return { topic: asTopic(params.get("join")) };
 }
 
+/** The privacy notice's own address: `https://coii.decipherclub.com/privacy`. */
+export const PRIVACY_PATH = "/privacy";
+
+export function isPrivacyLink(pathname: string): boolean {
+  return pathname.replace(/\/+$/, "").toLowerCase() === PRIVACY_PATH;
+}
+
 /** The same address with the join link taken out, so a reload doesn't reopen the form. */
 export function withoutJoinLink(pathname: string, search: string, hash: string): string {
   // Kept as written: bare flags like `?still` stay bare.

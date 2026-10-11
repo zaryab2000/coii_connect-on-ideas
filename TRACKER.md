@@ -53,7 +53,7 @@ Then, once the backend exists: L2–L4, C3 handshake QR, M2 waves, M5 meetup fla
 | L4  | Moderation: report button, auto-hide at 3 reports, name blocklist, admin hide                                                                                                 | M      | BE          | P0 for a real launch | ◐      |
 | L5  | Demo-crowd rule (owner: option a): backend mode shows database people only; seed beans purged on launch day                                                                   | S      | —           | P0                   | ◐      |
 | L6  | Deploy to `coii.decipherclub.com` (Vercel) with a CDN cache in front of `get_venue`, + Web Analytics                                                                          | S      | owner login | P0                   | ☐      |
-| L7  | Privacy page, consent copy, "delete me"                                                                                                                                       | S      | —           | P0                   | ☐      |
+| L7  | Privacy page, consent copy, "delete me"                                                                                                                                       | S      | —           | P0                   | ◐      |
 | L8  | Cold start: seed list (friends, speakers), QR poster, Devcon 8 India Telegram group post                                                                                      | S      | ORG         | P0                   | ☐      |
 | L9  | **Launch gate:** no public posts (Devcon Telegram group, X) until the CDN cache in front of `get_venue` is live. Friends and testers are fine before that                     | S      | L6          | P0                   | ☐      |
 

@@ -8,7 +8,7 @@ import type { Chai } from "@/match/storage";
 export type Panel = "none" | "profile" | "booth" | "people" | "meet" | "adda";
 
 /** Centred cards above everything else; the venue keeps moving behind them. */
-export type Overlay = "none" | "about" | "you" | "board" | "share" | "drop" | "invite";
+export type Overlay = "none" | "about" | "you" | "board" | "share" | "drop" | "invite" | "privacy";
 
 export interface Toast {
   readonly id: number;
