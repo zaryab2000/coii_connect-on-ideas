@@ -54,7 +54,7 @@ function render(controller: AppController): void {
       withoutJoinLink(location.pathname, location.search, location.hash),
     );
   }
-  if (import.meta.env.DEV || params.has("debug")) {
+  if (import.meta.env.DEV) {
     Object.assign(window, { __coii: { engine, controller } });
   }
   const rootEl = document.getElementById("root");

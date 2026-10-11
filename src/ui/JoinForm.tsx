@@ -640,7 +640,15 @@ export function JoinForm({ you, presetTopic, onDone, onCancel }: JoinFormProps) 
 /** The Turnstile widget, when this join needs it. */
 function Check({ sending }: { readonly sending: Submission }) {
   const check = useCheck();
-  if (!check.needed || !check.siteKey) return null;
+  if (!check.needed) return null;
+  if (!check.siteKey) {
+    // A build without the Turnstile site key can't pass the check, so say so up front.
+    return (
+      <p className="q-card__error" role="alert">
+        Joining is unavailable right now. Please try again a little later.
+      </p>
+    );
+  }
   return <Turnstile key={sending.round} siteKey={check.siteKey} onToken={sending.setToken} />;
 }
 

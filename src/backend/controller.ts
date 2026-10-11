@@ -152,8 +152,13 @@ class BackendApp {
   begin(): void {
     this.start.venue.start({ onUpdate: this.venueUpdated, onError: this.venueFailed });
     if (this.store.get().you) this.enter();
-    this.start.supabase.auth.onAuthStateChange((_event, session) => {
+    this.start.supabase.auth.onAuthStateChange((event, session) => {
       this.session = session;
+      // Signed out elsewhere (another tab, an expired refresh token): drop your bean here too.
+      if (event === "SIGNED_OUT") {
+        if (this.store.get().account) void this.forgetYou();
+        return;
+      }
       const account = this.store.get().account;
       if (session && account)
         this.store.set({ account: { ...account, google: hasGoogle(session) } });
