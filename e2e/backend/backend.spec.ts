@@ -33,9 +33,20 @@ test("AC1: a visitor sees the seeded venue from one small snapshot, with no sess
 }) => {
   const context = await browser.newContext();
   const page = await context.newPage();
-  const snapshot = page.waitForResponse((r) => r.url().includes("/rest/v1/rpc/get_venue"));
+  const direct: string[] = [];
+  page.on("request", (r) => {
+    if (r.url().includes("/rest/v1/rpc/get_venue?") || r.url().endsWith("/rpc/get_venue")) {
+      direct.push(r.url());
+    }
+  });
+  // The snapshot comes through the same-origin cached route (P15), never straight from Supabase.
+  const snapshot = page.waitForResponse((r) => new URL(r.url()).pathname === "/api/venue");
   await page.goto("/");
-  const body = await (await snapshot).body();
+  const response = await snapshot;
+  expect(response.headers()["cache-control"]).toBe(
+    "public, s-maxage=60, stale-while-revalidate=60",
+  );
+  const body = await response.body();
   expect(body.length).toBeLessThanOrEqual(SEED * BYTES_PER_BEAN);
   await page.waitForFunction(() => window.__coii?.controller.store.get().people.length === 1500);
   const state = await page.evaluate(() => {
@@ -43,6 +54,7 @@ test("AC1: a visitor sees the seeded venue from one small snapshot, with no sess
     return { mode: s?.mode, account: s?.account, demo: s?.people.every((p) => p.isDemo) };
   });
   expect(state).toEqual({ mode: "backend", account: null, demo: true });
+  expect(direct).toEqual([]);
   // Browsing never creates an account (§10.2).
   expect(sqlNumber("select count(*) from auth.users")).toBe(0);
   await expect(page.getByRole("button", { name: /Demo crowd/ })).toBeVisible();

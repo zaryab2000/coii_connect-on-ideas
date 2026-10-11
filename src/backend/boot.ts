@@ -25,6 +25,16 @@ function storage(): Storage | null {
 }
 
 /**
+ * The snapshot through the same-origin CDN-cached route (api/venue.js, PRD §13): Supabase
+ * serves it about once a minute however many people open the site.
+ */
+async function cachedSnapshot(): Promise<unknown> {
+  const response = await fetch("/api/venue", { headers: { Accept: "application/json" } });
+  if (!response.ok) throw new Error(`/api/venue answered ${response.status}`);
+  return response.json();
+}
+
+/**
  * A profile from demo mode in this browser: offered once to prefill the join form, then every
  * demo-mode key is deleted (docs/prd/database.md §15).
  */
@@ -78,7 +88,12 @@ export async function bootBackend(
   const supabase = createSupabase(config);
   const venue = new VenueSync(
     {
-      snapshot: () => rpc(supabase, "get_venue", {}),
+      snapshot: () =>
+        cachedSnapshot().catch((error: unknown) => {
+          // The site still works if the cache route is down; it just reads the database.
+          console.warn("/api/venue failed; reading the snapshot from Supabase directly", error);
+          return rpc(supabase, "get_venue", {});
+        }),
       changes: (since) => rpc(supabase, "get_venue_changes", { since }),
     },
     storage(),

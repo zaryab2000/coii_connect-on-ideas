@@ -59,6 +59,8 @@ runs the same checks as `pnpm check`.
 The database, its functions and the Edge Functions live in `supabase/` (spec:
 [docs/prd/database.md](docs/prd/database.md), operations: [docs/runbooks/database.md](docs/runbooks/database.md)).
 The app's side of it is `src/backend/` (venue snapshot and deltas, Meet, adda, auth, realtime).
+The snapshot comes through `api/venue.js`, a Vercel Function at `/api/venue` that Vercel's CDN
+caches for 60 s; `pnpm dev` and `pnpm preview` serve the same function locally.
 
 Needs Docker (local stack), the Supabase CLI and [Deno](https://deno.com) (`pnpm db:seed` and the
 Edge Function tests run on Deno).
