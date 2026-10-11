@@ -1,10 +1,17 @@
 import { defineConfig, devices } from "@playwright/test";
 
+/**
+ * GitHub's runners have no GPU, so Chrome draws the 1,500-bean WebGL venue in software and the
+ * suite runs about four times slower there: more time per test, and one retry.
+ */
+const ci = Boolean(process.env["CI"]);
+
 /** Smoke tests against the real app in the system Chrome (no browser download needed). */
 export default defineConfig({
   testDir: "e2e",
   testIgnore: "backend/**",
-  timeout: 45_000,
+  timeout: ci ? 120_000 : 45_000,
+  retries: ci ? 1 : 0,
   fullyParallel: false,
   workers: 1,
   reporter: [["list"]],
