@@ -243,3 +243,27 @@
   flex: none;
   margin-top: 1px;
 }
+
+/* ---- report or block (backend mode) ------------------------------------------------------ */
+
+.safety-open {
+  margin-top: 10px;
+  font-size: 0.86rem;
+}
+
+.safety-menu {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+}
+
+.safety-menu__reason {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+}
+
+.safety-menu .confirm__actions {
+  margin-top: 6px;
+}

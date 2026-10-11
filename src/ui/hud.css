@@ -334,3 +334,65 @@
     padding-left: 16px;
   }
 }
+
+/* Backend mode, near-empty venue: a note under the chips with one clear next step. */
+.early-venue {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-self: center;
+  max-width: min(560px, calc(100% - 24px));
+  margin: 4px 12px 0;
+  padding: 10px 10px 10px 14px;
+  border: var(--line);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  box-shadow: var(--pop);
+  pointer-events: auto;
+}
+
+.early-venue__text {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.early-venue__go {
+  flex: none;
+}
+
+.early-venue__close {
+  flex: none;
+}
+
+.app[data-sheet] .early-venue {
+  display: none;
+}
+
+@media (max-width: 520px) {
+  .early-venue {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas:
+      "icon text close"
+      ". go go";
+    row-gap: 8px;
+  }
+
+  .early-venue > img {
+    grid-area: icon;
+  }
+
+  .early-venue__text {
+    grid-area: text;
+  }
+
+  .early-venue__close {
+    grid-area: close;
+  }
+
+  .early-venue__go {
+    grid-area: go;
+    justify-self: start;
+  }
+}

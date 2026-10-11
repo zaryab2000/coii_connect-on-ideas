@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createController } from "@/app/controller";
-import type { JoinInput } from "@/app/controller";
+import type { JoinInput } from "@/app/joinTypes";
 import { WAVES_PER_DAY } from "@/app/meet";
 import type { AddaView, AppState, Store } from "@/app/store";
 import { ADDA_MAX, ADDAS_MAX } from "@/data/adda";
@@ -47,9 +47,9 @@ function lastMaps(engine: FakeEngine): readonly AddaMapView[] {
 }
 
 /** Joins and builds one adda; returns its id. */
-function withAdda(ctx: ReturnType<typeof setup>): string {
-  ctx.actions.join(JOIN);
-  const addaId = ctx.actions.createAdda(LOOK);
+async function withAdda(ctx: ReturnType<typeof setup>): Promise<string> {
+  await ctx.actions.join(JOIN, null);
+  const addaId = await ctx.actions.createAdda(LOOK);
   if (!addaId) throw new Error("expected a new adda");
   return addaId;
 }
@@ -66,21 +66,21 @@ describe("Adda: your tents", () => {
   it("is off until you join, then waits for you to build one", () => {
     const { store, actions, engine } = setup();
     expect(store.get().adda).toBeNull();
-    actions.join(JOIN);
+    actions.join(JOIN, null);
     expect(addaOf(store)).toMatchObject({ addas: [], invites: [] });
     expect(lastMaps(engine)).toEqual([]);
   });
 
-  it("builds up to three addas, named by default or by you", () => {
+  it("builds up to three addas, named by default or by you", async () => {
     const { store, actions } = setup();
-    actions.join(JOIN);
+    actions.join(JOIN, null);
     const ids = [
-      actions.createAdda(LOOK),
-      actions.createAdda(LOOK, "  Rust   crew "),
-      actions.createAdda(LOOK, "see t.me/x"),
+      await actions.createAdda(LOOK),
+      await actions.createAdda(LOOK, "  Rust   crew "),
+      await actions.createAdda(LOOK, "see t.me/x"),
     ];
     expect(ids.every((addaId) => addaId !== null)).toBe(true);
-    expect(actions.createAdda(LOOK)).toBeNull();
+    expect(await actions.createAdda(LOOK)).toBeNull();
     expect(addaOf(store).addas.map((a) => a.name)).toEqual([
       "Zara's adda",
       "Rust crew",
@@ -89,15 +89,15 @@ describe("Adda: your tents", () => {
     expect(addaOf(store).addas).toHaveLength(ADDAS_MAX);
   });
 
-  it("only invites people you waved at, per adda", () => {
+  it("only invites people you waved at, per adda", async () => {
     const ctx = setup();
     const { store, actions, engine } = ctx;
-    const addaId = withAdda(ctx);
-    expect(actions.inviteToAdda(id(0), "nope")).toBe("needs_adda");
-    expect(actions.inviteToAdda(id(0), addaId)).toBe("needs_wave");
+    const addaId = await withAdda(ctx);
+    expect(await actions.inviteToAdda(id(0), "nope")).toBe("needs_adda");
+    expect(await actions.inviteToAdda(id(0), addaId)).toBe("needs_wave");
     actions.wave(id(0));
-    expect(actions.inviteToAdda(id(0), addaId)).toBe("invited");
-    expect(actions.inviteToAdda(id(0), addaId)).toBe("already");
+    expect(await actions.inviteToAdda(id(0), addaId)).toBe("invited");
+    expect(await actions.inviteToAdda(id(0), addaId)).toBe("already");
     expect(membersOf(store, addaId)).toEqual([
       { personId: id(0), status: "invited", invitedAt: START },
     ]);
@@ -109,30 +109,33 @@ describe("Adda: your tents", () => {
     ]);
   });
 
-  it("the same person can be in two of your addas", () => {
+  it("the same person can be in two of your addas", async () => {
     const ctx = setup();
-    const a = withAdda(ctx);
-    const b = ctx.actions.createAdda(LOOK) ?? "";
+    const a = await withAdda(ctx);
+    const b = (await ctx.actions.createAdda(LOOK)) ?? "";
     ctx.actions.wave(id(0));
-    expect(ctx.actions.inviteToAdda(id(0), a)).toBe("invited");
-    expect(ctx.actions.inviteToAdda(id(0), b)).toBe("invited");
+    expect(await ctx.actions.inviteToAdda(id(0), a)).toBe("invited");
+    expect(await ctx.actions.inviteToAdda(id(0), b)).toBe("invited");
   });
 
-  it("stops at the size cap", () => {
+  it("stops at the size cap", async () => {
     const ctx = setup();
-    const addaId = withAdda(ctx);
-    const results = CROWD.slice(0, ADDA_MAX + 1).map((p) => {
-      ctx.actions.wave(p.id);
-      return ctx.actions.inviteToAdda(p.id, addaId);
-    });
+    const addaId = await withAdda(ctx);
+    const results: string[] = [];
+    for (const p of CROWD.slice(0, ADDA_MAX + 1)) {
+      void ctx.actions.wave(p.id);
+      // In order on purpose: the last invite must be the one that finds the adda full.
+      // oxlint-disable-next-line eslint/no-await-in-loop
+      results.push(await ctx.actions.inviteToAdda(p.id, addaId));
+    }
     expect(results.filter((r) => r === "invited")).toHaveLength(ADDA_MAX);
     expect(results.at(-1)).toBe("full");
   });
 
-  it("demo people answer: a yes joins and makes a chai, a no keeps showing as invited", () => {
+  it("demo people answer: a yes joins and makes a chai, a no keeps showing as invited", async () => {
     const ctx = setup();
     const { store, actions, advance, engine } = ctx;
-    const addaId = withAdda(ctx);
+    const addaId = await withAdda(ctx);
     const invited = CROWD.slice(0, 25).map((p) => p.id);
     for (const pid of invited) {
       actions.wave(pid);
@@ -150,9 +153,9 @@ describe("Adda: your tents", () => {
     expect(pending).toBe(invited.length - joined.length);
   });
 
-  it("removing someone cancels their pending answer; deleting takes the tent down", () => {
+  it("removing someone cancels their pending answer; deleting takes the tent down", async () => {
     const ctx = setup();
-    const addaId = withAdda(ctx);
+    const addaId = await withAdda(ctx);
     ctx.actions.wave(id(1));
     ctx.actions.inviteToAdda(id(1), addaId);
     ctx.actions.removeFromAdda(id(1), addaId);
@@ -163,43 +166,43 @@ describe("Adda: your tents", () => {
     expect(lastMaps(ctx.engine)).toEqual([]);
   });
 
-  it("remembers where you dragged a tent, per layout", () => {
+  it("remembers where you dragged a tent, per layout", async () => {
     const ctx = setup();
-    const addaId = withAdda(ctx);
+    const addaId = await withAdda(ctx);
     ctx.engine.emitAddaMoved(addaId, "portrait", { x: 0.2, y: 0.9 });
     expect(addaOf(ctx.store).addas[0]?.places).toEqual({ portrait: { x: 0.2, y: 0.9 } });
     expect(lastMaps(ctx.engine)[0]?.places).toEqual({ portrait: { x: 0.2, y: 0.9 } });
   });
 
-  it("is forgotten when you leave coii", () => {
+  it("is forgotten when you leave coii", async () => {
     const ctx = setup();
-    withAdda(ctx);
-    ctx.actions.leave();
+    await withAdda(ctx);
+    await ctx.actions.leave();
     expect(ctx.store.get().adda).toBeNull();
     expect(lastMaps(ctx.engine)).toEqual([]);
   });
 });
 
 describe("Adda: dropping someone on your tent", () => {
-  it("asks you to wave and add first, then they drop into the tent", () => {
+  it("asks you to wave and add first, then they drop into the tent", async () => {
     const ctx = setup();
-    const addaId = withAdda(ctx);
+    const addaId = await withAdda(ctx);
     ctx.engine.emitBeanDropped(id(2), addaId);
     expect(ctx.store.get()).toMatchObject({
       overlay: "drop",
       addaDrop: { personId: id(2), addaId },
     });
-    expect(ctx.actions.waveAndAdd(id(2), addaId)).toBe("invited");
+    expect(await ctx.actions.waveAndAdd(id(2), addaId)).toBe("invited");
     expect(ctx.store.get().meet?.waved).toContain(id(2));
     expect(membersOf(ctx.store, addaId).map((m) => m.personId)).toEqual([id(2)]);
     expect(ctx.engine.calls.at(-1)).toEqual({ method: "dropIn", args: [addaId, id(2)] });
     expect(ctx.store.get()).toMatchObject({ overlay: "none", addaDrop: null });
   });
 
-  it("someone already in the tent just gets a toast", () => {
+  it("someone already in the tent just gets a toast", async () => {
     const ctx = setup();
-    const addaId = withAdda(ctx);
-    ctx.actions.waveAndAdd(id(3), addaId);
+    const addaId = await withAdda(ctx);
+    await ctx.actions.waveAndAdd(id(3), addaId);
     ctx.engine.emitBeanDropped(id(3), addaId);
     expect(ctx.store.get().overlay).toBe("none");
     expect(ctx.store.get().toasts.at(-1)?.text).toContain("already in");
@@ -209,7 +212,7 @@ describe("Adda: dropping someone on your tent", () => {
 /** Joins and waits for a demo invite to arrive. */
 function withInvite() {
   const ctx = setup();
-  ctx.actions.join(JOIN);
+  ctx.actions.join(JOIN, null);
   ctx.advance(271_000);
   const invite = addaOf(ctx.store).invites[0];
   if (!invite) throw new Error("expected a demo invite within 270 s");

@@ -119,6 +119,7 @@ export function waveToast(result: WaveResult, name: string, firstWave: boolean):
         : null;
     case "chai":
     case "already":
+    case "failed":
       return null;
   }
 }

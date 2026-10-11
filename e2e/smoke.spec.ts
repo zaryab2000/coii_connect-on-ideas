@@ -1,47 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
-interface DebugHook {
-  engine: {
-    stats(): { beans: number; fps: number };
-    pause(): void;
-    focusBooth(topic: string): void;
-    resume(): void;
-    screenPositionOf(id: string): { x: number; y: number } | null;
-    screenPositionOfAdda(id: string): { x: number; y: number } | null;
-    personAtScreen(x: number, y: number): string | null;
-  };
-  controller: {
-    store: {
-      get(): {
-        people: { id: string; isDemo: boolean; x: string | null }[];
-        selectedId: string | null;
-        you: { id: string; avatar: { hair: number } } | null;
-        tribe: boolean;
-        meet: { hand: { personId: string }[]; waved: string[] } | null;
-        adda: {
-          addas: { id: string; name: string; members: { personId: string; status: string }[] }[];
-          joined: { ownerId: string }[];
-        } | null;
-      };
-    };
-    actions: {
-      join(input: unknown): { id: string };
-      locate(id: string): void;
-      openPanel(panel: string): void;
-      createAdda(look: { style: string; color: string }, name?: string): string | null;
-      fit(): void;
-      focusAdda(id: string): void;
-    };
-  };
-}
-
-declare global {
-  interface Window {
-    __coii?: DebugHook;
-  }
-}
-
 function collectErrors(page: Page): string[] {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -132,9 +91,9 @@ test("up close, a few one-liners pop up at a time and tapping one opens that per
 test("joining puts you in the venue and you are still there after a reload", async ({ page }) => {
   await page.goto("/?still");
   await waitForCrowd(page);
-  const id = await page.evaluate(
-    () =>
-      window.__coii?.controller.actions.join({
+  const id = await page.evaluate(async () => {
+    const outcome = await window.__coii?.controller.actions.join(
+      {
         name: "Test Person",
         telegram: "test_person",
         x: null,
@@ -142,8 +101,11 @@ test("joining puts you in the venue and you are still there after a reload", asy
         intent: [],
         oneLiners: ["testing coii"],
         avatar: { skin: 2, hair: 0, hairColor: 0, accessory: 0 },
-      }).id,
-  );
+      },
+      null,
+    );
+    return outcome?.ok ? outcome.person.id : null;
+  });
   expect(id).toBeTruthy();
   await page.reload();
   await page.waitForFunction(() => (window.__coii?.engine.stats().beans ?? 0) >= 1501, undefined, {
@@ -228,15 +190,18 @@ test("tapping your own bean opens your profile overlay, not a side profile", asy
 
 async function joinQuickly(page: Page): Promise<void> {
   await page.evaluate(() =>
-    window.__coii?.controller.actions.join({
-      name: "Meet Tester",
-      telegram: "meet_tester",
-      x: null,
-      topics: ["privacy", "ai"],
-      intent: ["building"],
-      oneLiners: ["testing the daily picks"],
-      avatar: { skin: 1, hair: 2, hairColor: 0, accessory: 0 },
-    }),
+    window.__coii?.controller.actions.join(
+      {
+        name: "Meet Tester",
+        telegram: "meet_tester",
+        x: null,
+        topics: ["privacy", "ai"],
+        intent: ["building"],
+        oneLiners: ["testing the daily picks"],
+        avatar: { skin: 1, hair: 2, hairColor: 0, accessory: 0 },
+      },
+      null,
+    ),
   );
 }
 
@@ -476,9 +441,9 @@ test("adda: drag someone onto your tent, wave + add, and they fall in", async ({
   await page.goto("/?still");
   await waitForCrowd(page);
   await joinQuickly(page);
-  const addaId = await page.evaluate(() => {
+  const addaId = await page.evaluate(async () => {
     const actions = window.__coii?.controller.actions;
-    const id = actions?.createAdda({ style: "chhatri", color: "leaf" }, "ZK crew") ?? "";
+    const id = (await actions?.createAdda({ style: "chhatri", color: "leaf" }, "ZK crew")) ?? "";
     actions?.focusAdda(id);
     return id;
   });

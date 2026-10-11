@@ -14,28 +14,31 @@ const INVITE_DRIP_MAX = 2;
 const FIRST_INVITE_MS = 150_000;
 const INVITE_SPREAD_MS = 120_000;
 
+/** How an invite went. `failed`: the server couldn't be reached and you were already told why. */
 export type InviteResult =
   | "invited"
   | "needs_adda"
   | "needs_wave"
   | "full"
   | "already"
-  | "unavailable";
+  | "unavailable"
+  | "failed";
 
 /** Result of the drag-and-drop shortcut: wave (if needed) and add in one go. */
 export type WaveAndAddResult = InviteResult | "quota";
 
+/** What the UI may ask of adda. Creating and inviting resolve asynchronously in backend mode. */
 export interface AddaActions {
   /** Builds a new adda (up to three); returns its id, or null when you already have three. */
-  createAdda(look: AddaLook, name?: string): string | null;
+  createAdda(look: AddaLook, name?: string): Promise<string | null>;
   /** Changes an adda's look and name. */
   editAdda(addaId: string, look: AddaLook, name: string): void;
   /** Takes the tent down; its people are silently let go. */
   deleteAdda(addaId: string): void;
   /** Invites someone you have waved at to one of your addas. They see it's you. */
-  inviteToAdda(personId: string, addaId: string): InviteResult;
+  inviteToAdda(personId: string, addaId: string): Promise<InviteResult>;
   /** Waves at them if you haven't yet, then invites them; they drop into the tent. */
-  waveAndAdd(personId: string, addaId: string): WaveAndAddResult;
+  waveAndAdd(personId: string, addaId: string): Promise<WaveAndAddResult>;
   /** Takes back an invite or removes a member, silently. */
   removeFromAdda(personId: string, addaId: string): void;
   /** Joins their adda: you wave back for free, which makes it a chai. */
@@ -55,7 +58,15 @@ export interface AddaActions {
   shareAdda(addaId: string): void;
 }
 
-export interface AddaController extends AddaActions {
+/** Adda actions the demo decides on the spot. */
+interface AddaNow {
+  createAdda(look: AddaLook, name?: string): string | null;
+  inviteToAdda(personId: string, addaId: string): InviteResult;
+  waveAndAdd(personId: string, addaId: string): WaveAndAddResult;
+}
+
+/** The demo-mode adda loop. */
+export interface AddaController extends Omit<AddaActions, keyof AddaNow>, AddaNow {
   /** Re-reads you; call after joining or leaving. */
   sync(): void;
   /** Forget everything adda stored for you (on leaving). */
@@ -82,7 +93,48 @@ function viewOf(save: AddaSave): AddaView {
   return { addas: save.addas, invites: save.invites, joined: save.joined, viewing: save.viewing };
 }
 
-function sameRef(a: AddaRef, b: AddaRef | null): boolean {
+/**
+ * The tents on the map: yours (with everyone invited or in) plus one adda you joined, if you
+ * chose to show it. People who aren't in the venue (left, hidden, blocked) are left out.
+ */
+export function addaMapViews(
+  view: AddaView,
+  me: Person,
+  personById: (id: string) => Person | undefined,
+): AddaMapView[] {
+  const member = (id: string, pending: boolean): AddaMapMember[] => {
+    const person = personById(id);
+    return person ? [{ person, pending }] : [];
+  };
+  const mine: AddaMapView[] = view.addas.map((adda) => ({
+    id: adda.id,
+    ownerId: me.id,
+    mine: true,
+    places: adda.places,
+    label: adda.name,
+    look: adda.look,
+    members: [
+      ...member(me.id, false),
+      ...adda.members.flatMap((m) => member(m.personId, m.status === "invited")),
+    ],
+  }));
+  const shown = view.joined.find((j) => sameRef(j, view.viewing));
+  const owner = shown && personById(shown.ownerId);
+  if (!shown || !owner) return mine;
+  const ids = [owner.id, me.id, ...shown.memberIds.filter((id) => id !== me.id)];
+  const theirs: AddaMapView = {
+    id: shown.addaId,
+    ownerId: owner.id,
+    mine: false,
+    places: {},
+    label: shown.name,
+    look: shown.look,
+    members: ids.flatMap((id) => member(id, false)),
+  };
+  return [...mine, theirs];
+}
+
+export function sameRef(a: AddaRef, b: AddaRef | null): boolean {
   return b !== null && a.ownerId === b.ownerId && a.addaId === b.addaId;
 }
 
@@ -162,40 +214,9 @@ class Adda implements AddaController {
     this.deps.engine.setAddas(this.mapViews(this.save));
   }
 
-  private mapMember(id: string, pending: boolean): AddaMapMember[] {
-    const person = this.personById(id);
-    return person ? [{ person, pending }] : [];
-  }
-
   private mapViews(save: AddaSave): AddaMapView[] {
     const me = this.you();
-    if (!me) return [];
-    const mine: AddaMapView[] = save.addas.map((adda) => ({
-      id: adda.id,
-      ownerId: me.id,
-      mine: true,
-      places: adda.places,
-      label: adda.name,
-      look: adda.look,
-      members: [
-        ...this.mapMember(me.id, false),
-        ...adda.members.flatMap((m) => this.mapMember(m.personId, m.status === "invited")),
-      ],
-    }));
-    const shown = save.joined.find((j) => sameRef(j, save.viewing));
-    const owner = shown && this.personById(shown.ownerId);
-    if (!shown || !owner) return mine;
-    const ids = [owner.id, me.id, ...shown.memberIds.filter((id) => id !== me.id)];
-    const theirs: AddaMapView = {
-      id: shown.addaId,
-      ownerId: owner.id,
-      mine: false,
-      places: {},
-      label: shown.name,
-      look: shown.look,
-      members: ids.flatMap((id) => this.mapMember(id, false)),
-    };
-    return [...mine, theirs];
+    return me ? addaMapViews(viewOf(save), me, (id) => this.personById(id)) : [];
   }
 
   // ---- your addas ------------------------------------------------------------------------------

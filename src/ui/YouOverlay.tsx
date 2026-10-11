@@ -54,6 +54,39 @@ function YourPoints({ you }: { readonly you: Person }) {
   );
 }
 
+/**
+ * Backend mode: your bean lives in this browser's session until Google is linked. Linking it
+ * means a cleared browser or a new phone can get it back.
+ */
+function SaveBean() {
+  const actions = useActions();
+  const account = useApp((s) => s.account);
+  if (!account || account.google) return null;
+  return (
+    <div className="you-note">
+      <p>
+        <strong>Save your bean.</strong> Link Google so you can get it back on another phone or if
+        this browser forgets you.
+      </p>
+      <button type="button" className="btn btn--secondary" onClick={() => void actions.saveBean()}>
+        Save my bean with Google
+      </button>
+    </div>
+  );
+}
+
+/** Backend mode: your bean was hidden after reports, while a moderator takes a look. */
+function HiddenNote() {
+  const hidden = useApp((s) => s.account?.hidden ?? false);
+  if (!hidden) return null;
+  return (
+    <p className="you-note" role="status">
+      <strong>Your bean is hidden for now.</strong> A few people reported it, so nobody else can see
+      it until a moderator takes a look.
+    </p>
+  );
+}
+
 /** Your profile once you've joined: the card people see, plus what you can do with it. */
 function YouSummary({ you, onEdit }: { readonly you: Person; readonly onEdit: () => void }) {
   const actions = useActions();
@@ -61,6 +94,8 @@ function YouSummary({ you, onEdit }: { readonly you: Person; readonly onEdit: ()
     <div className="you-summary">
       <YouCard you={you} />
       <div className="you-summary__actions">
+        <HiddenNote />
+        <SaveBean />
         <YourPoints you={you} />
         <button type="button" className="btn btn--primary" onClick={() => actions.locate(you.id)}>
           <Glyph name="pin" size={20} />

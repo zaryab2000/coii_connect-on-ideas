@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
+    "dev:local": "node scripts/dev-local.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host",
     "typecheck": "tsc --noEmit",
@@ -15,9 +16,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:backend": "node scripts/test-e2e-backend.mjs",
     "test:db": "node scripts/test-db.mjs",
     "test:functions": "deno test --allow-env --config supabase/functions/deno.json supabase/functions",
     "sync:shared": "node scripts/sync-shared.ts",
+    "db:types": "node scripts/db-types.mjs",
+    "db:types:check": "node scripts/db-types.mjs --check",
     "db:seed": "deno run --allow-read --allow-write=supabase/seed.sql --config scripts/deno.json scripts/seed.ts",
     "check": "pnpm fmt:check && pnpm lint && pnpm typecheck && pnpm test"
   },

@@ -14,9 +14,10 @@ import { firstName } from "@/ui/meet";
 function useInvite(person: Person): (adda: { id: string; name: string }) => void {
   const actions = useActions();
   return (adda) => {
-    const result = actions.inviteToAdda(person.id, adda.id);
-    const text = inviteToast(result, firstName(person.name), adda.name);
-    if (text) actions.pushToast(text, "circus_tent", "success");
+    void actions.inviteToAdda(person.id, adda.id).then((result) => {
+      const text = inviteToast(result, firstName(person.name), adda.name);
+      if (text) actions.pushToast(text, "circus_tent", "success");
+    });
   };
 }
 
@@ -35,9 +36,10 @@ function BuildAndInvite({ person }: { readonly person: Person }) {
     );
   }
   const build = (look: AddaLook, name: string): void => {
-    const id = actions.createAdda(look, name);
-    if (id) invite({ id, name });
     setOpen(false);
+    void actions.createAdda(look, name).then((id) => {
+      if (id) invite({ id, name });
+    });
   };
   return (
     <div className="adda-build">

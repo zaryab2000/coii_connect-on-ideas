@@ -33,6 +33,7 @@
     "tests",
     "vite.config.ts",
     "vitest.db.config.ts",
-    "playwright.config.ts"
+    "playwright.config.ts",
+    "playwright.backend.config.ts"
   ]
 }

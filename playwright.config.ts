@@ -3,6 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 /** Smoke tests against the real app in the system Chrome (no browser download needed). */
 export default defineConfig({
   testDir: "e2e",
+  testIgnore: "backend/**",
   timeout: 45_000,
   fullyParallel: false,
   workers: 1,
@@ -17,6 +18,9 @@ export default defineConfig({
     url: "http://localhost:4173",
     reuseExistingServer: true,
     timeout: 60_000,
+    // Demo mode, always: empty values beat `.env.local`, so this suite never reaches a database
+    // (docs/prd/database.md §15). The backend suite is playwright.backend.config.ts.
+    env: { VITE_SUPABASE_URL: "", VITE_SUPABASE_PUBLISHABLE_KEY: "", VITE_TURNSTILE_SITE_KEY: "" },
   },
   projects: [
     { name: "desktop", use: { viewport: { width: 1440, height: 900 } } },
