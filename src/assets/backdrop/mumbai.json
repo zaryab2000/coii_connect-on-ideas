@@ -1,36 +1,36 @@
 {
   "landscape": {
     "width": 2174,
-    "height": 598,
+    "height": 597,
     "band": {
       "x": 0,
       "y": 0,
       "w": 2174,
-      "h": 390,
+      "h": 389,
       "pad": 251,
-      "waterline": 308
+      "waterline": 307
     },
     "sun": {
       "x": 0,
-      "y": 392,
+      "y": 391,
       "w": 629,
       "h": 206
     }
   },
   "portrait": {
     "width": 1223,
-    "height": 675,
+    "height": 674,
     "band": {
       "x": 0,
       "y": 0,
       "w": 1223,
-      "h": 477,
+      "h": 476,
       "pad": 141,
-      "waterline": 341
+      "waterline": 340
     },
     "sun": {
       "x": 0,
-      "y": 479,
+      "y": 478,
       "w": 588,
       "h": 196
     }

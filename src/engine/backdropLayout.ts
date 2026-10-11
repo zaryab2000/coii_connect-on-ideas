@@ -1,3 +1,4 @@
+import { smoothstep } from "@/engine/camera";
 import type { Rect } from "@/sim/layout";
 
 /**
@@ -84,15 +85,15 @@ export function backdropInWorld(
   piece: BackdropPiece,
   camera: BackdropCamera,
   home: BackdropHome,
+  bottom: number = camera.viewH,
 ): { x: number; y: number; scale: number } {
   const grow = (camera.zoom / home.zoom) ** GROW;
   const x =
     camera.viewW / 2 +
     (piece.x - camera.viewW / 2) * grow +
     (home.x - camera.x) * camera.zoom * PARALLAX;
-  // Grows about the bottom of the screen, where the harbour stands.
-  const y =
-    camera.viewH + (piece.y - camera.viewH) * grow + (home.y - camera.y) * camera.zoom * PARALLAX;
+  // Grows about the bottom of the visible map (above the phone's tab bar), where the harbour stands.
+  const y = bottom + (piece.y - bottom) * grow + (home.y - camera.y) * camera.zoom * PARALLAX;
   return {
     x: (x - camera.viewW / 2) / camera.zoom + camera.x,
     y: (y - camera.viewH / 2) / camera.zoom + camera.y,
@@ -109,7 +110,5 @@ const FADE_END = 2.4;
  * fades away as you zoom in close on the crowd. Zoomed out, it stays.
  */
 export function backdropAlpha(zoom: number, homeZoom: number): number {
-  const t = (FADE_END - zoom / homeZoom) / (FADE_END - FADE_START);
-  const u = Math.min(1, Math.max(0, t));
-  return u * u * (3 - 2 * u);
+  return smoothstep((FADE_END - zoom / homeZoom) / (FADE_END - FADE_START));
 }
