@@ -566,7 +566,11 @@ test("the trending chip opens a live narrative race of all ten booths", async ({
   await waitForCrowd(page);
   // The booth signs carry the race too: flames and joins today.
   await expect(page.locator(".booth-heat:not([hidden])").first()).toBeVisible();
-  await page.getByRole("button", { name: /^Narrative race/ }).click();
+  const hudActions = page.locator(".hud__chips-row");
+  await expect(hudActions.getByRole("button")).toHaveCount(2);
+  const raceButton = hudActions.getByRole("button", { name: /^Narrative race/ });
+  await expect(raceButton).toHaveText("Narrative race");
+  await raceButton.click();
   const race = page.getByRole("dialog", { name: "Narrative race" });
   await expect(race).toBeVisible();
   const rows = race.getByRole("list", { name: "Booths in the race" }).getByRole("listitem");
