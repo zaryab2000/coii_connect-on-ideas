@@ -135,30 +135,62 @@ describe("venue deltas", () => {
   });
 });
 
+/** Listens on your own topic; resolves once the channel has joined. */
+async function listen(
+  who: Awaited<ReturnType<typeof member>>,
+  onWave: (payload: Record<string, unknown>) => void,
+): Promise<void> {
+  await who.client.realtime.setAuth();
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("the channel didn't join within 10s")), 10_000);
+    who.client
+      .channel(`user:${who.userId}`, { config: { private: true } })
+      .on("broadcast", { event: "wave_in" }, (message) =>
+        onWave(message["payload"] as Record<string, unknown>),
+      )
+      .subscribe((status) => {
+        if (status !== "SUBSCRIBED") return;
+        clearTimeout(timer);
+        resolve();
+      });
+  });
+}
+
+/**
+ * Right after `supabase db reset` Realtime restarts and can take a few seconds to route database
+ * broadcasts even to joined channels. Waves at a throwaway listener (a fresh waver each time,
+ * since a pair waves once) until one arrives, so the real test starts with Realtime live.
+ */
+async function realtimeLive(): Promise<void> {
+  const listener = await member();
+  const heard = { yet: false };
+  await listen(listener, () => {
+    heard.yet = true;
+  });
+  for (let attempt = 0; attempt < 15 && !heard.yet; attempt++) {
+    const waver = await member();
+    await call(waver.client, "wave", { target: listener.me.id });
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  await listener.client.removeAllChannels();
+  if (!heard.yet) throw new Error("Realtime never delivered a broadcast within 15 attempts");
+}
+
 describe("personal realtime events", () => {
   it("tells you someone waved within seconds, without saying who", async () => {
+    await realtimeLive();
     const asha = await member();
     const ravi = await member();
-    await ravi.client.realtime.setAuth();
-    const payload = new Promise<Record<string, unknown>>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error("no wave_in within 10s")), 10_000);
-      ravi.client
-        .channel(`user:${ravi.userId}`, { config: { private: true } })
-        .on("broadcast", { event: "wave_in" }, (message) => {
-          clearTimeout(timer);
-          resolve(message["payload"] as Record<string, unknown>);
-        })
-        .subscribe((status) => {
-          // Give a freshly restarted Realtime a moment to route the topic before waving.
-          if (status !== "SUBSCRIBED") return;
-          setTimeout(() => void call(asha.client, "wave", { target: ravi.me.id }), 1000);
-        });
+    let received: Record<string, unknown> | null = null;
+    await listen(ravi, (payload) => {
+      received = payload;
     });
-    const received = await payload;
-    expect(received["points"]).toBe(1);
+    await call(asha.client, "wave", { target: ravi.me.id });
+    await expect.poll(() => received, { timeout: 5000 }).not.toBeNull();
+    expect(received?.["points"]).toBe(1);
     expect(JSON.stringify(received)).not.toContain(asha.me.id);
     await ravi.client.removeAllChannels();
-  });
+  }, 60_000);
 
   it("won't let you listen on someone else's topic", async () => {
     const asha = await member();
