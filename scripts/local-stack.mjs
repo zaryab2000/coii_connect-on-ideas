@@ -52,9 +52,10 @@ export function stackStatus() {
 
 /**
  * Serves the Edge Functions locally with the fake bot token and these allowed origins. Resolves
- * once they answer; `stop()` shuts them down.
+ * once they answer; `stop()` shuts them down. `status` is `stackStatus()`.
  */
-export async function serveFunctions(apiUrl, origins) {
+export async function serveFunctions(status, origins) {
+  const apiUrl = status.API_URL;
   const dir = mkdtempSync(join(tmpdir(), "coii-functions-"));
   const envFile = join(dir, "functions.env");
   writeFileSync(envFile, `TELEGRAM_BOT_TOKEN=${TEST_BOT_TOKEN}\nALLOWED_ORIGINS=${origins}\n`);
@@ -69,10 +70,22 @@ export async function serveFunctions(apiUrl, origins) {
     rmSync(dir, { recursive: true, force: true });
   };
   /* oxlint-disable eslint/no-await-in-loop -- polls once a second until the functions answer */
+  // Ready once our runtime answers: a POST from an allowed origin with the local anon key (no
+  // user) gets the function's own 401 `coii:not_signed_in`. A runtime left over from
+  // `supabase start` (without this env file) refuses the origin with a 403 instead. (Locally the
+  // gateway sets `Access-Control-Allow-Origin: *` itself, so that header can't tell them apart.)
+  const origin = origins.split(",")[0];
   for (let i = 0; i < 60; i++) {
     try {
-      const res = await fetch(`${apiUrl}/functions/v1/deal-hand`, { method: "OPTIONS" });
-      if (res.status < 500) return { stop };
+      const res = await fetch(`${apiUrl}/functions/v1/deal-hand`, {
+        method: "POST",
+        headers: {
+          Origin: origin,
+          apikey: status.ANON_KEY,
+          Authorization: `Bearer ${status.ANON_KEY}`,
+        },
+      });
+      if (res.status === 401 && (await res.text()).includes("coii:not_signed_in")) return { stop };
     } catch {
       // not up yet
     }

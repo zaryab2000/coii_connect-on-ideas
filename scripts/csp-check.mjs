@@ -25,7 +25,7 @@ if (spawnSync("pnpm", ["exec", "vite", "build"], { stdio: "inherit", env }).stat
   process.exit(1);
 }
 
-const functions = await serveFunctions(status.API_URL, ORIGIN);
+const functions = await serveFunctions(status, ORIGIN);
 const preview = spawn("pnpm", ["exec", "vite", "preview", "--port", String(PORT), "--strictPort"], {
   stdio: "ignore",
   env,

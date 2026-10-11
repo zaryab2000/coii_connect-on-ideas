@@ -25,7 +25,7 @@ const status = stackStatus();
 let code = 1;
 let functions = null;
 try {
-  functions = await serveFunctions(status.API_URL, ORIGIN);
+  functions = await serveFunctions(status, ORIGIN);
   const tests = spawnSync(
     "pnpm",
     ["exec", "vitest", "run", "--config", "vitest.db.config.ts", ...vitestArgs],

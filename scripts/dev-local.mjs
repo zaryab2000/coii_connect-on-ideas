@@ -8,7 +8,7 @@ import { serveFunctions, stackStatus } from "./local-stack.mjs";
 const ORIGIN = "http://localhost:5173";
 
 const status = stackStatus();
-const functions = await serveFunctions(status.API_URL, ORIGIN);
+const functions = await serveFunctions(status, ORIGIN);
 const vite = spawn("pnpm", ["exec", "vite", "--host", "--port", "5173", "--strictPort"], {
   stdio: "inherit",
   env: {

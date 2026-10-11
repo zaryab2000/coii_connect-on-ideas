@@ -27,7 +27,7 @@ if (!projectId) throw new Error("supabase/config.toml has no project_id");
 let code = 1;
 let functions = null;
 try {
-  functions = await serveFunctions(status.API_URL, ORIGIN);
+  functions = await serveFunctions(status, ORIGIN);
   const tests = spawnSync(
     "pnpm",
     ["exec", "playwright", "test", "--config", "playwright.backend.config.ts", ...playwrightArgs],
