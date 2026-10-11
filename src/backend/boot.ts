@@ -9,6 +9,7 @@ import type { Supabase } from "@/backend/client";
 import type { BackendConfig } from "@/backend/config";
 import { createBackendController, venuePeople } from "@/backend/controller";
 import { errorCopy, toBackendError } from "@/backend/errors";
+import { takeTelegramLogin } from "@/backend/telegram";
 import type { VenueState } from "@/backend/venue";
 import { VenueSync } from "@/backend/venueSync";
 import { clearYou, loadYou } from "@/data/localUser";
@@ -85,6 +86,7 @@ export async function bootBackend(
   reducedMotion: boolean,
 ): Promise<AppController> {
   const authError = takeAuthError();
+  const telegramLogin = takeTelegramLogin();
   const supabase = createSupabase(config);
   const venue = new VenueSync(
     {
@@ -114,6 +116,7 @@ export async function bootBackend(
     prefill,
     turnstileSiteKey: config.turnstileSiteKey,
     reducedMotion,
+    telegramLogin,
   });
   const { pushToast } = controller.actions;
   for (const error of [loaded.error, meError]) {

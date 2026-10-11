@@ -18,6 +18,7 @@ import { pointsReader } from "@/app/points";
 import { createStore } from "@/app/store";
 import type { AccountView, AppState, Score, Store } from "@/app/store";
 import { BackendAdda } from "@/backend/adda";
+import { invoke } from "@/backend/api";
 import {
   deleteAccount,
   hasGoogle,
@@ -26,12 +27,14 @@ import {
   signInGoogle,
   signOut,
 } from "@/backend/auth";
+import { meFrom } from "@/backend/auth";
 import type { Me } from "@/backend/auth";
 import type { Supabase } from "@/backend/client";
 import { toBackendError } from "@/backend/errors";
 import { BackendMeet } from "@/backend/meet";
 import type { Contact } from "@/backend/meetState";
 import { PersonalChannel } from "@/backend/personal";
+import type { TelegramLogin } from "@/backend/telegram";
 import type { VenueEntry, VenueState, VenueUpdate } from "@/backend/venue";
 import type { VenueSync } from "@/backend/venueSync";
 import type { Person } from "@/data/types";
@@ -58,6 +61,8 @@ export interface BackendStart {
   readonly prefill: Person | null;
   readonly turnstileSiteKey: string | null;
   readonly reducedMotion: boolean;
+  /** Telegram sent you back with a signed login to check ("Verify with Telegram"). */
+  readonly telegramLogin: TelegramLogin | null;
 }
 
 function accountOf(session: Session | null, me: Me | null): AccountView | null {
@@ -152,6 +157,7 @@ class BackendApp {
   begin(): void {
     this.start.venue.start({ onUpdate: this.venueUpdated, onError: this.venueFailed });
     if (this.store.get().you) this.enter();
+    if (this.start.telegramLogin) void this.verifyTelegram(this.start.telegramLogin);
     this.start.supabase.auth.onAuthStateChange((event, session) => {
       this.session = session;
       // Signed out elsewhere (another tab, an expired refresh token): drop your bean here too.
@@ -316,6 +322,30 @@ class BackendApp {
       return { ok: false, problem: toBackendError(error).copy };
     }
   };
+
+  /**
+   * Checks a Telegram login with `telegram-link`: on success your Telegram username becomes your
+   * verified handle and the ✓ shows (on other maps after their next venue poll).
+   */
+  private async verifyTelegram(login: TelegramLogin): Promise<void> {
+    if (!this.store.get().you) {
+      this.toasts.pushToast("Join coii first, then verify with Telegram.", null, "info");
+      return;
+    }
+    try {
+      const me = meFrom(await invoke(this.start.supabase, "telegram-link", login));
+      if (!me) throw new Error("telegram-link returned no profile");
+      this.store.set({ you: me.person });
+      this.project();
+      this.toasts.pushToast(
+        `Telegram verified: @${me.person.telegram ?? ""}. Your ✓ is on the map.`,
+        "sparkles",
+        "success",
+      );
+    } catch (error) {
+      this.toasts.pushToast(toBackendError(error).copy.text, null, "info");
+    }
+  }
 
   /** Clears you out locally after leaving or signing out. */
   private async forgetYou(): Promise<void> {

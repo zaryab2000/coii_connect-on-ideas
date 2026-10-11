@@ -692,3 +692,8 @@ fieldset.q-card > .q-card__title + * {
 .consent__more {
   margin: 8px 0 0 44px;
 }
+
+/* Telegram's widget draws its own button in an iframe; keep its row tidy. */
+.telegram-widget {
+  min-height: 44px;
+}

@@ -309,6 +309,69 @@ test("adda: invite someone you waved at; joining makes a chai", async ({ browser
   expect([...host.errors, ...guest.errors]).toEqual([]);
 });
 
+/** What Telegram's widget would send back, signed with the local stack's test bot token. */
+async function telegramLogin(fields: Record<string, string>): Promise<string> {
+  const encoder = new TextEncoder();
+  const check = Object.keys(fields)
+    .toSorted()
+    .map((key) => `${key}=${fields[key]}`)
+    .join("\n");
+  const secret = await crypto.subtle.digest("SHA-256", encoder.encode("local-test-bot-token"));
+  const key = await crypto.subtle.importKey(
+    "raw",
+    secret,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(check));
+  const hash = [...new Uint8Array(signature)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return new URLSearchParams({ ...fields, hash }).toString();
+}
+
+test("P8: Verify with Telegram checks the signed login and adds the ✓", async ({ browser }) => {
+  const asha = await join(browser, "Asha Telegram");
+  const now = Math.floor(Date.now() / 1000);
+  const username = `tgasha${Date.now().toString(36)}`;
+
+  // A stale login is refused with its own copy, and nothing changes.
+  const stale = await telegramLogin({
+    id: "777001",
+    username,
+    auth_date: String(now - 2 * 86_400),
+  });
+  await asha.page.goto(`/telegram?${stale}`);
+  await expect(
+    asha.page.getByText("That Telegram login expired. Try again.").first(),
+  ).toBeVisible();
+  expect(personRow(asha.id, "telegram_verified")).toBe("f");
+
+  const fresh = await telegramLogin({
+    id: "777001",
+    first_name: "Asha",
+    username,
+    auth_date: String(now),
+  });
+  await asha.page.goto(`/telegram?${fresh}`);
+  await expect(asha.page.getByText(`Telegram verified: @${username}`).first()).toBeVisible();
+  expect(new URL(asha.page.url()).pathname).toBe("/");
+  expect(personRow(asha.id, "telegram_verified")).toBe("t");
+  expect(sql(`select telegram from private.contacts where person_id = '${asha.id}'`)).toBe(
+    username,
+  );
+
+  // The same Telegram account can't verify a second bean.
+  const other = await join(browser, "Ravi Telegram");
+  await other.page.goto(`/telegram?${fresh}`);
+  await expect(
+    other.page.getByText("That Telegram account already verified another bean.").first(),
+  ).toBeVisible();
+  // The two refusals are 400 answers from telegram-link, which the browser logs; nothing else.
+  const refused =
+    "Failed to load resource: the server responded with a status of 400 (Bad Request)";
+  expect([...asha.errors, ...other.errors].filter((e) => e !== refused)).toEqual([]);
+});
+
 test("AC11: purge_demo removes every seed bean and its waves; real beans stay", async () => {
   const real = sqlNumber("select count(*) from private.people where source = 'self'");
   expect(sqlNumber("select count(*) from private.people where source = 'demo'")).toBe(SEED);

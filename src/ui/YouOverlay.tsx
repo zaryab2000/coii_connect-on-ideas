@@ -1,8 +1,9 @@
 import "@/ui/join.css";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { useActions, useApp } from "@/app/context";
 import { pointsReader } from "@/app/points";
+import { widgetAttributes } from "@/backend/telegram";
 import { SIGN_OUT } from "@/content/privacy";
 import { topicById } from "@/data/topics";
 import type { Person, TopicId } from "@/data/types";
@@ -76,6 +77,58 @@ function SaveBean() {
   );
 }
 
+/** Telegram's own Login Widget (script + iframe); it sends you back to /telegram when done. */
+function TelegramWidget() {
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const host = box.current;
+    if (!host) return undefined;
+    const script = document.createElement("script");
+    script.async = true;
+    script.src = "https://telegram.org/js/telegram-widget.js?22";
+    for (const [name, value] of Object.entries(widgetAttributes(location.origin))) {
+      script.setAttribute(name, value);
+    }
+    host.append(script);
+    return () => host.replaceChildren();
+  }, []);
+  return <div ref={box} className="telegram-widget" />;
+}
+
+/**
+ * Backend mode: prove your Telegram username is yours and get the ✓ (optional, any time).
+ * The widget only works on the site's own domain (BotFather /setdomain).
+ */
+function TelegramVerify({ you }: { readonly you: Person }) {
+  const backend = useApp((s) => s.mode === "backend");
+  const [open, setOpen] = useState(false);
+  if (!backend) return null;
+  if (you.telegramVerified) {
+    return (
+      <p className="you-note" role="status">
+        <strong>Telegram verified ✓</strong> @{you.telegram}
+      </p>
+    );
+  }
+  if (!open) {
+    return (
+      <button type="button" className="btn btn--secondary" onClick={() => setOpen(true)}>
+        <Icon id="speech_balloon" size={20} />
+        Verify with Telegram
+      </button>
+    );
+  }
+  return (
+    <div className="you-note">
+      <p>
+        Tap the Telegram button and confirm in Telegram. You'll come straight back here, and your
+        Telegram username becomes your verified handle with a ✓.
+      </p>
+      <TelegramWidget />
+    </div>
+  );
+}
+
 /** Backend mode, Google linked: sign out and keep the bean (without Google it would be lost). */
 function SignOut() {
   const actions = useActions();
@@ -112,6 +165,7 @@ function YouSummary({ you, onEdit }: { readonly you: Person; readonly onEdit: ()
       <div className="you-summary__actions">
         <HiddenNote />
         <SaveBean />
+        <TelegramVerify you={you} />
         <YourPoints you={you} />
         <button type="button" className="btn btn--primary" onClick={() => actions.locate(you.id)}>
           <Glyph name="pin" size={20} />

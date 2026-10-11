@@ -113,11 +113,9 @@ try {
   await member.page.waitForTimeout(1000);
   // The Telegram button loads Telegram's widget (script + iframe) once you have a bean.
   await member.page.goto(`${ORIGIN}/join`);
-  const telegram = member.page.getByRole("button", { name: /Verify with Telegram/ });
-  if (await telegram.isVisible().catch(() => false)) {
-    await telegram.click();
-    await member.page.waitForTimeout(3000);
-  }
+  await member.page.getByRole("button", { name: /Verify with Telegram/ }).click();
+  await member.page.locator('iframe[src*="oauth.telegram.org"]').waitFor({ timeout: 15_000 });
+  await member.page.waitForTimeout(1500);
   found.push(...(await violations(member)).map((v) => `member: ${v}`));
 
   // 3. "Sign in with Google" leaves for Supabase Auth; nothing may be blocked before it does.
