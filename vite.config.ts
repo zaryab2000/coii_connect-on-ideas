@@ -4,6 +4,7 @@ import type { Connect, Plugin } from "vite";
 import { defineConfig } from "vitest/config";
 
 import { venueResponse } from "./api/venue.js";
+import vercelConfig from "./vercel.json";
 
 const srcDir = decodeURIComponent(new URL("./src/", import.meta.url).pathname);
 const functionsDir = decodeURIComponent(new URL("./supabase/functions/", import.meta.url).pathname);
@@ -38,8 +39,45 @@ function venueApi(env: Record<string, string>): Plugin {
   };
 }
 
+/** The live project's API origin, as written into the CSP in vercel.json. */
+const LIVE_SUPABASE = "https://fqemvlxftoixmihcmhmt.supabase.co";
+
+/**
+ * `vite preview` sends the same headers as Vercel (vercel.json), so a local production build
+ * runs under the real Content-Security-Policy. The live Supabase origin in the policy becomes the
+ * one this build talks to (the local stack when testing). Not in dev: Vite's dev client needs
+ * inline scripts.
+ */
+function vercelHeaders(env: Record<string, string>): Plugin {
+  const api = env["VITE_SUPABASE_URL"] ? new URL(env["VITE_SUPABASE_URL"]).origin : LIVE_SUPABASE;
+  const socket = api.replace(/^http/, "ws");
+  const localize = (value: string): string =>
+    value.replaceAll(`wss://${new URL(LIVE_SUPABASE).host}`, socket).replaceAll(LIVE_SUPABASE, api);
+  const rules = vercelConfig.headers.map((rule) => ({
+    match: new RegExp(`^${rule.source}$`),
+    headers: rule.headers,
+  }));
+  return {
+    name: "coii-vercel-headers",
+    configurePreviewServer: (server) =>
+      void server.middlewares.use((req, res, next) => {
+        const { url } = req as unknown as { url?: string };
+        const path = (url ?? "/").split("?")[0] ?? "/";
+        for (const rule of rules) {
+          if (!rule.match.test(path)) continue;
+          for (const { key, value } of rule.headers) res.setHeader(key, localize(value));
+        }
+        next();
+      }),
+  };
+}
+
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), venueApi(loadEnv(mode, ".", "VITE_"))],
+  plugins: [
+    react(),
+    venueApi(loadEnv(mode, ".", "VITE_")),
+    vercelHeaders(loadEnv(mode, ".", "VITE_")),
+  ],
   resolve: {
     alias: {
       "@/": srcDir,

@@ -44,6 +44,7 @@ In dev builds `window.__coii` exposes `{ engine, controller }` for scripting.
 | `pnpm test:e2e`         | Browser smoke tests on desktop and phone viewports, demo mode (uses system Chrome)     |
 | `pnpm test:e2e:backend` | The app in backend mode against the local stack: join, wave, chai, report, leave, adda |
 | `pnpm dev:local`        | Dev server in backend mode against the local stack, Edge Functions included            |
+| `pnpm test:csp`         | Production build under the real CSP (local stack); fails on any CSP violation          |
 | `pnpm build`            | Type check + production build into `dist/`                                             |
 | `pnpm test:db`          | Database integration tests and Edge Functions over HTTP (local stack)                  |
 | `pnpm test:functions`   | Deno unit tests for the Edge Functions                                                 |
