@@ -293,12 +293,14 @@ export class BackendMeet implements MeetActions {
     );
   };
 
+  /** Unmatch and block take both waves back, so their handles lock again right away. */
   private dropTies(personId: string): void {
     this.update((s) => ({
       ...s,
       chais: s.chais.filter((c) => c.personId !== personId),
       waved: s.waved.filter((id) => id !== personId),
     }));
+    if (this.contacts.delete(personId)) this.deps.onContacts(this.contacts);
   }
 
   readonly toggleTribe = (): void => {

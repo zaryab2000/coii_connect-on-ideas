@@ -153,8 +153,19 @@ test("AC7: unmatch and block take back both waves and both points", async ({ bro
   }
   expect([pointsOf(a.id), pointsOf(b.id), pointsOf(c.id)]).toEqual([2, 1, 1]);
 
-  // Unmatch from the chai card.
+  const handleOf = (id: string) =>
+    a.page.evaluate(
+      (pid) =>
+        window.__coii?.controller.store.get().people.find((p) => p.id === pid)?.telegram ?? null,
+      id,
+    );
+  await refresh(a.page);
+  await closeChaiCards(a.page);
+  await expect.poll(() => handleOf(b.id)).toBe(b.telegram);
+
+  // Unmatch from the chai card: the handles lock again at once.
   await a.page.evaluate((id) => window.__coii?.controller.actions.unmatch(id), b.id);
+  await expect.poll(() => handleOf(b.id)).toBeNull();
   await expect
     .poll(() =>
       sqlNumber(
@@ -165,8 +176,6 @@ test("AC7: unmatch and block take back both waves and both points", async ({ bro
   expect([pointsOf(a.id), pointsOf(b.id)]).toEqual([1, 0]);
 
   // Block from the profile's safety menu.
-  await refresh(a.page);
-  await closeChaiCards(a.page);
   await openProfile(a.page, c.id);
   const profile = a.page.locator(".profile");
   await profile.getByRole("button", { name: "Report or block Omar" }).click();
