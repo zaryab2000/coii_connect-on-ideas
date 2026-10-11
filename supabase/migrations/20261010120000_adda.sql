@@ -70,17 +70,34 @@ begin
 end;
 $$;
 
--- ---- blocking ends adda ties both ways --------------------------------------------------------
+-- ---- unmatch and block end adda ties both ways ------------------------------------------------
 
+-- Neither person stays in (or invited to) the other's addas.
+create function private.cut_adda_ties(a uuid, b uuid) returns void
+language sql security definer set search_path = ''
+as $$
+  delete from private.adda_members m
+   using private.addas t
+   where t.id = m.adda_id
+     and ((t.owner_id = a and m.member_id = b) or (t.owner_id = b and m.member_id = a));
+$$;
+
+-- Unmatch and block both go through here: the chai, both waves, and now the adda ties.
+create or replace function private.cut_ties(me uuid, person uuid) returns void
+language sql security definer set search_path = ''
+as $$
+  delete from private.chais where a_id = least(me, person) and b_id = greatest(me, person);
+  delete from private.waves
+   where (from_id = me and to_id = person) or (from_id = person and to_id = me);
+  select private.cut_adda_ties(me, person);
+$$;
+
+-- A block added any other way (an admin in the SQL editor) ends adda ties too.
 create function private.on_block_insert() returns trigger
 language plpgsql security definer set search_path = ''
 as $$
 begin
-  delete from private.adda_members m
-   using private.addas a
-   where a.id = m.adda_id
-     and ((a.owner_id = new.blocker_id and m.member_id = new.blocked_id)
-       or (a.owner_id = new.blocked_id and m.member_id = new.blocker_id));
+  perform private.cut_adda_ties(new.blocker_id, new.blocked_id);
   return null;
 end;
 $$;

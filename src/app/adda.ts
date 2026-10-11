@@ -454,7 +454,7 @@ class Adda implements AddaController {
     };
     this.update((s) => ({ ...s, invites: [...s.invites, invite] }));
     this.deps.pushToast(
-      `${firstName(inviter)} wants you in ${name}! Answer in the Adda tab.`,
+      `${firstName(inviter)} invited you to ${name}! Answer in the Adda tab.`,
       "handshake",
       "info",
     );

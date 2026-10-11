@@ -303,7 +303,7 @@ export class BackendAdda implements AddaActions {
       const owner = this.personById(ownerId);
       if (!invite || !owner) return;
       this.deps.pushToast(
-        `${firstName(owner)} wants you in ${invite.name}! Answer in the Adda tab.`,
+        `${firstName(owner)} invited you to ${invite.name}! Answer in the Adda tab.`,
         "handshake",
         "info",
       );
