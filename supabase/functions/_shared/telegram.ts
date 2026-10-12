@@ -18,8 +18,11 @@ export type TelegramCheck =
       readonly code: "telegram_bad_signature" | "telegram_expired" | "telegram_no_username";
     };
 
-/** A login older than this is refused. */
-const MAX_AGE_S = 24 * 60 * 60;
+/**
+ * A login older than this is refused. Redirect mode puts the signed login in the page address
+ * (and so in request logs); a short window keeps a copied address from being replayed.
+ */
+export const MAX_AGE_S = 10 * 60;
 /** Clocks drift; a login up to this far in the future is tolerated. */
 const MAX_SKEW_S = 5 * 60;
 
