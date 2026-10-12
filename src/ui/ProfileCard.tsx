@@ -216,11 +216,7 @@ export function ProfileCard({
       </header>
       <div className="panel__scroll profile__body">
         <OneLiners lines={person.oneLiners} />
-        {person.isInvited ? (
-          <InvitedActions person={person} />
-        ) : (
-          <OthersActions person={person} />
-        )}
+        {person.isInvited ? <InvitedActions person={person} /> : <OthersActions person={person} />}
         <p className="safety">
           <Icon id="shield" size={18} />
           Tip: nobody legit will ask for your seed phrase or funds.

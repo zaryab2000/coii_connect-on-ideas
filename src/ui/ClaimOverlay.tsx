@@ -350,7 +350,10 @@ function ClaimWays({ telegram }: { readonly telegram: boolean }) {
   );
 }
 
-function panelCopy(reason: "join" | "card" | "hint", name: string): { title: string; text: string } {
+function panelCopy(
+  reason: "join" | "card" | "hint",
+  name: string,
+): { title: string; text: string } {
   return reason === "join"
     ? { title: CLAIM.panelJoinHeading, text: CLAIM.panelJoinText(name) }
     : { title: CLAIM.panelHeading, text: CLAIM.panelText(name) };

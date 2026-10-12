@@ -16,7 +16,9 @@ Columns: ${INVITE_COLUMNS.join(",")}`);
   }
   const normalized = path.replace(/^\.\//, "");
   if (!normalized.startsWith(PRIVATE_DIR) || normalized.includes("..") || !path.endsWith(".csv")) {
-    throw new Error(`The CSV must be a .csv file under ${PRIVATE_DIR} (gitignored), got "${path}".`);
+    throw new Error(
+      `The CSV must be a .csv file under ${PRIVATE_DIR} (gitignored), got "${path}".`,
+    );
   }
   return normalized;
 }

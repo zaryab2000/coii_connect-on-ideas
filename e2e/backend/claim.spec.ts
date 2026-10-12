@@ -124,11 +124,14 @@ test("claim link: a visitor claims an invited bean once, and every map sees it c
   expect(personRow(kiran.id, "source")).toBe("self");
   expect(personRow(kiran.id, "user_id")).not.toBe("");
   expect(personRow(kiran.id, "consent_at")).not.toBe("");
-  expect(sql(`select used_at is not null from private.claim_tokens where person_id = '${kiran.id}'`)).toBe("t");
+  expect(
+    sql(`select used_at is not null from private.claim_tokens where person_id = '${kiran.id}'`),
+  ).toBe("t");
 
   // Other maps pick the claim up on their next poll.
   await observer.page.waitForFunction(
-    (id) => window.__coii?.controller.store.get().people.find((p) => p.id === id)?.isInvited === false,
+    (id) =>
+      window.__coii?.controller.store.get().people.find((p) => p.id === id)?.isInvited === false,
     kiran.id,
     { timeout: 75_000, polling: 500 },
   );
@@ -201,9 +204,7 @@ test("joining with an invited Telegram username: logging in with Telegram claims
   await consent(page, panel);
   await panel.getByRole("button", { name: "Continue with Telegram" }).click();
   // Consent rides along to Telegram and back; then the signed login claims the bean.
-  await page.waitForFunction(
-    () => sessionStorage.getItem("coii:telegram-claim:v1") === "consent",
-  );
+  await page.waitForFunction(() => sessionStorage.getItem("coii:telegram-claim:v1") === "consent");
   const login = await telegramLogin({
     id: "777101",
     username: username.toUpperCase(),

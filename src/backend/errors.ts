@@ -163,12 +163,7 @@ export function toBackendError(error: unknown): BackendError {
   // fetch() rejects with a TypeError when the network is down or the server can't be reached;
   // supabase-js passes that on as an error object or as its message.
   if (isOffline(e, message)) return new BackendError("offline", message);
-  return new BackendError(
-    coiiCode(message) ?? authCode(e),
-    message,
-    text(e.details),
-    text(e.hint),
-  );
+  return new BackendError(coiiCode(message) ?? authCode(e), message, text(e.details), text(e.hint));
 }
 
 /** The invited bean behind a `coii:handle_invited` error, or null for any other error. */

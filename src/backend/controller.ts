@@ -215,10 +215,15 @@ class BackendApp {
   private project(): void {
     const you = this.store.get().you;
     const people: Person[] = [];
+    const npcs: Person[] = [];
     const scores = new Map<string, Score>();
     for (const entry of this.entries.values()) {
       const { person } = entry;
       if (person.id === you?.id || this.blocked.has(person.id)) continue;
+      if (person.isNpc) {
+        npcs.push(person);
+        continue;
+      }
       const contact = this.contacts.get(person.id);
       people.push(contact ? { ...person, ...contact } : person);
       scores.set(person.id, { p: entry.p, d: entry.d });
@@ -227,7 +232,7 @@ class BackendApp {
       people.push(you);
       scores.set(you.id, this.yourScore);
     }
-    this.store.set({ people, scores });
+    this.store.set({ people, npcs, scores });
     this.refreshCrowns();
   }
 
@@ -250,7 +255,9 @@ class BackendApp {
       this.engine.remove(person.id);
       this.engine.spawn(person, false);
     }
-    this.welcome(update.arrived.filter(visible));
+    // NPCs walk on quietly: no toast, no race "+1".
+    for (const npc of update.arrived.filter((p) => p.isNpc)) this.engine.spawn(npc, false);
+    this.welcome(update.arrived.filter((p) => visible(p) && !p.isNpc));
     this.project();
     this.trends.sync();
     for (const id of update.gained.slice(0, POPS_MAX)) this.pop(id);
@@ -409,7 +416,10 @@ class BackendApp {
     }
   }
 
-  readonly claimBean = async (token: string, captchaToken: string | null): Promise<string | null> => {
+  readonly claimBean = async (
+    token: string,
+    captchaToken: string | null,
+  ): Promise<string | null> => {
     const you = this.store.get().you;
     if (you) return CLAIM.alreadyHaveBean(you.name);
     const { supabase } = this.start;

@@ -110,7 +110,10 @@ export async function saveProfile(
  * A Turnstile-checked anonymous session, unless this browser already has a session (joining,
  * claiming a bean, getting ready to claim with Telegram).
  */
-export async function ensureSession(supabase: Supabase, captchaToken: string | null): Promise<void> {
+export async function ensureSession(
+  supabase: Supabase,
+  captchaToken: string | null,
+): Promise<void> {
   if (await currentSession(supabase)) return;
   const { error } = await supabase.auth.signInAnonymously({
     options: captchaToken ? { captchaToken } : {},

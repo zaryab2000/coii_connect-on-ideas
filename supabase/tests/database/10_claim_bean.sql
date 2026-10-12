@@ -4,7 +4,7 @@
 -- Telegram claim, the admin tools and both purges.
 begin;
 \ir _helpers.inc
-select plan(67);
+select plan(78);
 
 -- The invited bean's entry in the venue's flags column, or null when it isn't on the map.
 create function tests.flag_of(person uuid) returns int
@@ -246,6 +246,45 @@ select ok(not exists (select 1 from private.people where id = (select om from tg
   'remove_invited deletes an invited bean on request');
 select throws_ok($$select private.remove_invited((select kiran from inv_))$$, 'coii:not_invited',
   'and refuses a claimed bean');
+
+-- ---- review fixes: a reissued link, a hidden bean, Telegram without a bean --------------------
+select tests.claim(tests.new_user());
+select throws_ok($$select public.claim_bean(tests.token_of((select first_url from quinn_)), true)$$,
+  'coii:claim_invalid', 'a link replaced by reissue_claim can''t claim (it is re-read by its own hash)');
+
+create temp table hid_ as
+select person_id as vik, claim_url as vik_url
+  from private.invite_bean('Vik Rao', '{ai}', '{}', '{}', 'vik_hidden', null);
+update private.people set status = 'hidden', hidden_reason = 'reports' where id = (select vik from hid_);
+select is(public.claim_preview(tests.token_of((select vik_url from hid_))), '{"status": "invalid"}'::jsonb,
+  'a hidden invited bean''s link reads as invalid, and shows nothing');
+select tests.claim(tests.new_user());
+select throws_ok($$select public.claim_bean(tests.token_of((select vik_url from hid_)), true)$$,
+  'coii:claim_invalid', 'and can''t be claimed until the owner reviews it');
+select throws_ok($$select public.link_telegram((select stranger from tg_), 502, 'vik_hidden', true)$$,
+  'coii:no_profile', 'nor claimed through Telegram');
+select throws_ok($$select public.link_telegram((select stranger from tg_), 503, null, true)$$,
+  'coii:no_profile', 'without a bean, a Telegram login with no username is still "join first"');
+
+-- ---- NPCs (part 7) and invited beans together ------------------------------------------------------
+create temp table both_ as
+select 'e0000000-0000-4000-8000-000000000001'::uuid as npc,
+       (select person_id from private.invite_bean('Una Bose', '{ai}', '{}', '{}', 'una_bose', null)) as una;
+select is(tests.flag_of((select npc from both_)) & 24, 16, 'an NPC carries bit 16 and not the invited bit');
+select is(tests.flag_of((select una from both_)) & 24, 8, 'an invited bean carries bit 8 and not the NPC bit');
+select tests.act((select asha from cast_));
+select is(public.wave((select npc from both_)) ->> 'result', 'unavailable', 'NPCs still can''t be waved at');
+select is(public.wave((select una from both_)) ->> 'result', 'unclaimed', 'invited beans still say unclaimed');
+select ok(not private.reachable((select p from private.people p where p.id = (select asha from cast_)),
+                                (select npc from both_))
+          and not private.reachable((select p from private.people p where p.id = (select asha from cast_)),
+                                    (select una from both_)),
+  'neither can be added to an adda');
+create temp table hand_ as select public.hand_inputs(tests.user_of((select asha from cast_))) as h;
+select ok((select (h ->> 'ready')::boolean = false from hand_)
+          and not exists (select 1 from hand_, jsonb_array_elements(h -> 'candidates') c
+                          where (c ->> 'id')::uuid in ((select npc from both_), (select una from both_))),
+  'and neither is ever a candidate for Today''s 3');
 
 -- ---- purges ------------------------------------------------------------------------------------------------
 create temp table invited_before as

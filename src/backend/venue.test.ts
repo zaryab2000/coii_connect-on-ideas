@@ -89,11 +89,16 @@ describe("venue columns", () => {
       ]),
     );
     expect(invited?.person).toMatchObject({ isInvited: true, isDemo: false });
-    expect(claimed?.person).toMatchObject({ isInvited: false, telegramVerified: true });
+    expect(invited?.person.isNpc).toBeUndefined();
+    expect(claimed?.person).toMatchObject({ telegramVerified: true });
+    expect(claimed?.person.isInvited).toBeUndefined();
   });
 
   it("keeps the invited flag through the cache format", () => {
-    const state = snapshot([{ id: "i", flags: 8 }, { id: "d", flags: 4 }]);
+    const state = snapshot([
+      { id: "i", flags: 8 },
+      { id: "d", flags: 4 },
+    ]);
     expect(encodeState(state).f).toEqual([8, 4]);
     expect(parseSnapshot(encodeState(state))).toEqual(state);
   });
@@ -102,7 +107,20 @@ describe("venue columns", () => {
     const before = snapshot([{ id: "k", flags: 8 }]);
     const update = applyChanges(before, changes([{ id: "k", flags: 0 }]));
     expect(update.updated.map((p) => p.id)).toEqual(["k"]);
-    expect(update.state.entries.get("k")?.person.isInvited).toBe(false);
+    expect(update.state.entries.get("k")?.person.isInvited).toBeUndefined();
+  });
+
+  it("marks NPCs (flag bit 16), and nobody else", () => {
+    const [npc, person] = decodeColumns(
+      columns([
+        { id: "n", flags: 16 },
+        { id: "p", flags: 4 },
+      ]),
+    );
+    expect(npc?.person.isNpc).toBe(true);
+    expect(person?.person.isNpc).toBeUndefined();
+    const state = snapshot([{ id: "n", flags: 16 }]);
+    expect(encodeState(state).f).toEqual([16]);
   });
 
   it("skips malformed rows instead of failing the whole venue", () => {

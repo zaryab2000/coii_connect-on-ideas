@@ -367,3 +367,47 @@ test("AC11: purge_demo removes every seed bean and its waves; real beans stay", 
     ),
   ).toBe(0);
 });
+
+test("NPCs: after the purge, 30 grey roamers that count for nothing and say so", async ({
+  browser,
+}) => {
+  // Runs after AC11's purge_demo(): only the 30 NPCs (and test people who stayed) are left.
+  expect(sqlNumber("select count(*) from private.people where source = 'npc'")).toBe(30);
+  expect(sqlNumber("select count(*) from private.people where source = 'demo'")).toBe(0);
+  const { page, errors } = await visitor(browser);
+  const counts = await page.evaluate(() => {
+    const state = window.__coii?.controller.store.get();
+    return { npcs: state?.npcs.length, npcPeople: state?.people.filter((p) => p.isNpc).length };
+  });
+  expect(counts).toEqual({ npcs: 30, npcPeople: 0 });
+  // The near-empty note counts real people only (NPCs never fill the venue), and shows at most once.
+  const real = sqlNumber(
+    "select count(*) from private.people where source = 'self' and status = 'visible'",
+  );
+  await expect(page.getByText("The venue's just opening.")).toHaveCount(real < 10 ? 1 : 0);
+
+  // Booth signs count real interest only.
+  const realPerBooth = sqlNumber(
+    "select count(*) from private.people where source = 'self' and status = 'visible' and 'jobs' = any (topics)",
+  );
+  await expect(
+    page.getByRole("button", { name: /^Jobs & Hiring booth, \d+ people/ }),
+  ).toHaveAccessibleName(new RegExp(`booth, ${realPerBooth} people interested`));
+
+  // Tapping one opens the NPC card: no Wave, no handles, no menu.
+  const npcId = await page.evaluate(() => window.__coii?.controller.store.get().npcs[0]?.id ?? "");
+  await page.evaluate((id) => window.__coii?.controller.actions.selectPerson(id), npcId);
+  const card = page.locator(".profile--npc");
+  await expect(card.getByText("Hey, I'm just an NPC here 👋")).toBeVisible();
+  await expect(card.getByText("NPC", { exact: true })).toBeVisible();
+  await expect(card.getByRole("button", { name: /Wave/ })).toHaveCount(0);
+  await expect(card.getByRole("button", { name: /Report or block/ })).toHaveCount(0);
+
+  // The board never lists them.
+  await page.getByRole("button", { name: /Wave points board/ }).click();
+  const board = page.getByRole("dialog", { name: "Wave points" });
+  for (const name of ["Chai Runner", "Booth Hopper", "Gate Greeter"]) {
+    await expect(board.getByText(name)).toHaveCount(0);
+  }
+  expect(errors).toEqual([]);
+});

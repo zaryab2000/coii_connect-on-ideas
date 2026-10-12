@@ -9,6 +9,8 @@ export const RANI = 0xff2e88;
 export const PEACOCK = 0x0fa3a3;
 export const WHITE = 0xffffff;
 export const LEAF = 0x2f9e5b;
+/** NPC beans' outfit: one grey, so they never pass for real people (npc-beans.md §6.1). */
+export const NPC_OUTFIT = 0x9aa0a6;
 
 export function css(color: number): string {
   return `#${color.toString(16).padStart(6, "0")}`;

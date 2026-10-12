@@ -77,7 +77,8 @@ export function claimPreviewFrom(value: unknown): ClaimPreview {
   const name = typeof raw["name"] === "string" ? raw["name"] : "";
   return {
     // A preview without a bean to show can only be explained as a link that doesn't work.
-    status: status !== "invalid" && (!personId || !name || topics.length === 0) ? "invalid" : status,
+    status:
+      status !== "invalid" && (!personId || !name || topics.length === 0) ? "invalid" : status,
     personId,
     name,
     topics,
@@ -111,7 +112,11 @@ export type ClaimView =
    * An invited bean someone may be. `join`: their join hit its handle; `card`: "This is me" on a
    * profile card; `hint`: their typed name matched.
    */
-  | { readonly kind: "panel"; readonly invited: InvitedRef; readonly reason: "join" | "card" | "hint" };
+  | {
+      readonly kind: "panel";
+      readonly invited: InvitedRef;
+      readonly reason: "join" | "card" | "hint";
+    };
 
 /** The Telegram claim's consent tick, kept across the round trip to Telegram and back. */
 export const TELEGRAM_CLAIM_KEY = "coii:telegram-claim:v1";

@@ -1,6 +1,5 @@
-import { describe, expect, it } from "vitest";
-
 import { checkRow, describeBad, inviteSql, parseCsv, planInvites } from "@scripts/invites";
+import { describe, expect, it } from "vitest";
 
 const HEADER = "name,telegram,x,topics,intents,one_liners";
 
@@ -30,7 +29,16 @@ describe("invite CSV parsing", () => {
 
 describe("invite rows", () => {
   it("cleans the PRD's example row the way the join form would", () => {
-    expect(checkRow(["Asha Rao", "@asha_builds", "", "privacy;core", "building", "building private UPI rails"])).toEqual({
+    expect(
+      checkRow([
+        "Asha Rao",
+        "@asha_builds",
+        "",
+        "privacy;core",
+        "building",
+        "building private UPI rails",
+      ]),
+    ).toEqual({
       name: "Asha Rao",
       telegram: "asha_builds",
       x: null,
@@ -41,12 +49,30 @@ describe("invite rows", () => {
   });
 
   it("accepts handle links and mixed-case ids", () => {
-    const row = checkRow(["Kiran", "", "https://x.com/kiran_k", "Privacy", "Hiring;Building", "a|b"]);
-    expect(row).toMatchObject({ x: "kiran_k", topics: ["privacy"], intents: ["hiring", "building"] });
+    const row = checkRow([
+      "Kiran",
+      "",
+      "https://x.com/kiran_k",
+      "Privacy",
+      "Hiring;Building",
+      "a|b",
+    ]);
+    expect(row).toMatchObject({
+      x: "kiran_k",
+      topics: ["privacy"],
+      intents: ["hiring", "building"],
+    });
   });
 
   it("says everything wrong with a row at once", () => {
-    const problems = checkRow(["Devcon Support", "", "", "nope", "building;hiring;raising", "see @me"]);
+    const problems = checkRow([
+      "Devcon Support",
+      "",
+      "",
+      "nope",
+      "building;hiring;raising",
+      "see @me",
+    ]);
     expect(Array.isArray(problems)).toBe(true);
     const text = (problems as string[]).join(" ");
     expect(text).toMatch(/Unknown topics: nope/);
@@ -60,7 +86,9 @@ describe("invite rows", () => {
     expect((checkRow(["A", "ab", "", "core", "dancing", ""]) as string[]).join(" ")).toMatch(
       /Unknown intents: dancing.*5–32/,
     );
-    expect((checkRow(["see www.me", "", "me", "core", "", ""]) as string[]).join(" ")).toMatch(/links/);
+    expect((checkRow(["see www.me", "", "me", "core", "", ""]) as string[]).join(" ")).toMatch(
+      /links/,
+    );
   });
 });
 
@@ -75,8 +103,12 @@ describe("invite plans", () => {
       ),
     );
     expect(plan.rows.map((r) => r.name)).toEqual(["Asha Rao", "Kiran"]);
-    expect(plan.bad).toEqual([{ line: 4, name: "Bad Bean", reasons: ["Add a Telegram username or an X handle."] }]);
-    expect(describeBad(plan.bad)).toBe("  row 4 (Bad Bean): Add a Telegram username or an X handle.");
+    expect(plan.bad).toEqual([
+      { line: 4, name: "Bad Bean", reasons: ["Add a Telegram username or an X handle."] },
+    ]);
+    expect(describeBad(plan.bad)).toBe(
+      "  row 4 (Bad Bean): Add a Telegram username or an X handle.",
+    );
   });
 
   it("leaves out a later row that reuses a handle, ignoring case", () => {
@@ -98,7 +130,14 @@ describe("invite SQL", () => {
   });
 
   it("refuses a row that would close the quote early", () => {
-    const row = { name: "$coii_invites$", telegram: "abcde", x: null, topics: [], intents: [], one_liners: [] };
+    const row = {
+      name: "$coii_invites$",
+      telegram: "abcde",
+      x: null,
+      topics: [],
+      intents: [],
+      one_liners: [],
+    };
     expect(() => inviteSql([row], "x.csv")).toThrow(/quote tag/);
   });
 });

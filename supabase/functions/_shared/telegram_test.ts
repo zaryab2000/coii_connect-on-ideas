@@ -1,12 +1,6 @@
 import { assertEquals } from "jsr:@std/assert@1.0.13";
 
-import {
-  checkTelegram,
-  dataCheckString,
-  MAX_AGE_S,
-  splitLogin,
-  telegramHash,
-} from "./telegram.ts";
+import { checkTelegram, dataCheckString, MAX_AGE_S, splitLogin, telegramHash } from "./telegram.ts";
 import type { TelegramPayload } from "./telegram.ts";
 
 const TOKEN = "local-test-bot-token";

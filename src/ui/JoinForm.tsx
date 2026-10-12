@@ -5,7 +5,7 @@ import { invitedNamed } from "@/app/claim";
 import { useActions, useApp } from "@/app/context";
 import type { InvitedRef, JoinInput } from "@/app/joinTypes";
 import { CLAIM } from "@/content/claim";
-import { CONSENT, UNOFFICIAL } from "@/content/privacy";
+import { CONSENT, JOIN_CREDIT } from "@/content/privacy";
 import { INTENTS, INTENTS_MAX } from "@/data/intents";
 import { ONE_LINER_MAX, ONE_LINERS_MAX } from "@/data/oneLinerRules";
 import { TOPICS } from "@/data/topics";
@@ -793,7 +793,7 @@ function JoinSubmit({ editing, pending, notes, demo, onCancel }: JoinSubmitProps
           Saved in this browser only for now. You can leave anytime.
         </p>
       ) : null}
-      <p className="unofficial">{UNOFFICIAL}</p>
+      <p className="unofficial">{JOIN_CREDIT}</p>
     </div>
   );
 }

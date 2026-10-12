@@ -1,36 +1,33 @@
--- coii backend, part 7: invited beans and claiming them (docs-internal/prd/claim-your-bean.md).
+-- coii backend, part 8: invited beans and claiming them (docs-internal/prd/claim-your-bean.md).
 --
 -- The owner adds real people who are coming to Devcon 8 as `invited` beans: on the map like
 -- everyone else, owned by nobody, handles never shown, inert until claimed. Each one gets a
 -- private single-use claim link. Claiming needs proof (the link, or a Telegram login with the
 -- bean's exact username), records consent, and turns the bean into the claimer's own `self` bean.
+--
+-- Runs after part 7 (NPC beans): every function both parts define keeps the NPC exclusions too.
 
 create extension if not exists pgcrypto with schema extensions;
 
--- ---- people: a third source ---------------------------------------------------------------------
+-- ---- people: the invited source --------------------------------------------------------------
 
--- The three source checks were created unnamed (people_source_check, people_check, people_check1),
--- so find them by what they say rather than by a generated name.
-do $$
-declare
-  c record;
-begin
-  for c in
-    select conname from pg_constraint
-     where conrelid = 'private.people'::regclass and contype = 'c'
-       and pg_get_constraintdef(oid) like '%source%'
-  loop
-    execute format('alter table private.people drop constraint %I', c.conname);
-  end loop;
-end;
-$$;
+-- Part 7 already named these with all four sources; restating them keeps this file correct on its
+-- own and changes nothing when part 7 has run.
+alter table private.people drop constraint if exists people_source_check;
+alter table private.people add constraint people_source_check
+  check (source in ('self', 'demo', 'invited', 'npc'));
 
-alter table private.people
-  add constraint people_source_check check (source in ('self', 'demo', 'invited')),
-  -- Demo and invited beans belong to nobody; a `self` bean always has its auth user.
-  add constraint people_owner_check check ((source in ('demo', 'invited')) = (user_id is null)),
-  -- Only people who joined (or claimed) themselves gave consent.
-  add constraint people_consent_check check (source <> 'self' or consent_at is not null);
+-- Only people who joined (or claimed) have a login; demo, invited and NPC beans never do.
+alter table private.people drop constraint if exists people_check;
+alter table private.people drop constraint if exists people_login_check;
+alter table private.people add constraint people_login_check
+  check ((source in ('demo', 'invited', 'npc')) = (user_id is null));
+
+-- Only people who joined (or claimed) themselves gave consent.
+alter table private.people drop constraint if exists people_check1;
+alter table private.people drop constraint if exists people_consent_check;
+alter table private.people add constraint people_consent_check
+  check (source <> 'self' or consent_at is not null);
 
 -- Claiming flips the venue's invited flag, so a change of source is a profile change too.
 create or replace function private.on_people_update() returns trigger
@@ -84,7 +81,7 @@ begin
 end;
 $$;
 
--- ---- venue: bit 8 marks an invited (unclaimed) bean -----------------------------------------------
+-- ---- venue: bit 8 marks an invited (unclaimed) bean, bit 16 an NPC (part 7) --------------------
 
 create or replace function private.people_columns(ids uuid[]) returns text
 language sql stable security definer set search_path = ''
@@ -106,7 +103,7 @@ as $$
            order by joined_at, id), '')
       || '],"f":[' || coalesce(string_agg(
            ((telegram_verified::int) | (ticket_verified::int << 1) | ((source = 'demo')::int << 2)
-            | ((source = 'invited')::int << 3))::text,
+            | ((source = 'invited')::int << 3) | ((source = 'npc')::int << 4))::text,
            ',' order by joined_at, id), '')
       || '],"p":[' || coalesce(string_agg(wave_points::text, ',' order by joined_at, id), '')
       || '],"d":[' || coalesce(string_agg(today::text, ',' order by joined_at, id), '')
@@ -185,7 +182,9 @@ begin
     'pair:' || least(me.id::text, target::text) || ':' || greatest(me.id::text, target::text), 0));
 
   used := private.waves_used_today(me.id);
-  select status, source into target_status, target_source from private.people where id = target;
+  -- NPCs (grey background beans, part 7) are not people: never waved at, so no row, quota or point.
+  select status, source into target_status, target_source
+    from private.people where id = target and source <> 'npc';
   if target_status is null or target = me.id or target_status <> 'visible'
      or me.status <> 'visible' or private.blocked_between(me.id, target) then
     return jsonb_build_object('result', 'unavailable', 'contacts', null, 'waves_left', 50 - used);
@@ -237,18 +236,18 @@ begin
 end;
 $$;
 
--- No adda invites to (or from) a bean nobody owns yet.
+-- No adda invites to (or from) a bean nobody owns yet, or an NPC (part 7).
 create or replace function private.reachable(me private.people, other uuid) returns boolean
 language sql stable security definer set search_path = ''
 as $$
   select me.status = 'visible'
      and other <> me.id
      and exists (select 1 from private.people
-                 where id = other and status = 'visible' and source <> 'invited')
+                 where id = other and status = 'visible' and source not in ('invited', 'npc'))
      and not private.blocked_between(me.id, other)
 $$;
 
--- Same as part 6, with invited beans left out of the candidates (never in Today's 3).
+-- Same as part 7, with invited beans left out too (never in Today's 3, nor counted as inbound).
 create or replace function public.hand_inputs(user_id uuid) returns jsonb
 language plpgsql stable security definer set search_path = ''
 as $$
@@ -288,7 +287,7 @@ begin
         'intents', to_jsonb(p.intents), 'one_liners', to_jsonb(p.one_liners),
         'joined_at', p.joined_at, 'source', p.source))
       from private.people p
-      where p.status = 'visible' and p.source <> 'invited' and p.id <> me.id
+      where p.status = 'visible' and p.source not in ('invited', 'npc') and p.id <> me.id
     ), '[]'),
     'excluded', to_jsonb(excluded),
     'recent_hands', coalesce((
@@ -310,7 +309,7 @@ begin
         group by x
       ) c on c.x = p.id
       where p.status = 'visible'
-        and p.source <> 'invited'
+        and p.source not in ('invited', 'npc')
         and p.id <> me.id
         and not (p.id = any (excluded))
         and p.wave_points > coalesce(c.n, 0)
@@ -348,7 +347,8 @@ end;
 $$;
 
 -- What a claim link shows before anyone claims it: the bean, never its handles. `status` is
--- 'ready', 'claimed', 'expired' or 'invalid' (only `status` is present for 'invalid').
+-- 'ready', 'claimed', 'expired' or 'invalid' (only `status` is present for 'invalid'). An unclaimed
+-- bean that was hidden (reported) reads as 'invalid': the owner reviews it before anyone takes it.
 create function public.claim_preview(token text) returns jsonb
 language plpgsql stable security definer set search_path = ''
 as $$
@@ -364,6 +364,9 @@ begin
     return jsonb_build_object('status', 'invalid');
   end if;
   select * into p from private.people where id = link.person_id;
+  if p.source = 'invited' and p.status <> 'visible' then
+    return jsonb_build_object('status', 'invalid');
+  end if;
   return jsonb_build_object(
     'person_id', p.id,
     'name', p.name,
@@ -386,6 +389,7 @@ declare
   uid uuid := (select auth.uid());
   link private.claim_tokens;
   owner_source text;
+  owner_status text;
 begin
   if uid is null then
     raise exception 'coii:not_signed_in';
@@ -404,8 +408,15 @@ begin
     raise exception 'coii:claim_invalid';
   end if;
   -- One claim at a time per bean: a second one waits here, then finds it claimed.
-  select source into owner_source from private.people where id = link.person_id for update;
-  select * into link from private.claim_tokens t where t.person_id = link.person_id;
+  select source, status into owner_source, owner_status
+    from private.people where id = link.person_id for update;
+  -- Re-read by this token, not by person: if the link was reissued (or the bean removed) while we
+  -- waited, this token is gone and must not claim.
+  select * into link from private.claim_tokens t where t.token_hash = private.claim_hash(token);
+  if link.person_id is null or owner_source is null
+     or (owner_source = 'invited' and owner_status <> 'visible') then
+    raise exception 'coii:claim_invalid';
+  end if;
   if link.expires_at <= now() then
     raise exception 'coii:claim_expired';
   end if;
@@ -439,20 +450,22 @@ as $$
 declare
   me uuid;
   invited uuid;
+  invited_status text;
   holder record;
 begin
   select id into me from private.people p where p.user_id = link_telegram.user_id;
-  if username is null or username !~ '^[A-Za-z][A-Za-z0-9_]{4,31}$' then
-    raise exception 'coii:telegram_no_username';
+  if username is not null and username ~ '^[A-Za-z][A-Za-z0-9_]{4,31}$' then
+    select p.id, p.status into invited, invited_status
+      from private.people p
+      join private.contacts c on c.person_id = p.id
+     where p.source = 'invited' and lower(c.telegram) = lower(username)
+     for update of p;
   end if;
-  select p.id into invited
-    from private.people p
-    join private.contacts c on c.person_id = p.id
-   where p.source = 'invited' and lower(c.telegram) = lower(username)
-   for update of p;
 
   if me is null then
-    if invited is null then
+    -- Without a bean, the only thing a Telegram login can do is claim a visible invited bean;
+    -- anything else is the same "join first" it always was.
+    if invited is null or invited_status <> 'visible' then
       raise exception 'coii:no_profile';
     end if;
     if consent is not true then
@@ -468,6 +481,9 @@ begin
     return private.me_json(invited);
   end if;
 
+  if username is null or username !~ '^[A-Za-z][A-Za-z0-9_]{4,31}$' then
+    raise exception 'coii:telegram_no_username';
+  end if;
   if exists (select 1 from private.contacts where telegram_user_id = tg_id and person_id <> me) then
     raise exception 'coii:telegram_taken';
   end if;

@@ -118,8 +118,13 @@ export interface AccountView {
 
 export interface AppState {
   readonly mode: AppMode;
-  /** Everyone currently in the venue: demo crowd, live arrivals and you. */
+  /** Everyone currently in the venue: demo crowd, live arrivals and you. Never NPCs. */
   readonly people: readonly Person[];
+  /**
+   * Backend mode: grey background NPC beans. Only the map shows them; they're kept apart so no
+   * list, count, board, tribe or match ever includes them.
+   */
+  readonly npcs: readonly Person[];
   /** Backend mode: wave points from the database, by person id. Null in demo mode. */
   readonly scores: ReadonlyMap<string, Score> | null;
   /** Backend mode: your session, or null when you have none (demo mode: always null). */

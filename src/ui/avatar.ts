@@ -11,7 +11,7 @@ import { topicById } from "@/data/topics";
 import type { Avatar, TopicId } from "@/data/types";
 import { drawAccessory, drawBody, drawFace, drawHair, drawHead, drawLegs } from "@/engine/beanArt";
 import type { FaceKind } from "@/engine/beanArt";
-import { css } from "@/engine/palette";
+import { css, NPC_OUTFIT } from "@/engine/palette";
 
 type Draw = (ctx: CanvasRenderingContext2D) => void;
 
@@ -61,10 +61,13 @@ function layer(
  * Draws a person's bean (same art as the live map) into a canvas element sized `cssSize` CSS px.
  * Tinted parts are multiplied with their colour, exactly like the WebGL particles.
  */
+/** Whose colours a bean wears: a topic's, or the NPC grey. */
+export type Shirt = TopicId | "npc";
+
 export function renderAvatar(
   canvas: HTMLCanvasElement,
   avatar: Avatar,
-  topic: TopicId,
+  topic: Shirt,
   cssSize: number,
   face: FaceKind = "open",
 ): void {
@@ -78,7 +81,7 @@ export function renderAvatar(
 export function drawAvatarPixels(
   canvas: HTMLCanvasElement,
   avatar: Avatar,
-  topic: TopicId,
+  topic: Shirt,
   size: number,
   face: FaceKind = "open",
 ): void {
@@ -91,7 +94,7 @@ export function drawAvatarPixels(
   const accessory = ACCESSORIES[avatar.accessory];
   const layers: [Draw, string | null][] = [
     [(c) => drawLegs(c, "stand"), null],
-    [drawBody, topicById(topic).css],
+    [drawBody, topic === "npc" ? css(NPC_OUTFIT) : topicById(topic).css],
     [drawHead, css(SKIN_TONES[avatar.skin] ?? 0xd9a066)],
     [(c) => drawFace(c, face), null],
     [

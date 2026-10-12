@@ -19,7 +19,7 @@ import {
 import type { FaceKind, LegPose } from "@/engine/beanArt";
 import { drawBang, drawBubble, drawConfetti, drawDust, drawRing, drawStar } from "@/engine/fxArt";
 import { loadIconImages } from "@/engine/icons";
-import { css } from "@/engine/palette";
+import { css, NPC_OUTFIT } from "@/engine/palette";
 
 /** A sub-texture plus the anchor that puts the drawing origin at the particle position. */
 export interface Frame {
@@ -203,11 +203,10 @@ export async function buildCrowdAtlas(): Promise<CrowdAtlas> {
     bean((c) => drawAccessory(c, "sunglasses")),
     bean((c) => drawAccessory(c, "headphones")),
   ]);
+  // One far-zoom frame per (shirt colour × skin tone): every topic, then the NPC grey last.
   const lod = Promise.all(
-    TOPICS.flatMap((topic) =>
-      SKIN_TONES.map((skin) =>
-        b.add(BEAN_BOX, LOD_SCALE, (c) => drawLodBean(c, topic.css, css(skin))),
-      ),
+    [...TOPICS.map((topic) => topic.css), css(NPC_OUTFIT)].flatMap((shirt) =>
+      SKIN_TONES.map((skin) => b.add(BEAN_BOX, LOD_SCALE, (c) => drawLodBean(c, shirt, css(skin)))),
     ),
   );
   const iconFrames = Promise.all(
