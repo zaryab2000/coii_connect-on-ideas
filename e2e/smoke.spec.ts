@@ -604,6 +604,8 @@ test("/privacy opens the privacy notice; the join form and About link to it", as
       "Your bean, name, topics and one-liners are public. Your handles show only to people who wave at you.",
     ),
   ).toBeVisible();
+  await expect(form.getByText("Built with Love, by Decipher Club ❤️")).toBeVisible();
+  await expect(form.getByText(/unofficial community project/)).toHaveCount(0);
   await form.getByRole("button", { name: "How coii uses your data" }).click();
   await expect(page.getByRole("dialog", { name: "Privacy" })).toBeVisible();
   expect(errors).toEqual([]);

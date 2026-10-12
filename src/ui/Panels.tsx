@@ -13,6 +13,7 @@ import { meetTabLabel } from "@/ui/meet";
 import type { MeetBadge } from "@/ui/meet";
 import { BadgeMark, useMeetBadge } from "@/ui/MeetBadge";
 import { MeetPanel } from "@/ui/MeetPanel";
+import { NpcCard } from "@/ui/NpcCard";
 import type { PanelChrome } from "@/ui/PanelChrome";
 import type { PeopleQuery } from "@/ui/people";
 import { PeopleList } from "@/ui/PeopleList";
@@ -68,7 +69,9 @@ export function usePanelView(): PanelView | null {
 
 function ProfileView({ id, chrome }: { readonly id: string; readonly chrome: PanelChrome }) {
   const person = useApp((s) => s.people.find((p) => p.id === id) ?? null);
-  return person ? <ProfileCard person={person} chrome={chrome} /> : null;
+  const npc = useApp((s) => s.npcs.find((p) => p.id === id) ?? null);
+  if (person) return <ProfileCard person={person} chrome={chrome} />;
+  return npc ? <NpcCard person={npc} chrome={chrome} /> : null;
 }
 
 /** Renders the content for one panel view. */

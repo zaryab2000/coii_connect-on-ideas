@@ -122,6 +122,7 @@ export function initialState(init: InitialState): AppState {
   return {
     mode: init.mode,
     people: init.you ? [...init.people, init.you] : [...init.people],
+    npcs: [],
     scores: null,
     account: null,
     turnstileSiteKey: null,

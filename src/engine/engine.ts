@@ -22,6 +22,7 @@ import { Gestures } from "@/engine/gestures";
 import type { GestureTarget } from "@/engine/gestures";
 import { loadIconTextures } from "@/engine/icons";
 import { BoothLabels, LabelLayer, PointPops, QuoteBubbles } from "@/engine/labels";
+import { outfitFor } from "@/engine/outfit";
 import { bgr, FLOOR } from "@/engine/palette";
 import { bubbleBox, QUOTE_ZOOM, QuoteDirector, quoteCap } from "@/engine/quotes";
 import type { QuoteSpot } from "@/engine/quotes";
@@ -307,8 +308,14 @@ export class CoiiEngine implements EngineApi {
       if (this.youIndex === index) this.youIndex = -1;
       this.agentOf.delete(personId);
       this.personAt[index] = undefined;
-      for (const topic of person?.topics ?? []) this.bumpInterest(scene, topicIndex(topic), -1);
+      if (person) this.countOut(scene, person);
     });
+  }
+
+  /** Takes a person who left off their booths' counts (NPCs were never on them). */
+  private countOut(scene: Scene, person: Person): void {
+    if (person.isNpc) return;
+    for (const topic of person.topics) this.bumpInterest(scene, topicIndex(topic), -1);
   }
 
   select(personId: string | null): void {
@@ -527,7 +534,8 @@ export class CoiiEngine implements EngineApi {
       document.fonts.load('400 16px "Mukta"'),
     ]);
     const rect = host.getBoundingClientRect();
-    const topicLists = this.people.map((p) => p.topics.map(topicIndex));
+    // Booths are sized for the people who care about them; roaming NPCs don't count.
+    const topicLists = this.people.filter((p) => !p.isNpc).map((p) => p.topics.map(topicIndex));
     const capacities = zoneCapacities(topicLists, TOPICS.length);
     const layout = computeLayout(
       modeForAspect(rect.width / Math.max(1, rect.height)),
@@ -1003,28 +1011,31 @@ export class CoiiEngine implements EngineApi {
 
   private addAgent(scene: Scene, person: Person, at: "scatter" | "gate"): number {
     const topics = person.topics.map(topicIndex);
-    const index = scene.world.spawn({ id: person.id, topics, isYou: person.isYou }, at);
+    const npc = person.isNpc === true;
+    const index = scene.world.spawn({ id: person.id, topics, isYou: person.isYou, roams: npc }, at);
     scene.crowd.setLook(index, this.lookFor(scene.atlas, person, topics[0] ?? 0));
     this.agentOf.set(person.id, index);
     this.personAt[index] = person;
     if (person.oneLiners.length > 0) this.quoteable.add(index);
     else this.quoteable.delete(index);
     if (person.isYou) this.youIndex = index;
-    for (const topic of topics) this.bumpInterest(scene, topic, 1);
+    // Booth counts mean real interest: NPCs never count.
+    if (!npc) for (const topic of topics) this.bumpInterest(scene, topic, 1);
     return index;
   }
 
   private lookFor(atlas: CrowdAtlas, person: Person, primary: number): BeanLook {
     const { avatar } = person;
-    const lod = atlas.lod[primary * SKIN_TONES.length + avatar.skin] ?? atlas.lod[0];
+    const outfit = outfitFor(person, primary);
+    const lod = atlas.lod[outfit.lodRow * SKIN_TONES.length + avatar.skin] ?? atlas.lod[0];
     if (!lod) throw new Error("Crowd atlas is missing far-zoom bean frames");
     return {
-      shirt: bgr(TOPICS[primary]?.color ?? 0xffffff),
+      shirt: bgr(outfit.shirt),
       skin: bgr(SKIN_TONES[avatar.skin] ?? 0xd9a066),
       hair: bgr(hairTint(avatar.hair, avatar.hairColor)),
       hairFrame: atlas.hair[avatar.hair] ?? null,
       accessory: atlas.accessories[avatar.accessory] ?? null,
-      intentProp: intentPropFor(atlas, person),
+      intentProp: person.isNpc ? null : intentPropFor(atlas, person),
       lod,
       seed: seedOf(person.id),
     };

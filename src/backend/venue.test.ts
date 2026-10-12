@@ -81,6 +81,19 @@ describe("venue columns", () => {
     });
   });
 
+  it("marks NPCs (flag bit 16), and nobody else", () => {
+    const [npc, person] = decodeColumns(
+      columns([
+        { id: "n", flags: 16 },
+        { id: "p", flags: 4 },
+      ]),
+    );
+    expect(npc?.person.isNpc).toBe(true);
+    expect(person?.person.isNpc).toBeUndefined();
+    const state = snapshot([{ id: "n", flags: 16 }]);
+    expect(encodeState(state).f).toEqual([16]);
+  });
+
   it("skips malformed rows instead of failing the whole venue", () => {
     const cols = columns([{ id: "a" }, { id: "b", topics: ["nope"] }, { id: "c" }]);
     // b's topic is unknown and its name isn't text: only b is dropped.

@@ -200,7 +200,6 @@ export function Hud({ ref }: { readonly ref: Ref<HTMLDivElement> }) {
         <DemoChip />
       </div>
       <EarlyVenue />
-      <EarlyVenue />
     </div>
   );
 }

@@ -75,6 +75,8 @@ export interface VenueUpdate {
 const FLAG_TELEGRAM = 1;
 const FLAG_TICKET = 2;
 const FLAG_DEMO = 4;
+/** Bit 8 is reserved for claim-your-bean's invited beans. */
+const FLAG_NPC = 16;
 
 type Raw = Record<string, unknown>;
 
@@ -92,6 +94,18 @@ function strings(value: unknown): string[] {
 
 function count(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
+}
+
+/** The `f` bit mask (§8.2) as the person's flags; `isNpc` only when set. */
+function flagsOf(
+  bits: number,
+): Pick<Person, "telegramVerified" | "ticketVerified" | "isDemo" | "isNpc"> {
+  const badges = {
+    telegramVerified: (bits & FLAG_TELEGRAM) !== 0,
+    ticketVerified: (bits & FLAG_TICKET) !== 0,
+    isDemo: (bits & FLAG_DEMO) !== 0,
+  };
+  return (bits & FLAG_NPC) !== 0 ? { ...badges, isNpc: true } : badges;
 }
 
 /** One row of the columns as a `Person`, or null when the row is malformed. */
@@ -118,9 +132,7 @@ function personAt(cols: Raw, row: number): VenueEntry | null {
       hairColor: look[2] ?? 0,
       accessory: look[3] ?? 0,
     },
-    telegramVerified: (bits & FLAG_TELEGRAM) !== 0,
-    ticketVerified: (bits & FLAG_TICKET) !== 0,
-    isDemo: (bits & FLAG_DEMO) !== 0,
+    ...flagsOf(bits),
     isYou: false,
     origin: null,
     joinedAt: count(array(cols["j"])[row]) * 1000,
@@ -275,7 +287,8 @@ function flags(p: Person): number {
   return (
     (p.telegramVerified ? FLAG_TELEGRAM : 0) |
     (p.ticketVerified ? FLAG_TICKET : 0) |
-    (p.isDemo ? FLAG_DEMO : 0)
+    (p.isDemo ? FLAG_DEMO : 0) |
+    (p.isNpc ? FLAG_NPC : 0)
   );
 }
 
