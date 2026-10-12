@@ -14,9 +14,12 @@ import {
 } from "@/app/controller";
 import type { Actions, AppController, ToastActions } from "@/app/controller";
 import type { JoinInput, JoinOutcome } from "@/app/joinTypes";
+import { realClock } from "@/app/meet";
 import { pointsReader } from "@/app/points";
 import { createStore } from "@/app/store";
 import type { AccountView, AppState, Score, Store } from "@/app/store";
+import { createTrends } from "@/app/trends";
+import type { TrendsController } from "@/app/trends";
 import { BackendAdda } from "@/backend/adda";
 import { invoke } from "@/backend/api";
 import {
@@ -86,6 +89,8 @@ class BackendApp {
   readonly toasts: ToastActions;
   readonly meet: BackendMeet;
   readonly adda: BackendAdda;
+  /** The narrative race: joins in the last 24 hours per booth, from the venue's join times. */
+  private readonly trends: TrendsController;
   private readonly personal: PersonalChannel;
   private entries: ReadonlyMap<string, VenueEntry>;
   private contacts: ReadonlyMap<string, Contact> = new Map();
@@ -140,6 +145,7 @@ class BackendApp {
       meet: this.meet,
       pushToast: this.toasts.pushToast,
     });
+    this.trends = createTrends({ engine, store: this.store, clock: realClock });
     this.personal = new PersonalChannel(supabase, {
       waveIn: this.waveIn,
       chai: this.chai,
@@ -156,6 +162,7 @@ class BackendApp {
   /** Starts the live parts: venue polling and, once you have a bean, your game loops. */
   begin(): void {
     this.start.venue.start({ onUpdate: this.venueUpdated, onError: this.venueFailed });
+    this.trends.sync();
     if (this.store.get().you) this.enter();
     if (this.start.telegramLogin) void this.verifyTelegram(this.start.telegramLogin);
     this.start.supabase.auth.onAuthStateChange((event, session) => {
@@ -221,6 +228,7 @@ class BackendApp {
     }
     this.welcome(update.arrived.filter(visible));
     this.project();
+    this.trends.sync();
     for (const id of update.gained.slice(0, POPS_MAX)) this.pop(id);
     this.adda.redraw();
   };
@@ -230,6 +238,7 @@ class BackendApp {
     for (const person of arrived) this.engine.spawn(person, parade);
     for (const person of arrived.slice(0, ARRIVAL_TOASTS)) {
       this.toasts.pushToast(arrivalText(person), "waving_hand", "arrival");
+      this.trends.arrived(person);
     }
     const rest = arrived.length - ARRIVAL_TOASTS;
     if (rest > 0) {
@@ -307,6 +316,7 @@ class BackendApp {
       if (before) this.engine.remove(before.id);
       walkIn(this.engine, this.store, me.person);
       this.project();
+      if (!before) this.trends.arrived(me.person);
       this.toasts.pushToast(
         before ? "Saved! Your bean walks back in." : "You're in! Watch yourself walk in.",
         "party_popper",
@@ -357,6 +367,7 @@ class BackendApp {
     this.session = null;
     this.store.set({ account: null, overlay: "none", joinTopic: null });
     this.project();
+    this.trends.sync();
   }
 
   readonly leave = async (): Promise<boolean> => {

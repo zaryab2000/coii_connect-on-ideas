@@ -9,8 +9,23 @@ import { Awning, PanelNav, topicVars } from "@/ui/PanelChrome";
 import type { PanelChrome } from "@/ui/PanelChrome";
 import { peopleInTopic } from "@/ui/people";
 import { PeopleRows } from "@/ui/PeopleRows";
+import { useRaceToday } from "@/ui/trends";
 
 const numberFormat = new Intl.NumberFormat("en-IN");
+
+/** This booth's place in the narrative race; opens the race. */
+function RaceLine({ topic }: { readonly topic: TopicId }) {
+  const actions = useActions();
+  const { rows, hot } = useRaceToday();
+  const row = rows.find((r) => r.topic === topic);
+  if (!row) return null;
+  return (
+    <button type="button" className="booth__race" onClick={() => actions.openOverlay("trends")}>
+      <Icon id={hot === topic ? "fire" : "trophy"} size={18} />#{row.rank} in the narrative race
+      {row.recent > 0 ? ` · ▲ ${row.recent} today` : ""}
+    </button>
+  );
+}
 
 /** A booth: its topic, how many people are into it, and who they are (newest first). */
 export function BoothPanel({
@@ -47,6 +62,7 @@ export function BoothPanel({
               <strong>{numberFormat.format(count)}</strong>{" "}
               {count === 1 ? "person interested" : "people interested"}
             </p>
+            <RaceLine topic={topic} />
           </div>
         </div>
       </header>

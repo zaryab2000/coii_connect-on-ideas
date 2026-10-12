@@ -1,6 +1,6 @@
 import { Analytics } from "@vercel/analytics/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { RefObject } from "react";
+import type { ComponentType, RefObject } from "react";
 
 import { useActions, useApp } from "@/app/context";
 import { MapHost } from "@/app/MapHost";
@@ -23,6 +23,7 @@ import { PrivacyOverlay } from "@/ui/PrivacyOverlay";
 import { ShareAddaOverlay } from "@/ui/ShareAddaOverlay";
 import { TabBar } from "@/ui/TabBar";
 import { Toasts } from "@/ui/Toasts";
+import { TrendsOverlay } from "@/ui/TrendsOverlay";
 import { YouOverlay } from "@/ui/YouOverlay";
 
 const DESKTOP = "(min-width: 768px)";
@@ -140,28 +141,26 @@ function PanelArea({ flags, tabBar, query, onSheetHeight }: PanelAreaProps) {
 
 type OverlayKind = Exclude<Overlay, "none">;
 
-function OverlayFor(props: {
-  readonly kind: OverlayKind;
+interface OverlayProps {
   readonly leaving: boolean;
   readonly onClose: () => void;
-}) {
-  const { kind, ...rest } = props;
-  switch (kind) {
-    case "about":
-      return <AboutOverlay {...rest} />;
-    case "you":
-      return <YouOverlay {...rest} />;
-    case "board":
-      return <BoardOverlay {...rest} />;
-    case "share":
-      return <ShareAddaOverlay {...rest} />;
-    case "drop":
-      return <DropAddaOverlay {...rest} />;
-    case "invite":
-      return <InviteOverlay {...rest} />;
-    case "privacy":
-      return <PrivacyOverlay {...rest} />;
-  }
+}
+
+/** Which component draws each overlay. */
+const OVERLAYS: Readonly<Record<OverlayKind, ComponentType<OverlayProps>>> = {
+  about: AboutOverlay,
+  you: YouOverlay,
+  board: BoardOverlay,
+  share: ShareAddaOverlay,
+  drop: DropAddaOverlay,
+  invite: InviteOverlay,
+  trends: TrendsOverlay,
+  privacy: PrivacyOverlay,
+};
+
+function OverlayFor({ kind, ...rest }: OverlayProps & { readonly kind: OverlayKind }) {
+  const Component = OVERLAYS[kind];
+  return <Component {...rest} />;
 }
 
 /** About, your profile or the board, centred over everything; fades out when closed or swapped. */

@@ -7,6 +7,8 @@ import { createPoints, loadPoints } from "@/app/points";
 import type { PointsController } from "@/app/points";
 import { createStore } from "@/app/store";
 import type { AppMode, AppState, Overlay, Panel, Store, Toast } from "@/app/store";
+import { createTrends } from "@/app/trends";
+import type { TrendsController } from "@/app/trends";
 import { clearYou, saveYou } from "@/data/localUser";
 import type { ReportReason } from "@/data/report";
 import type { PeopleSource } from "@/data/source";
@@ -39,6 +41,8 @@ export interface Actions extends MeetActions, AddaActions, AccountActions {
   closeOverlay(): void;
   /** Opens your profile overlay on the form, optionally with a topic preselected (or added). */
   startJoin(topic: TopicId | null): void;
+  /** The invite card, its link starting at this booth (or any booth). */
+  openInvite(topic: TopicId | null): void;
   toggleHighlight(topic: TopicId): void;
   clearHighlight(): void;
   fit(): void;
@@ -135,6 +139,9 @@ export function initialState(init: InitialState): AppState {
     adda: null,
     addaDrop: null,
     shareAddaId: null,
+    inviteTopic: null,
+    lastArrival: null,
+    race: { rows: [], hot: null },
     tribe: false,
     points: { extra: new Map(), lastBump: null },
     reducedMotion: init.reducedMotion,
@@ -211,6 +218,7 @@ export type PanelActions = Pick<
   | "openOverlay"
   | "closeOverlay"
   | "startJoin"
+  | "openInvite"
 >;
 
 export function panelActions(engine: EngineApi, store: AppStore): PanelActions {
@@ -240,10 +248,13 @@ export function panelActions(engine: EngineApi, store: AppStore): PanelActions {
       store.set({ panel: "none", framed: false });
     },
     openOverlay(overlay) {
-      store.set({ overlay, joinTopic: null });
+      store.set({ overlay, joinTopic: null, inviteTopic: null });
     },
     closeOverlay() {
-      store.set({ overlay: "none", joinTopic: null });
+      store.set({ overlay: "none", joinTopic: null, inviteTopic: null });
+    },
+    openInvite(topic) {
+      store.set({ overlay: "invite", joinTopic: null, inviteTopic: topic });
     },
     startJoin(topic) {
       store.set({ overlay: "you", joinTopic: topic });
@@ -294,13 +305,14 @@ interface Loops {
   readonly meet: MeetController;
   readonly adda: AddaController;
   readonly points: PointsController;
+  readonly trends: TrendsController;
 }
 
 function youActions(
   engine: EngineApi,
   store: AppStore,
   toasts: ToastActions,
-  { meet, adda, points }: Loops,
+  { meet, adda, points, trends }: Loops,
 ): Pick<Actions, "join" | "leave"> {
   return {
     join(input) {
@@ -308,6 +320,7 @@ function youActions(
       const person = personFromJoin(input);
       const saved = saveYou(person);
       walkIn(engine, store, person);
+      trends.arrived(person);
       meet.forget();
       meet.sync();
       adda.forget();
@@ -327,6 +340,7 @@ function youActions(
       store.set({ overlay: "none", joinTopic: null });
       meet.forget();
       adda.forget();
+      trends.sync();
       points.refreshCrowns();
       toasts.pushToast("You left coii. Come back anytime.", "waving_hand", "info");
       return Promise.resolve(true);
@@ -436,10 +450,11 @@ export function createController(engine: EngineApi, options: ControllerOptions):
     onPoint: points.bump,
   });
   const adda = createAdda({ engine, store, meet, pushToast: toasts.pushToast, clock });
+  const trends = createTrends({ engine, store, clock });
   const actions: Actions = {
     ...panelActions(engine, store),
     ...mapActions(engine, store),
-    ...youActions(engine, store, toasts, { meet, adda, points }),
+    ...youActions(engine, store, toasts, { meet, adda, points, trends }),
     ...toasts,
     ...meetActionsOf(meet),
     ...addaActionsOf(adda),
@@ -450,6 +465,7 @@ export function createController(engine: EngineApi, options: ControllerOptions):
   meet.sync();
   adda.sync();
   points.refreshCrowns();
+  trends.sync();
 
   return {
     store,
@@ -458,6 +474,7 @@ export function createController(engine: EngineApi, options: ControllerOptions):
       return source.start((person) => {
         store.set((s) => ({ people: [...s.people, person] }));
         engine.spawn(person, true);
+        trends.arrived(person);
         actions.pushToast(arrivalText(person), "waving_hand", "arrival");
       });
     },

@@ -12,6 +12,8 @@ Everything built in this iteration, on branches `iteration-v2` (PR #3) and `iter
   Telegram.
 - **Join link:** `coii.decipherclub.com/join` opens the join form straight away. There's also an
   invite screen for sharing it.
+- **Narrative race:** a live race of the ten booths (who's biggest, who's rising fastest), with
+  flames on the booth signs and an invite-to-climb loop.
 - **Backend:** adda tables, RPCs and pgTAP tests in Supabase. The client still runs on demo data
   until real sign-ups are connected.
 
@@ -193,6 +195,32 @@ Everything built in this iteration, on branches `iteration-v2` (PR #3) and `iter
 - **Realtime:** `adda_invite` goes to the invitee and `adda_joined` goes to the owner, on their
   personal topic.
 - **Tests:** `supabase/tests/database/07_adda.sql` (40 pgTAP checks).
+
+## 7. Narrative race (which ideas Devcon 8 is lining up for)
+
+- **What:** a live race of the ten booths, opened from the pink 🔥 chip next to the Board pill
+  (it names the fastest-rising booth), from a booth panel's "#2 in the narrative race" line, or
+  from `coii.decipherclub.com/trends`.
+- **Counting:** everyone who picked a topic counts once in that booth (three topics, three
+  booths). "Today" is a rolling 24 hours.
+- **Tabs:** Most people · Rising fastest (24h) · Since you joined (or since you got here).
+- **Hottest:** the booth growing fastest today, not the biggest: joins in 24h against its crowd
+  before them, with at least 3 joins so one person can't spike it.
+- **Live:** every arrival bumps its booths with "+1 Name" on the bars; rows slide when one booth
+  passes another; bars ease to their new length. Tapping a row opens that booth.
+- **Your booth:** "Privacy is #4. 124 more people and it passes DeFi." with **Invite to Privacy**
+  (the invite card with `/join/privacy` ready) and **Share the race** (top three and the hottest,
+  plus the `/trends` link). Before joining: a nudge to join instead.
+- **On the map:** every booth sign carries a badge with up to three flames (joins against the
+  busiest booth's) and "+N" joins today; the hottest booth's sign glows; arrivals float "+1 Name"
+  off their booths' signs.
+- **Demo:** the demo crowd's sign-up days lean recent for some booths (Prediction, Security,
+  DeFi) so the race isn't a dead heat; real sign-ups replace it.
+- **Code:** `src/match/trends.ts` (counting), `src/app/trends.ts` (feeds the map and the store),
+  `src/ui/TrendsOverlay.tsx`, `src/ui/trends.css`, the chip in `src/ui/Hud.tsx`,
+  `BoothLabels.setHeat` / `pop` in `src/engine/labels.ts`.
+- **Backend later:** a `topic_counts` view (count and joins in 24h per topic) plus a realtime
+  "joined" event; the client already recounts on every arrival.
 
 ## Not done yet
 

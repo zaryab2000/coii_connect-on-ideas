@@ -12,7 +12,7 @@ import { App } from "@/app/App";
 import { ControllerContext } from "@/app/context";
 import { createController } from "@/app/controller";
 import type { AppController } from "@/app/controller";
-import { isPrivacyLink, readJoinLink, withoutJoinLink } from "@/app/joinLink";
+import { isPrivacyLink, readJoinLink, readTrendsLink, withoutShareLink } from "@/app/joinLink";
 import { backendConfig } from "@/backend/config";
 import type { BackendConfig } from "@/backend/config";
 import { generateDemo } from "@/data/generateDemo";
@@ -46,12 +46,14 @@ async function startBackend(config: BackendConfig): Promise<AppController> {
 
 function render(controller: AppController): void {
   const joinLink = readJoinLink(location.pathname, location.search);
-  if (joinLink) {
-    controller.openJoinLink(joinLink.topic);
+  const trendsLink = readTrendsLink(location.pathname, location.search);
+  if (joinLink) controller.openJoinLink(joinLink.topic);
+  else if (trendsLink) controller.actions.openOverlay("trends");
+  if (joinLink || trendsLink) {
     history.replaceState(
       null,
       "",
-      withoutJoinLink(location.pathname, location.search, location.hash),
+      withoutShareLink(location.pathname, location.search, location.hash),
     );
   }
   if (isPrivacyLink(location.pathname)) {

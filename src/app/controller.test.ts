@@ -290,8 +290,14 @@ describe("controller toasts, readiness and arrivals", () => {
     for (const onArrive of listeners)
       onArrive(person("new", ["ai", "defi"], { name: "Priya Shah" }));
     expect(store.get().people.at(-1)?.id).toBe("new");
-    expect(engine.calls.at(-1)).toEqual({ method: "spawn", args: ["new", true] });
+    expect(engine.calls).toContainEqual({ method: "spawn", args: ["new", true] });
     expect(store.get().toasts.at(-1)?.text).toBe("Priya just walked in · AI Agents + DeFi");
+    // The narrative race moves: "+1 Priya" on both booths, and the signs recount.
+    expect(engine.calls).toContainEqual({ method: "boothPop", args: ["ai", "+1 Priya"] });
+    expect(engine.calls).toContainEqual({ method: "boothPop", args: ["defi", "+1 Priya"] });
+    expect(engine.calls.at(-1)?.method).toBe("setBoothHeat");
+    expect(store.get().race.rows.find((r) => r.topic === "ai")?.count).toBe(2);
+    expect(store.get().lastArrival).toMatchObject({ name: "Priya", topics: ["ai", "defi"] });
     stop();
     expect(stopped).toBe(true);
   });

@@ -1,16 +1,13 @@
 import "@/ui/hud.css";
-import { useId, useMemo, useState } from "react";
-import type { CSSProperties, MouseEvent, Ref } from "react";
+import { useId, useState } from "react";
+import type { MouseEvent, Ref } from "react";
 
 import { useActions, useApp } from "@/app/context";
 import { pointsReader } from "@/app/points";
 import type { AppState } from "@/app/store";
-import { TOPICS } from "@/data/topics";
 import { rankOf } from "@/match/points";
-import { tribeOf } from "@/match/tribe";
 import { Glyph, Icon } from "@/ui/Icon";
 import { firstName } from "@/ui/meet";
-import { topicVars } from "@/ui/PanelChrome";
 
 const numberFormat = new Intl.NumberFormat("en-IN");
 
@@ -112,56 +109,20 @@ function BoardPill() {
   );
 }
 
-const TRIBE_VARS = { "--topic": "var(--rani)", "--on-topic": "var(--paper)" } as CSSProperties;
-
-/** "My tribe" map mode: everyone who shares your topics glows. Shown once you've joined. */
-function TribeToggle() {
+/** Opens the live narrative race without replacing its label with a topic name. */
+function TrendingChip() {
   const actions = useActions();
-  const you = useApp((s) => s.you);
-  const people = useApp((s) => s.people);
-  const on = useApp((s) => s.tribe);
-  const size = useMemo(() => (you ? tribeOf(you, people).length : 0), [you, people]);
-  if (!you) return null;
   return (
     <button
       type="button"
-      className="chip tribe-chip"
-      style={TRIBE_VARS}
-      aria-pressed={on}
-      onClick={() => actions.toggleTribe()}
+      className="chip trend-chip"
+      aria-haspopup="dialog"
+      aria-label="Narrative race. Open the race."
+      onClick={() => actions.openOverlay("trends")}
     >
-      <Icon id="light_bulb" size={20} />
-      My tribe
-      <span className="tribe-chip__count">{numberFormat.format(size)}</span>
+      <Icon id="fire" size={20} />
+      <span className="trend-chip__text">Narrative race</span>
     </button>
-  );
-}
-
-function TopicHighlights() {
-  const actions = useActions();
-  const highlight = useApp((s) => s.highlight);
-  return (
-    <div className="hud-chips" role="group" aria-label="Highlight booths on the map">
-      {highlight.length > 0 ? (
-        <button type="button" className="chip chip--clear" onClick={() => actions.clearHighlight()}>
-          <Glyph name="close" size={16} />
-          Clear
-        </button>
-      ) : null}
-      {TOPICS.map((topic) => (
-        <button
-          key={topic.id}
-          type="button"
-          className="chip"
-          style={topicVars(topic.id)}
-          aria-pressed={highlight.includes(topic.id)}
-          onClick={() => actions.toggleHighlight(topic.id)}
-        >
-          <Icon id={topic.icon} size={20} />
-          {topic.short}
-        </button>
-      ))}
-    </div>
   );
 }
 
@@ -206,7 +167,7 @@ function EarlyVenue() {
   );
 }
 
-/** Heads-up display over the map: wordmark, live count, About, fit button and topic highlights. */
+/** Heads-up display over the map: wordmark, live count, map controls and two primary actions. */
 export function Hud({ ref }: { readonly ref: Ref<HTMLDivElement> }) {
   const actions = useActions();
   return (
@@ -235,10 +196,10 @@ export function Hud({ ref }: { readonly ref: Ref<HTMLDivElement> }) {
       </div>
       <div className="hud__chips-row">
         <BoardPill />
+        <TrendingChip />
         <DemoChip />
-        <TribeToggle />
-        <TopicHighlights />
       </div>
+      <EarlyVenue />
       <EarlyVenue />
     </div>
   );

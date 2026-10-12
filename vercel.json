@@ -7,6 +7,7 @@
   "rewrites": [
     { "source": "/join", "destination": "/index.html" },
     { "source": "/join/:topic", "destination": "/index.html" },
+    { "source": "/trends", "destination": "/index.html" },
     { "source": "/privacy", "destination": "/index.html" },
     { "source": "/telegram", "destination": "/index.html" }
   ],

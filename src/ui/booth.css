@@ -41,6 +41,28 @@
   font-variant-numeric: tabular-nums;
 }
 
+.booth__race {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  padding: 3px 10px 1px 6px;
+  border: var(--line-thin);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  box-shadow: var(--pop-sm);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.booth__race:active {
+  transform: translate(1px, 1px);
+  box-shadow: var(--pop-pressed);
+}
+
 .booth__actions {
   display: flex;
   flex-wrap: wrap;

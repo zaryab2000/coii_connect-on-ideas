@@ -244,11 +244,16 @@ test("Meet: reveal today's 3, wave at one and light up My tribe", async ({ page 
   await expect(slot.getByRole("button", { name: "See how to reach them" })).toBeVisible();
   await expect(page.getByText("49 waves left today")).toBeVisible();
 
-  await page.keyboard.press("Escape");
-  const tribe = page.getByRole("button", { name: /My tribe/ });
-  await tribe.click();
-  await expect(tribe).toHaveAttribute("aria-pressed", "true");
-  expect(await page.evaluate(() => window.__coii?.controller.store.get().tribe)).toBe(true);
+  // Skipping the other two finishes today's picks; "Light up My tribe" then lights the map.
+  const skips = page.locator(".meet-slot").getByRole("button", { name: "Skip" });
+  await skips.first().click();
+  await expect(skips).toHaveCount(1);
+  await skips.first().click();
+  await expect(skips).toHaveCount(0);
+  await page.getByRole("button", { name: "Light up My tribe" }).click();
+  await expect
+    .poll(() => page.evaluate(() => window.__coii?.controller.store.get().tribe))
+    .toBe(true);
   expect(errors).toEqual([]);
 });
 
@@ -520,6 +525,62 @@ test("?join opens the form too, and About hands out the join link", async ({ pag
   await expect(invite).toBeVisible();
   await expect(invite.getByLabel("Join link")).toHaveValue("https://coii.decipherclub.com/join");
   await invite.getByLabel("Start them at a booth").selectOption("privacy");
+  await expect(invite.getByLabel("Join link")).toHaveValue(
+    "https://coii.decipherclub.com/join/privacy",
+  );
+});
+
+test("the trending chip opens a live narrative race of all ten booths", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto("/?still");
+  await waitForCrowd(page);
+  // The booth signs carry the race too: flames and joins today.
+  await expect(page.locator(".booth-heat:not([hidden])").first()).toBeVisible();
+  const hudActions = page.locator(".hud__chips-row");
+  // Board, race, and the "Demo crowd" label (made-up people are always labelled).
+  await expect(hudActions.getByRole("button")).toHaveCount(3);
+  await expect(hudActions.getByRole("button", { name: /Demo crowd/ })).toBeVisible();
+  const raceButton = hudActions.getByRole("button", { name: /^Narrative race/ });
+  await expect(raceButton).toHaveText("Narrative race");
+  await raceButton.click();
+  const race = page.getByRole("dialog", { name: "Narrative race" });
+  await expect(race).toBeVisible();
+  const rows = race.getByRole("list", { name: "Booths in the race" }).getByRole("listitem");
+  await expect(rows).toHaveCount(10);
+  await expect(rows.first()).toContainText("AI Agents");
+  await race.getByRole("button", { name: "Rising fastest · 24h" }).click();
+  await expect(race.getByRole("button", { name: "Rising fastest · 24h" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  // Exactly one booth is the hottest (the fastest-rising one).
+  await expect(race.getByRole("button", { name: /rising fastest/ })).toHaveCount(1);
+  expect(errors).toEqual([]);
+});
+
+test("a /trends link opens the race, and a row opens its booth", async ({ page }) => {
+  await page.goto("/trends?still");
+  const race = page.getByRole("dialog", { name: "Narrative race" });
+  await expect(race).toBeVisible();
+  await expect(page).toHaveURL(/\/\?still$/);
+  await waitForCrowd(page);
+  await race.getByRole("button", { name: /^#\d+ DeFi:/ }).click();
+  await expect(race).toBeHidden();
+  await expect(page.getByRole("heading", { name: "DeFi" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /in the narrative race/ })).toBeVisible();
+});
+
+test("once joined, the race shows your booth's place and invites people to it", async ({
+  page,
+}) => {
+  await page.goto("/?still");
+  await waitForCrowd(page);
+  await joinQuickly(page);
+  await page.getByRole("button", { name: /^Narrative race/ }).click();
+  const race = page.getByRole("dialog", { name: "Narrative race" });
+  await expect(race.getByText(/Privacy is #\d+\. \d+ more people and it passes/)).toBeVisible();
+  await race.getByRole("button", { name: "Invite to Privacy" }).click();
+  const invite = page.getByRole("dialog", { name: "Invite people to coii" });
   await expect(invite.getByLabel("Join link")).toHaveValue(
     "https://coii.decipherclub.com/join/privacy",
   );

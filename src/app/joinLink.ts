@@ -38,14 +38,32 @@ export function isPrivacyLink(pathname: string): boolean {
   return pathname.replace(/\/+$/, "").toLowerCase() === PRIVACY_PATH;
 }
 
-/** The same address with the join link taken out, so a reload doesn't reopen the form. */
-export function withoutJoinLink(pathname: string, search: string, hash: string): string {
+/** The path a shared narrative race link opens: the race, over the live venue. */
+export const TRENDS_PATH = "/trends";
+
+export function trendsUrl(): string {
+  return `${SITE_URL}${TRENDS_PATH}`;
+}
+
+/** Whether this address is a narrative race link: `/trends` or `?trends`. */
+export function readTrendsLink(pathname: string, search: string): boolean {
+  const path = pathname.replace(/\/+$/, "").toLowerCase();
+  return path === TRENDS_PATH || new URLSearchParams(search).has("trends");
+}
+
+const LINK_PARAMS = new Set(["join", "trends"]);
+
+/**
+ * The same address with a join or race link taken out, so a reload doesn't reopen the form or
+ * the race.
+ */
+export function withoutShareLink(pathname: string, search: string, hash: string): string {
   // Kept as written: bare flags like `?still` stay bare.
   const rest = search
     .replace(/^\?/, "")
     .split("&")
-    .filter((part) => part !== "" && decodeURIComponent(part.split("=")[0] ?? "") !== "join")
+    .filter((part) => part !== "" && !LINK_PARAMS.has(decodeURIComponent(part.split("=")[0] ?? "")))
     .join("&");
-  const path = readJoinLink(pathname, "") ? "/" : pathname;
+  const path = readJoinLink(pathname, "") || readTrendsLink(pathname, "") ? "/" : pathname;
   return `${path}${rest ? `?${rest}` : ""}${hash}`;
 }
