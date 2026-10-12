@@ -13,10 +13,13 @@ if (!url.startsWith("http://127.0.0.1") && !url.startsWith("http://localhost")) 
   );
 }
 
+/** GitHub's runners have no GPU: every browser draws the WebGL venue in software, ~3x slower. */
+const ci = Boolean(process.env["CI"]);
+
 export default defineConfig({
   testDir: "e2e/backend",
   // Venue polling runs once a minute, so "another browser sees it" checks wait up to 70 s.
-  timeout: 360_000,
+  timeout: ci ? 900_000 : 360_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,
   workers: 1,
