@@ -9,6 +9,7 @@ import {
   refresh,
   sql,
   sqlNumber,
+  telegramLogin,
   visitor,
   waitForPresence,
 } from "./helpers";
@@ -308,26 +309,6 @@ test("adda: invite someone you waved at; joining makes a chai", async ({ browser
   );
   expect([...host.errors, ...guest.errors]).toEqual([]);
 });
-
-/** What Telegram's widget would send back, signed with the local stack's test bot token. */
-async function telegramLogin(fields: Record<string, string>): Promise<string> {
-  const encoder = new TextEncoder();
-  const check = Object.keys(fields)
-    .toSorted()
-    .map((key) => `${key}=${fields[key]}`)
-    .join("\n");
-  const secret = await crypto.subtle.digest("SHA-256", encoder.encode("local-test-bot-token"));
-  const key = await crypto.subtle.importKey(
-    "raw",
-    secret,
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(check));
-  const hash = [...new Uint8Array(signature)].map((b) => b.toString(16).padStart(2, "0")).join("");
-  return new URLSearchParams({ ...fields, hash }).toString();
-}
 
 test("P8: Verify with Telegram checks the signed login and adds the ✓", async ({ browser }) => {
   const asha = await join(browser, "Asha Telegram");

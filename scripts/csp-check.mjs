@@ -80,7 +80,7 @@ try {
 
   browser = await chromium.launch({ channel: "chrome" });
 
-  // 1. A visitor: the map, the board, the privacy notice.
+  // 1. A visitor: the map, the board, the privacy notice, a claim link.
   const visitor = await watch(await browser.newContext());
   await visitor.page.goto(ORIGIN);
   await waitForApp(visitor.page);
@@ -88,6 +88,10 @@ try {
   await visitor.page.keyboard.press("Escape");
   await visitor.page.goto(`${ORIGIN}/privacy`);
   await visitor.page.getByRole("dialog", { name: "Privacy" }).waitFor();
+  // A claim link (a broken one: the screen still loads its preview through the API).
+  await visitor.page.goto(`${ORIGIN}/claim/not-a-real-claim-link`);
+  await visitor.page.getByRole("dialog", { name: /You're already on coii/ }).waitFor();
+  await visitor.page.getByText(/This claim link doesn't work/).waitFor();
   found.push(...(await violations(visitor)).map((v) => `visitor: ${v}`));
 
   // 2. Join through Turnstile, then Meet (deal-hand), realtime and adda.
