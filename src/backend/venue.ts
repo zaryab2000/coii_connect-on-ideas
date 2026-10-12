@@ -75,6 +75,8 @@ export interface VenueUpdate {
 const FLAG_TELEGRAM = 1;
 const FLAG_TICKET = 2;
 const FLAG_DEMO = 4;
+/** An invited bean nobody has claimed yet (docs-internal/prd/claim-your-bean.md §6.1). */
+const FLAG_INVITED = 8;
 
 type Raw = Record<string, unknown>;
 
@@ -121,6 +123,7 @@ function personAt(cols: Raw, row: number): VenueEntry | null {
     telegramVerified: (bits & FLAG_TELEGRAM) !== 0,
     ticketVerified: (bits & FLAG_TICKET) !== 0,
     isDemo: (bits & FLAG_DEMO) !== 0,
+    isInvited: (bits & FLAG_INVITED) !== 0,
     isYou: false,
     origin: null,
     joinedAt: count(array(cols["j"])[row]) * 1000,
@@ -275,7 +278,8 @@ function flags(p: Person): number {
   return (
     (p.telegramVerified ? FLAG_TELEGRAM : 0) |
     (p.ticketVerified ? FLAG_TICKET : 0) |
-    (p.isDemo ? FLAG_DEMO : 0)
+    (p.isDemo ? FLAG_DEMO : 0) |
+    (p.isInvited ? FLAG_INVITED : 0)
   );
 }
 

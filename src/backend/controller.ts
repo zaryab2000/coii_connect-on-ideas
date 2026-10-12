@@ -1,5 +1,6 @@
 import type { Session } from "@supabase/supabase-js";
 
+import { claimPreviewFrom, rememberTelegramClaim, takeTelegramClaim } from "@/app/claim";
 import {
   arrivalText,
   followAddaTents,
@@ -13,7 +14,7 @@ import {
   walkIn,
 } from "@/app/controller";
 import type { Actions, AppController, ToastActions } from "@/app/controller";
-import type { JoinInput, JoinOutcome } from "@/app/joinTypes";
+import type { InvitedRef, JoinInput, JoinOutcome } from "@/app/joinTypes";
 import { realClock } from "@/app/meet";
 import { pointsReader } from "@/app/points";
 import { createStore } from "@/app/store";
@@ -21,9 +22,11 @@ import type { AccountView, AppState, Score, Store } from "@/app/store";
 import { createTrends } from "@/app/trends";
 import type { TrendsController } from "@/app/trends";
 import { BackendAdda } from "@/backend/adda";
-import { invoke } from "@/backend/api";
+import { invoke, rpc } from "@/backend/api";
 import {
+  claimBean,
   deleteAccount,
+  ensureSession,
   hasGoogle,
   linkGoogle,
   saveProfile,
@@ -33,13 +36,14 @@ import {
 import { meFrom } from "@/backend/auth";
 import type { Me } from "@/backend/auth";
 import type { Supabase } from "@/backend/client";
-import { toBackendError } from "@/backend/errors";
+import { invitedRef, toBackendError } from "@/backend/errors";
 import { BackendMeet } from "@/backend/meet";
 import type { Contact } from "@/backend/meetState";
 import { PersonalChannel } from "@/backend/personal";
 import type { TelegramLogin } from "@/backend/telegram";
 import type { VenueEntry, VenueState, VenueUpdate } from "@/backend/venue";
 import type { VenueSync } from "@/backend/venueSync";
+import { CLAIM } from "@/content/claim";
 import type { Person } from "@/data/types";
 import type { EngineApi } from "@/engine/types";
 import { leaderboard, topIds } from "@/match/points";
@@ -66,6 +70,24 @@ export interface BackendStart {
   readonly reducedMotion: boolean;
   /** Telegram sent you back with a signed login to check ("Verify with Telegram"). */
   readonly telegramLogin: TelegramLogin | null;
+  /** A claim link's token, already taken out of the address (docs-internal/prd/claim-your-bean.md). */
+  readonly claimToken: string | null;
+}
+
+/** What to say when a Telegram round trip didn't work out. */
+function telegramFailure(error: unknown, claiming: boolean): string {
+  const failure = toBackendError(error);
+  // Claiming, but this Telegram account isn't the one the coii team added.
+  if (claiming && failure.code === "no_profile") return CLAIM.telegramNoMatch;
+  return failure.copy.text;
+}
+
+function sessionStore(): Storage | null {
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
 }
 
 function accountOf(session: Session | null, me: Me | null): AccountView | null {
@@ -165,6 +187,7 @@ class BackendApp {
     this.trends.sync();
     if (this.store.get().you) this.enter();
     if (this.start.telegramLogin) void this.verifyTelegram(this.start.telegramLogin);
+    else if (this.start.claimToken) this.openClaimLink(this.start.claimToken);
     this.start.supabase.auth.onAuthStateChange((event, session) => {
       this.session = session;
       // Signed out elsewhere (another tab, an expired refresh token): drop your bean here too.
@@ -210,7 +233,8 @@ class BackendApp {
 
   private refreshCrowns(): void {
     const state = this.store.get();
-    const ids = topIds(leaderboard(state.people, pointsReader(state)), CROWNS);
+    const ranked = state.people.filter((p) => !p.isInvited);
+    const ids = topIds(leaderboard(ranked, pointsReader(state)), CROWNS);
     const key = ids.join(",");
     if (key === this.crowned) return;
     this.crowned = key;
@@ -329,7 +353,94 @@ class BackendApp {
       // A refused profile keeps the new session, so the next submit needs no new check.
       this.session = await supabase.auth.getSession().then((r) => r.data.session);
       this.store.set({ account: accountOf(this.session, null) });
-      return { ok: false, problem: toBackendError(error).copy };
+      const failure = toBackendError(error);
+      const invited = invitedRef(failure);
+      // The handle belongs to an invited bean: the form shows the claim panel instead.
+      return {
+        ok: false,
+        problem: invited ? { ...failure.copy, invited } : failure.copy,
+      };
+    }
+  };
+
+  /** You just became the owner of a bean (a claim link or Telegram): walk it in as yours. */
+  private claimed(me: Me): void {
+    this.store.set({ account: accountOf(this.session, me), joinPrefill: null, claim: null });
+    const entries = new Map(this.entries);
+    entries.delete(me.person.id);
+    this.entries = entries;
+    this.engine.remove(me.person.id);
+    walkIn(this.engine, this.store, me.person);
+    this.project();
+    this.toasts.pushToast(CLAIM.done, "party_popper", "success");
+    this.enter();
+    // Check everything over, then save it with Google (the "you" overlay nudges once you save).
+    this.store.set({ overlay: "you", editYou: true });
+    void this.start.venue.pollNow();
+  }
+
+  // ---- claim your bean ------------------------------------------------------------------------------
+
+  readonly openClaim = (invited: InvitedRef, reason: "join" | "card" | "hint"): void => {
+    this.store.set({ claim: { kind: "panel", invited, reason }, overlay: "claim" });
+  };
+
+  readonly openClaimLink = (token: string): void => {
+    this.store.set({ claim: { kind: "link", token, preview: null }, overlay: "claim" });
+    rpc(this.start.supabase, "claim_preview", { token })
+      .then((value) => {
+        const claim = this.store.get().claim;
+        // Still looking at this link (not closed or swapped meanwhile).
+        if (claim?.kind === "link" && claim.token === token) {
+          this.store.set({ claim: { ...claim, preview: claimPreviewFrom(value) } });
+        }
+      })
+      .catch((error: unknown) => {
+        this.store.set({ claim: null, overlay: "none" });
+        this.toasts.pushToast(toBackendError(error).copy.text, null, "info");
+      });
+  };
+
+  /** Sets the claim link's preview to a state the server just told us about. */
+  private claimLinkIs(status: "claimed" | "expired" | "invalid"): void {
+    const claim = this.store.get().claim;
+    if (claim?.kind === "link" && claim.preview) {
+      this.store.set({ claim: { ...claim, preview: { ...claim.preview, status } } });
+    }
+  }
+
+  readonly claimBean = async (token: string, captchaToken: string | null): Promise<string | null> => {
+    const you = this.store.get().you;
+    if (you) return CLAIM.alreadyHaveBean(you.name);
+    const { supabase } = this.start;
+    try {
+      await ensureSession(supabase, captchaToken);
+      this.session = await supabase.auth.getSession().then((r) => r.data.session);
+      const me = await claimBean(supabase, token);
+      this.claimed(me);
+      return null;
+    } catch (error) {
+      this.session = await supabase.auth.getSession().then((r) => r.data.session);
+      this.store.set({ account: accountOf(this.session, null) });
+      const failure = toBackendError(error);
+      if (failure.code === "claim_used") this.claimLinkIs("claimed");
+      else if (failure.code === "claim_expired") this.claimLinkIs("expired");
+      else if (failure.code === "claim_invalid") this.claimLinkIs("invalid");
+      if (failure.code === "already_joined") return CLAIM.alreadyHaveBean("your other bean");
+      return failure.copy.text;
+    }
+  };
+
+  readonly prepareTelegramClaim = async (captchaToken: string | null): Promise<string | null> => {
+    const { supabase } = this.start;
+    try {
+      await ensureSession(supabase, captchaToken);
+      this.session = await supabase.auth.getSession().then((r) => r.data.session);
+      this.store.set({ account: accountOf(this.session, null) });
+      rememberTelegramClaim(sessionStore());
+      return null;
+    } catch (error) {
+      return toBackendError(error).copy.text;
     }
   };
 
@@ -338,23 +449,34 @@ class BackendApp {
    * verified handle and the ✓ shows (on other maps after their next venue poll).
    */
   private async verifyTelegram(login: TelegramLogin): Promise<void> {
-    if (!this.store.get().you) {
+    // Back from Telegram after "Claim with Telegram": the consent ticked before leaving.
+    const claiming = takeTelegramClaim(sessionStore()) && !this.store.get().you;
+    if (!this.store.get().you && !claiming) {
       this.toasts.pushToast("Join coii first, then verify with Telegram.", null, "info");
       return;
     }
     try {
-      const me = meFrom(await invoke(this.start.supabase, "telegram-link", login));
+      const body = claiming ? { ...login, consent: true } : login;
+      const me = meFrom(await invoke(this.start.supabase, "telegram-link", body));
       if (!me) throw new Error("telegram-link returned no profile");
-      this.store.set({ you: me.person });
-      this.project();
-      this.toasts.pushToast(
-        `Telegram verified: @${me.person.telegram ?? ""}. Your ✓ is on the map.`,
-        "sparkles",
-        "success",
-      );
+      if (claiming) this.claimed(me);
+      else this.verified(me);
     } catch (error) {
-      this.toasts.pushToast(toBackendError(error).copy.text, null, "info");
+      this.toasts.pushToast(telegramFailure(error, claiming), null, "info");
     }
+  }
+
+  /** Your Telegram username is now your verified handle. */
+  private verified(me: Me): void {
+    this.store.set({ you: me.person });
+    this.project();
+    this.toasts.pushToast(
+      `Telegram verified: @${me.person.telegram ?? ""}. Your ✓ is on the map.`,
+      "sparkles",
+      "success",
+    );
+    // An invited bean with this username was you: it's gone now, so open maps drop it.
+    void this.start.venue.pollNow();
   }
 
   /** Clears you out locally after leaving or signing out. */
@@ -452,6 +574,10 @@ export function createBackendController(engine: EngineApi, start: BackendStart):
     saveBean: () => app.google(linkGoogle),
     signInWithGoogle: () => app.google(signInGoogle),
     signOut: app.signOut,
+    openClaim: app.openClaim,
+    openClaimLink: app.openClaimLink,
+    claimBean: app.claimBean,
+    prepareTelegramClaim: app.prepareTelegramClaim,
   };
   followEngine(engine, store);
   followAddaTents(engine, store, adda);

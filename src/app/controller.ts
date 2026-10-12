@@ -1,6 +1,6 @@
 import { createAdda } from "@/app/adda";
 import type { AddaActions, AddaController } from "@/app/adda";
-import type { JoinInput, JoinOutcome } from "@/app/joinTypes";
+import type { InvitedRef, JoinInput, JoinOutcome } from "@/app/joinTypes";
 import { createMeet, realClock } from "@/app/meet";
 import type { MeetActions, MeetClock, MeetController } from "@/app/meet";
 import { createPoints, loadPoints } from "@/app/points";
@@ -28,6 +28,23 @@ export interface AccountActions {
   signInWithGoogle(): Promise<void>;
   /** Signs out but keeps the bean; only offered when Google is linked. */
   signOut(): Promise<void>;
+  /**
+   * Claim your bean: shows an invited bean someone may be (their join hit its handle, "This is
+   * me" on its profile card, or their typed name matched), with the ways to claim it.
+   */
+  openClaim(invited: InvitedRef, reason: "join" | "card" | "hint"): void;
+  /** Opens the claim screen for a claim link's token (from the address or pasted). */
+  openClaimLink(token: string): void;
+  /**
+   * Claims the bean behind a claim link: a Turnstile-checked session if you have none, then the
+   * claim (consent included). Resolves to null on success, or what to tell you.
+   */
+  claimBean(token: string, captchaToken: string | null): Promise<string | null>;
+  /**
+   * Gets ready to claim with Telegram: a session if you have none, and your consent remembered
+   * across the round trip to Telegram. Resolves to null when the Telegram button can show.
+   */
+  prepareTelegramClaim(captchaToken: string | null): Promise<string | null>;
 }
 
 export interface Actions extends MeetActions, AddaActions, AccountActions {
@@ -139,6 +156,8 @@ export function initialState(init: InitialState): AppState {
     adda: null,
     addaDrop: null,
     shareAddaId: null,
+    claim: null,
+    editYou: false,
     inviteTopic: null,
     lastArrival: null,
     race: { rows: [], hot: null },
@@ -196,6 +215,7 @@ function openYou(engine: EngineApi, store: AppStore): void {
   engine.select(null);
   store.set((s) => ({
     overlay: "you",
+    editYou: false,
     selectedId: null,
     panel: s.panel === "profile" ? "none" : s.panel,
     framed: false,
@@ -248,16 +268,22 @@ export function panelActions(engine: EngineApi, store: AppStore): PanelActions {
       store.set({ panel: "none", framed: false });
     },
     openOverlay(overlay) {
-      store.set({ overlay, joinTopic: null, inviteTopic: null });
+      store.set({ overlay, joinTopic: null, inviteTopic: null, editYou: false });
     },
     closeOverlay() {
-      store.set({ overlay: "none", joinTopic: null, inviteTopic: null });
+      store.set({
+        overlay: "none",
+        joinTopic: null,
+        inviteTopic: null,
+        claim: null,
+        editYou: false,
+      });
     },
     openInvite(topic) {
       store.set({ overlay: "invite", joinTopic: null, inviteTopic: topic });
     },
     startJoin(topic) {
-      store.set({ overlay: "you", joinTopic: topic });
+      store.set({ overlay: "you", joinTopic: topic, editYou: false });
     },
   };
 }
@@ -295,6 +321,7 @@ export function walkIn(engine: EngineApi, store: AppStore, person: Person): void
     selectedId: null,
     framed: false,
     joinTopic: null,
+    editYou: false,
   }));
   engine.select(null);
   engine.spawn(person, true);
@@ -397,13 +424,17 @@ function addaActionsOf(adda: AddaController): AddaActions {
   };
 }
 
-/** Demo mode has no accounts: the UI never offers these, and they do nothing. */
+/** Demo mode has no accounts (or invited beans): the UI never offers these, and they do nothing. */
 const demoAccount: AccountActions = {
   report: () => Promise.resolve(false),
   block: () => Promise.resolve(false),
   saveBean: () => Promise.resolve(),
   signInWithGoogle: () => Promise.resolve(),
   signOut: () => Promise.resolve(),
+  openClaim: () => undefined,
+  openClaimLink: () => undefined,
+  claimBean: () => Promise.resolve(null),
+  prepareTelegramClaim: () => Promise.resolve(null),
 };
 
 /** Taps, drags and drops on adda tents. */

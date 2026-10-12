@@ -1,8 +1,10 @@
 import { useId, useState } from "react";
 import type { CSSProperties, FormEvent, ReactNode } from "react";
 
+import { invitedNamed } from "@/app/claim";
 import { useActions, useApp } from "@/app/context";
-import type { JoinInput } from "@/app/joinTypes";
+import type { InvitedRef, JoinInput } from "@/app/joinTypes";
+import { CLAIM } from "@/content/claim";
 import { CONSENT, UNOFFICIAL } from "@/content/privacy";
 import { INTENTS, INTENTS_MAX } from "@/data/intents";
 import { ONE_LINER_MAX, ONE_LINERS_MAX } from "@/data/oneLinerRules";
@@ -10,6 +12,7 @@ import { TOPICS } from "@/data/topics";
 import type { Person, TopicId } from "@/data/types";
 import { randomAvatar } from "@/ui/avatar";
 import { CharacterStudio } from "@/ui/CharacterStudio";
+import { ClaimPanel } from "@/ui/ClaimOverlay";
 import { Glyph, Icon } from "@/ui/Icon";
 import {
   addLine,
@@ -532,6 +535,8 @@ function initialDraft(
 interface ServerProblem {
   readonly field: JoinField | null;
   readonly text: string;
+  /** A handle belongs to an invited bean (docs-internal/prd/claim-your-bean.md §7.3). */
+  readonly invited?: InvitedRef;
 }
 
 /** Backend mode's first join needs Cloudflare's check; editing later doesn't. */
@@ -638,7 +643,7 @@ export function JoinForm({ you, presetTopic, onDone, onCancel }: JoinFormProps) 
         <JoinSubmit
           editing={you !== null}
           pending={sending.pending}
-          problem={formProblem(problem)}
+          notes={<SubmitNotes problem={problem} you={you} name={draft.name} />}
           demo={mode === "demo"}
           onCancel={onCancel}
         />
@@ -677,23 +682,100 @@ function withServer(errors: JoinErrors, problem: ServerProblem | null): JoinErro
   return { ...errors, [problem.field]: problem.text };
 }
 
+/**
+ * A bean waiting for the name you typed (an unclaimed invited bean with exactly that name): a
+ * gentle "is that you?" above the button. Dismissible, and never in the way of joining.
+ */
+function ClaimHint({
+  you,
+  name,
+  quiet,
+}: {
+  readonly you: Person | null;
+  readonly name: string;
+  /** The claim panel is already showing. */
+  readonly quiet: boolean;
+}) {
+  const actions = useActions();
+  const match = useApp((s) => (s.mode === "backend" ? invitedNamed(s.people, name) : null));
+  const [dismissed, setDismissed] = useState<string | null>(null);
+  if (you || quiet || !match || match.id === dismissed) return null;
+  return (
+    <p className="claim-hint" role="status">
+      <span className="claim-hint__text">{CLAIM.hint(match.name)}</span>
+      <button
+        type="button"
+        className="btn btn--secondary"
+        onClick={() => actions.openClaim({ personId: match.id, handle: null }, "hint")}
+      >
+        {CLAIM.hintClaim}
+      </button>
+      <button type="button" className="btn btn--quiet" onClick={() => setDismissed(match.id)}>
+        {CLAIM.hintDismiss}
+      </button>
+    </p>
+  );
+}
+
+/** A handle belongs to an invited bean: claim it (new here), or what to do (editing yours). */
+function InvitedProblem({
+  invited,
+  editing,
+}: {
+  readonly invited: InvitedRef;
+  readonly editing: boolean;
+}) {
+  if (editing) {
+    return (
+      <p className="q-card__error" role="alert">
+        {CLAIM.editingTaken}
+      </p>
+    );
+  }
+  return <ClaimPanel invited={invited} reason="join" titled />;
+}
+
+/**
+ * Above the button: the server's problem with the whole form, or the claim panel when a handle
+ * belongs to an invited bean; and the "bean waiting for <name>" hint.
+ */
+function SubmitNotes({
+  problem,
+  you,
+  name,
+}: {
+  readonly problem: ServerProblem | null;
+  readonly you: Person | null;
+  readonly name: string;
+}) {
+  const invited = problem?.invited ?? null;
+  const text = formProblem(problem);
+  return (
+    <>
+      {invited ? <InvitedProblem invited={invited} editing={you !== null} /> : null}
+      {text && !invited ? (
+        <p className="q-card__error" role="alert">
+          {text}
+        </p>
+      ) : null}
+      <ClaimHint you={you} name={name} quiet={invited !== null} />
+    </>
+  );
+}
+
 interface JoinSubmitProps {
   readonly editing: boolean;
   readonly pending: boolean;
-  /** A problem with the whole form (no single field), from the server. */
-  readonly problem: string | null;
+  /** What to say above the button (see `SubmitNotes`). */
+  readonly notes: ReactNode;
   readonly demo: boolean;
   readonly onCancel: (() => void) | null;
 }
 
-function JoinSubmit({ editing, pending, problem, demo, onCancel }: JoinSubmitProps) {
+function JoinSubmit({ editing, pending, notes, demo, onCancel }: JoinSubmitProps) {
   return (
     <div className="join-form__submit">
-      {problem ? (
-        <p className="q-card__error" role="alert">
-          {problem}
-        </p>
-      ) : null}
+      {notes}
       <button
         type="submit"
         className="btn btn--primary btn--big"

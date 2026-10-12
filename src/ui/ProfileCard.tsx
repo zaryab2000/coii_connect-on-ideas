@@ -3,6 +3,7 @@ import { useId } from "react";
 
 import { useActions, useApp } from "@/app/context";
 import { pointsReader } from "@/app/points";
+import { CLAIM } from "@/content/claim";
 import { topicById } from "@/data/topics";
 import type { Person } from "@/data/types";
 import { AddaButton } from "@/ui/AddaButton";
@@ -32,6 +33,7 @@ function Badges({ person }: { readonly person: Person }) {
         </li>
       ) : null}
       {person.isDemo ? <li className="badge badge--demo">Demo</li> : null}
+      {person.isInvited ? <li className="badge badge--invited">{CLAIM.badge}</li> : null}
     </ul>
   );
 }
@@ -123,6 +125,33 @@ function OthersActions({ person }: { readonly person: Person }) {
   );
 }
 
+/**
+ * An invited bean nobody has claimed: no Wave, no adda, no lock card. Maybe it's you, though
+ * (docs-internal/prd/claim-your-bean.md §7.5).
+ */
+function InvitedActions({ person }: { readonly person: Person }) {
+  const actions = useActions();
+  const backend = useApp((s) => s.mode === "backend");
+  const you = useApp((s) => s.you);
+  return (
+    <div className="profile__actions">
+      <div className="claim-card">
+        <p>{CLAIM.cardText}</p>
+        {backend && !you ? (
+          <button
+            type="button"
+            className="btn btn--primary"
+            onClick={() => actions.openClaim({ personId: person.id, handle: null }, "card")}
+          >
+            {CLAIM.cardButton}
+          </button>
+        ) : null}
+      </div>
+      <ShowOnMap id={person.id} />
+    </div>
+  );
+}
+
 /** Handles once unlocked; until then a hint that a wave reveals them. */
 function Handles({ person }: { readonly person: Person }) {
   const unlocked = useUnlocked(person.id);
@@ -177,7 +206,7 @@ export function ProfileCard({
             <h2 id={nameId} className="profile__name">
               {person.name}
             </h2>
-            <Handles person={person} />
+            {person.isInvited ? null : <Handles person={person} />}
             <Badges person={person} />
             <PointsBadge person={person} />
           </div>
@@ -187,7 +216,11 @@ export function ProfileCard({
       </header>
       <div className="panel__scroll profile__body">
         <OneLiners lines={person.oneLiners} />
-        <OthersActions person={person} />
+        {person.isInvited ? (
+          <InvitedActions person={person} />
+        ) : (
+          <OthersActions person={person} />
+        )}
         <p className="safety">
           <Icon id="shield" size={18} />
           Tip: nobody legit will ask for your seed phrase or funds.

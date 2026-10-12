@@ -88,12 +88,7 @@ export async function saveProfile(
   input: JoinInput,
   captchaToken: string | null,
 ): Promise<Me> {
-  if (!(await currentSession(supabase))) {
-    const { error } = await supabase.auth.signInAnonymously({
-      options: captchaToken ? { captchaToken } : {},
-    });
-    if (error) throw toBackendError(error);
-  }
+  await ensureSession(supabase, captchaToken);
   const { avatar } = input;
   const saved = await rpc(supabase, "upsert_profile", {
     name: input.name,
@@ -108,6 +103,28 @@ export async function saveProfile(
   });
   const me = meFrom(saved);
   if (!me) throw new Error("upsert_profile returned no profile");
+  return me;
+}
+
+/**
+ * A Turnstile-checked anonymous session, unless this browser already has a session (joining,
+ * claiming a bean, getting ready to claim with Telegram).
+ */
+export async function ensureSession(supabase: Supabase, captchaToken: string | null): Promise<void> {
+  if (await currentSession(supabase)) return;
+  const { error } = await supabase.auth.signInAnonymously({
+    options: captchaToken ? { captchaToken } : {},
+  });
+  if (error) throw toBackendError(error);
+}
+
+/**
+ * Claims the invited bean behind a claim link for this session, consent included (the claim
+ * screen asks for it): docs-internal/prd/claim-your-bean.md §6.3.
+ */
+export async function claimBean(supabase: Supabase, token: string): Promise<Me> {
+  const me = meFrom(await rpc(supabase, "claim_bean", { token, consent: true }));
+  if (!me) throw new Error("claim_bean returned no profile");
   return me;
 }
 

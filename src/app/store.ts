@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 
 import type { AddaInvite, AddaRef, JoinedAdda, MyAdda } from "@/adda/storage";
+import type { ClaimView } from "@/app/claim";
 import type { IconId, Person, TopicId } from "@/data/types";
 import type { Card } from "@/match/hand";
 import type { Chai } from "@/match/storage";
@@ -18,7 +19,8 @@ export type Overlay =
   | "drop"
   | "invite"
   | "trends"
-  | "privacy";
+  | "privacy"
+  | "claim";
 
 export interface Toast {
   readonly id: number;
@@ -153,6 +155,10 @@ export interface AppState {
   readonly race: RaceView;
   /** Which of your addas the share card shows. */
   readonly shareAddaId: string | null;
+  /** Backend mode: what the claim overlay shows (a claim link, or an invited bean you may be). */
+  readonly claim: ClaimView | null;
+  /** Open your profile on the edit form (right after claiming a bean, to check it over). */
+  readonly editYou: boolean;
   /** "My tribe" map mode: everyone sharing your topics glows, the rest dim. */
   readonly tribe: boolean;
   readonly points: PointsState;

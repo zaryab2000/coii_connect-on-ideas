@@ -72,6 +72,12 @@ export const PRIVACY = {
       ],
     },
     {
+      heading: "If the coii team added you",
+      paragraphs: [
+        `Before launch we added some people we know are coming to Devcon 8, using only their name, topics and public handle. Their handles are never shown and nobody can wave at them until they claim their bean. Don't want to be on coii? Write to ${CONTACT_EMAIL} and we'll remove you. Unclaimed beans are deleted on 6 December 2026.`,
+      ],
+    },
+    {
       heading: "Who helps run coii",
       bullets: [
         "Supabase: the database and sign-in. Your data is stored in Mumbai, India.",

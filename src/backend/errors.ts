@@ -1,4 +1,5 @@
-import type { JoinProblem } from "@/app/joinTypes";
+import type { InvitedRef, JoinProblem } from "@/app/joinTypes";
+import { CONTACT_EMAIL } from "@/content/privacy";
 
 /** What to tell someone when a backend call fails, and which join-form field it belongs to. */
 export type ErrorCopy = JoinProblem;
@@ -45,6 +46,24 @@ const COPY: Readonly<Record<string, ErrorCopy>> = {
     field: "handles",
     text: "That username is already on coii. If it's yours, verify with Telegram to claim it.",
   },
+  // Claim your bean (docs-internal/prd/claim-your-bean.md §7.7).
+  handle_invited: {
+    field: null,
+    text: "You're already on coii: the coii team added a bean with that handle. Claim it instead of making a new one.",
+  },
+  claim_invalid: {
+    field: null,
+    text: `This claim link doesn't work. Check you copied all of it, or ask for a new one: ${CONTACT_EMAIL}`,
+  },
+  claim_expired: {
+    field: null,
+    text: `This claim link has expired. Ask for a new one: ${CONTACT_EMAIL}`,
+  },
+  claim_used: {
+    field: null,
+    text: "This bean has already been claimed. If it was you, sign in with Google.",
+  },
+  not_invited: { field: null, text: "That bean isn't waiting to be claimed any more." },
   consent_required: { field: "consent", text: "Tick this so people can see your bean." },
   invalid_avatar: { field: null, text: "Your bean's look didn't save. Pick it again." },
   no_chai: { field: null, text: "That chai has ended." },
@@ -96,6 +115,10 @@ export class BackendError extends Error {
   constructor(
     readonly code: string | null,
     message: string,
+    /** The database error's DETAIL (handle_invited: the invited bean's id), if any. */
+    readonly detail: string | null = null,
+    /** The database error's HINT (handle_invited: "telegram" or "x"), if any. */
+    readonly hint: string | null = null,
   ) {
     super(message);
     this.name = "BackendError";
@@ -114,6 +137,13 @@ interface ErrorLike {
   readonly message?: string;
   readonly code?: string;
   readonly name?: string;
+  /** PostgREST passes a database error's DETAIL and HINT through as these. */
+  readonly details?: unknown;
+  readonly hint?: unknown;
+}
+
+function text(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
 }
 
 function isOffline(e: ErrorLike, message: string): boolean {
@@ -133,5 +163,17 @@ export function toBackendError(error: unknown): BackendError {
   // fetch() rejects with a TypeError when the network is down or the server can't be reached;
   // supabase-js passes that on as an error object or as its message.
   if (isOffline(e, message)) return new BackendError("offline", message);
-  return new BackendError(coiiCode(message) ?? authCode(e), message);
+  return new BackendError(
+    coiiCode(message) ?? authCode(e),
+    message,
+    text(e.details),
+    text(e.hint),
+  );
+}
+
+/** The invited bean behind a `coii:handle_invited` error, or null for any other error. */
+export function invitedRef(error: BackendError): InvitedRef | null {
+  if (error.code !== "handle_invited" || !error.detail) return null;
+  const handle = error.hint === "telegram" || error.hint === "x" ? error.hint : null;
+  return { personId: error.detail, handle };
 }

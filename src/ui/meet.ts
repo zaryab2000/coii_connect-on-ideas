@@ -1,6 +1,7 @@
 import { WAVES_PER_DAY } from "@/app/meet";
 import type { WaveResult } from "@/app/meet";
 import type { MeetView, Toast } from "@/app/store";
+import { CLAIM } from "@/content/claim";
 import type { IconId } from "@/data/types";
 import type { ChaiStatus } from "@/match/storage";
 
@@ -109,6 +110,8 @@ export function waveToast(result: WaveResult, name: string, firstWave: boolean):
         icon: "waving_hand",
         tone: "info",
       };
+    case "unclaimed":
+      return { text: CLAIM.unclaimed(first), icon: "waving_hand", tone: "info" };
     case "waved":
       return firstWave
         ? {

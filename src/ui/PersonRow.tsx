@@ -1,6 +1,7 @@
 import { memo } from "react";
 import type { CSSProperties } from "react";
 
+import { CLAIM } from "@/content/claim";
 import { topicById } from "@/data/topics";
 import type { Person, TopicId } from "@/data/types";
 import { BeanAvatar } from "@/ui/BeanAvatar";
@@ -41,6 +42,7 @@ export const PersonRow = memo(function PersonRow({ person, omitTopic, onPick }: 
           <span className="person-row__name">
             <span className="person-row__name-text">{person.name}</span>
             {person.isYou ? <span className="tag tag--you">You</span> : null}
+            {person.isInvited ? <span className="tag tag--unclaimed">{CLAIM.tag}</span> : null}
             {person.telegramVerified ? (
               <span className="person-row__verified" title="Telegram verified">
                 <Glyph name="check" size={12} />

@@ -12,6 +12,8 @@ export type Database = {
     };
     Functions: {
       block: { Args: { person: string }; Returns: undefined };
+      claim_bean: { Args: { consent: boolean; token: string }; Returns: Json };
+      claim_preview: { Args: { token: string }; Returns: Json };
       create_adda: { Args: { color: string; name: string; style: string }; Returns: string };
       delete_adda: { Args: { adda: string }; Returns: undefined };
       dismiss_chai: { Args: { person: string }; Returns: undefined };
@@ -24,7 +26,10 @@ export type Database = {
       hand_inputs: { Args: { user_id: string }; Returns: Json };
       invite_to_adda: { Args: { adda: string; person: string }; Returns: string };
       leave_adda: { Args: { adda: string }; Returns: undefined };
-      link_telegram: { Args: { tg_id: number; user_id: string; username: string }; Returns: Json };
+      link_telegram: {
+        Args: { consent?: boolean; tg_id: number; user_id: string; username: string };
+        Returns: Json;
+      };
       move_adda: { Args: { adda: string; mode: string; x: number; y: number }; Returns: undefined };
       remove_from_adda: { Args: { adda: string; person: string }; Returns: undefined };
       report: { Args: { person: string; reason: string }; Returns: undefined };

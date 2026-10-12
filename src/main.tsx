@@ -9,6 +9,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { App } from "@/app/App";
+import { takeClaimToken } from "@/app/claim";
 import { ControllerContext } from "@/app/context";
 import { createController } from "@/app/controller";
 import type { AppController } from "@/app/controller";
@@ -20,6 +21,9 @@ import { loadYou } from "@/data/localUser";
 import { demoSource } from "@/data/source";
 import { engine } from "@/engine";
 
+// First of all: a claim link's private token leaves the address before anything (analytics,
+// history, Supabase) can see it (docs-internal/prd/claim-your-bean.md §7.1).
+const claimToken = takeClaimToken();
 const params = new URLSearchParams(location.search);
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 engine.setReducedMotion(reducedMotion);
@@ -41,7 +45,7 @@ function startDemo(): AppController {
 /** Backend mode: the shared database. Loaded on demand, so demo mode never ships supabase-js. */
 async function startBackend(config: BackendConfig): Promise<AppController> {
   const { bootBackend } = await import("@/backend/boot");
-  return bootBackend(config, engine, reducedMotion);
+  return bootBackend(config, engine, reducedMotion, claimToken);
 }
 
 function render(controller: AppController): void {

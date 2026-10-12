@@ -11,7 +11,14 @@ import type { EngineApi } from "@/engine/types";
 import type { ChaiStatus } from "@/match/storage";
 import { tribeOf } from "@/match/tribe";
 
-const WAVE_RESULTS: readonly WaveResult[] = ["waved", "chai", "already", "quota", "unavailable"];
+const WAVE_RESULTS: readonly WaveResult[] = [
+  "waved",
+  "chai",
+  "already",
+  "quota",
+  "unavailable",
+  "unclaimed",
+];
 /** `get_contacts()` takes at most 200 ids per call. */
 const CONTACTS_BATCH = 200;
 
@@ -156,8 +163,14 @@ export class BackendMeet implements MeetActions {
   /** Why a wave can't go out right now (decided here, before asking the server), or null. */
   private waveBlocker(me: Person | null, personId: string): WaveResult | null {
     if (!this.state || !me || personId === me.id) return "unavailable";
+    if (this.isInvited(personId)) return "unclaimed";
     if (this.hasWaved(personId) || this.pending.has(personId)) return "already";
     return this.state.wavesLeft <= 0 ? "quota" : null;
+  }
+
+  /** An invited bean nobody has claimed: waving would send nothing (the server says so too). */
+  private isInvited(personId: string): boolean {
+    return this.deps.store.get().people.some((p) => p.id === personId && p.isInvited === true);
   }
 
   readonly wave = async (personId: string): Promise<WaveResult> => {
