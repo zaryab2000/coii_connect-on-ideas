@@ -17,9 +17,11 @@ interface DebugHook {
           id: string;
           name: string;
           isDemo: boolean;
+          isNpc?: boolean;
           telegram: string | null;
           x: string | null;
         }[];
+        npcs: { id: string; name: string; isNpc?: boolean }[];
         selectedId: string | null;
         you: { id: string; name: string; avatar: { hair: number } } | null;
         account: { google: boolean; hidden: boolean } | null;
@@ -45,6 +47,7 @@ interface DebugHook {
         captchaToken: null,
       ): Promise<{ ok: true; person: { id: string } } | { ok: false }>;
       locate(id: string): void;
+      selectPerson(id: string | null): void;
       openPanel(panel: string): void;
       createAdda(look: { style: string; color: string }, name?: string): Promise<string | null>;
       fit(): void;

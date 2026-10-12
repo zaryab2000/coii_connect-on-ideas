@@ -93,6 +93,8 @@ export interface Person {
   readonly telegramVerified: boolean;
   readonly ticketVerified: boolean;
   readonly isDemo: boolean;
+  /** A background NPC bean (grey, roams, not a person): never in any list, count or feature. */
+  readonly isNpc?: boolean;
   readonly isYou: boolean;
   /** Name pool used for demo people; null for real people. */
   readonly origin: Origin | null;

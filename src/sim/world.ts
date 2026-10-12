@@ -4,6 +4,7 @@ import { segmentHitsCircle, sunflowerSpots } from "@/sim/geometry";
 import { SpatialGrid } from "@/sim/grid";
 import { ADDA_SPOTS } from "@/sim/layout";
 import type { VenueLayout, Zone } from "@/sim/layout";
+import { nextRoamZone, roamDwell } from "@/sim/roam";
 
 export const State = {
   Idle: 0,
@@ -38,6 +39,8 @@ export interface AgentSpec {
   readonly isYou: boolean;
   /** Keeps the agent inside this zone for good (adda stand-ins). */
   readonly pinnedZone?: number;
+  /** An NPC: no home booth, roams between the chai hub and booths, never chats. */
+  readonly roams?: boolean;
 }
 
 export class Agent {
@@ -47,6 +50,7 @@ export class Agent {
   isYou = false;
   /** Zone this agent never leaves, or -1 to roam its topics. */
   pinned = -1;
+  roams = false;
   /** Stands still until unfrozen (an adda invite nobody has answered yet). */
   frozen = false;
   zone = 0;
@@ -242,6 +246,7 @@ export class World {
     a.topics = [...spec.topics];
     a.isYou = spec.isYou;
     a.pinned = spec.pinnedZone ?? -1;
+    a.roams = spec.roams ?? false;
     a.speed = this.rng.range(WALK_MIN, WALK_MAX);
     a.facing = this.rng.chance(0.5) ? 1 : -1;
 
@@ -253,7 +258,9 @@ export class World {
   }
 
   private placeScattered(index: number, a: Agent): void {
-    a.zone = this.pickZone(a, a.pinned < 0 && this.rng.chance(0.04));
+    a.zone = a.roams
+      ? nextRoamZone(-1, this.boothCount(), this.layout.plazaIndex, () => this.rng.next())
+      : this.pickZone(a, a.pinned < 0 && this.rng.chance(0.04));
     this.claimSpot(index, a.zone);
     a.x = a.tx;
     a.y = a.ty;
@@ -450,6 +457,7 @@ export class World {
       a.t -= dt;
       if (a.t > 0 || a.frozen) return;
       if (a.pinned >= 0) this.decideInPlace(index, a);
+      else if (a.roams) this.roamOn(index, a);
       else this.decideNext(index, a);
     },
     [State.Chatting]: (index, a, dt) => this.updateChat(index, a, dt),
@@ -490,6 +498,19 @@ export class World {
     } else {
       this.toIdle(a, this.idleDuration());
     }
+  }
+
+  /** Booth zones come first in the layout, one per topic; the plaza is the first after them. */
+  private boothCount(): number {
+    return this.layout.plazaIndex;
+  }
+
+  /** An NPC's next stop: the hub or another booth (see sim/roam.ts). */
+  private roamOn(index: number, a: Agent): void {
+    const next = nextRoamZone(a.zone, this.boothCount(), this.layout.plazaIndex, () =>
+      this.rng.next(),
+    );
+    this.travel(index, a, next, State.Commuting);
   }
 
   /** Pinned agents (adda stand-ins) only stroll around their zone or stand. */
@@ -533,7 +554,7 @@ export class World {
     }
     const wasArriving = a.state === State.Arriving;
     const wasRunning = a.state === State.RunningHome;
-    this.toIdle(a, this.idleDuration());
+    this.toIdle(a, a.roams ? roamDwell(() => this.rng.next()) : this.idleDuration());
     if (wasRunning) a.idleKind = IdleKind.Hop;
     if (wasArriving) this.emit("arrive", index, a.x, a.y);
   }
@@ -774,7 +795,15 @@ export class World {
   }
 
   private canChat(a: Agent | undefined): boolean {
-    return !!a && a.active && !a.frozen && a.state === State.Idle && a.partner === -1 && a.t > 1.5;
+    return (
+      !!a &&
+      a.active &&
+      !a.roams &&
+      !a.frozen &&
+      a.state === State.Idle &&
+      a.partner === -1 &&
+      a.t > 1.5
+    );
   }
 
   private startChat(i: number, j: number): void {

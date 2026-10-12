@@ -1,8 +1,9 @@
 import { useEffect, useRef } from "react";
 
-import type { Avatar, TopicId } from "@/data/types";
+import type { Avatar } from "@/data/types";
 import type { FaceKind } from "@/engine/beanArt";
 import { renderAvatar } from "@/ui/avatar";
+import type { Shirt } from "@/ui/avatar";
 
 type Paint = () => void;
 
@@ -46,7 +47,8 @@ function whenVisible(el: Element, paint: Paint): () => void {
 
 interface BeanAvatarProps {
   readonly avatar: Avatar;
-  readonly topic: TopicId;
+  /** Shirt colour: the person's primary topic, or "npc" for the grey background beans. */
+  readonly topic: Shirt;
   readonly size: number;
   readonly face?: FaceKind;
   /** Paint only once scrolled near the viewport (long lists). */

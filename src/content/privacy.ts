@@ -9,6 +9,9 @@ export const CONTACT_EMAIL = "zartaj.afsar@gmail.com";
 export const UNOFFICIAL =
   "coii is an unofficial community project. It isn't run by or affiliated with Devcon or the Ethereum Foundation.";
 
+/** The sign-off at the bottom of the join form. */
+export const JOIN_CREDIT = "Built with Love, by Decipher Club ❤️";
+
 /** Next to the join form's checkbox: the only consent step, so it says everything that matters. */
 export const CONSENT = {
   label:
@@ -63,6 +66,7 @@ export const PRIVACY = {
         "Anyone who opens coii sees your bean, name, topics, what you're here for, your one-liners, your badges and your wave points.",
         "Nobody else sees your handles, who you waved at, who waved at you (until you both have), who you blocked, or any report.",
         "If someone invites you to their adda, you'll see who it's from. People in the same adda can see each other.",
+        "Grey beans marked NPC are not people and hold no data about anyone.",
       ],
     },
     {

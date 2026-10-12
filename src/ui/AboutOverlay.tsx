@@ -37,6 +37,7 @@ const PROMISES: readonly string[] = [
   "No app to install and no wallet to connect. It's just a web page.",
   "Leave anytime and your bean walks out.",
   "Meet in public parts of the venue. Nobody legit will ask for your seed phrase or funds.",
+  "Grey beans are NPCs: friendly background walkers, not real people.",
 ];
 
 const CROWD: readonly { readonly avatar: Avatar; readonly topic: TopicId }[] = [
