@@ -26,6 +26,22 @@ export const MAX_AGE_S = 10 * 60;
 /** Clocks drift; a login up to this far in the future is tolerated. */
 const MAX_SKEW_S = 5 * 60;
 
+/**
+ * A request body as the app sends it: Telegram's signed fields, plus `consent: true` when a
+ * caller without a bean is claiming an invited bean. Only an exact `true` counts as consent.
+ */
+export function splitLogin(body: unknown): {
+  readonly payload: TelegramPayload;
+  readonly consent: boolean;
+} {
+  const fields: Record<string, unknown> =
+    typeof body === "object" && body !== null && !Array.isArray(body)
+      ? (body as Record<string, unknown>)
+      : {};
+  const { consent, ...signed } = fields;
+  return { payload: signed as unknown as TelegramPayload, consent: consent === true };
+}
+
 /** `key=value` lines for every field except `hash`, sorted by key (Telegram's rule). */
 export function dataCheckString(payload: Readonly<Record<string, unknown>>): string {
   return Object.keys(payload)

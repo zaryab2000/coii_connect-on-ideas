@@ -7,6 +7,7 @@ import {
   cleanup,
   join,
   PUBLISHABLE_KEY,
+  signIn,
   SUPABASE_URL,
   TEST_BOT_TOKEN,
 } from "./helpers";
@@ -22,7 +23,7 @@ async function member(overrides = {}): Promise<Member & { me: Me }> {
   return m;
 }
 
-async function token(m: Member): Promise<string> {
+async function token(m: Pick<Member, "client">): Promise<string> {
   const { data } = await m.client.auth.getSession();
   const access = data.session?.access_token;
   if (!access) throw new Error("member has no session");
@@ -114,6 +115,24 @@ describe("telegram-link", () => {
     expect(res.status).toBe(200);
     const me = (await res.json()) as Me & { telegram_verified: boolean };
     expect(me).toMatchObject({ telegram: username, telegram_verified: true });
+  });
+
+  it("still verifies when the app sends its consent flag next to the login", async () => {
+    const asha = await member();
+    const username = `tgc${Date.now().toString(36)}`;
+    const login = await signedLogin(username, Date.now() + 2);
+    const res = await post("telegram-link", asha, { ...login, consent: true });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ telegram: username, telegram_verified: true });
+  });
+
+  it("tells someone without a bean and no invited match to join first", async () => {
+    const stranger = await signIn();
+    created.push(stranger.userId);
+    const login = await signedLogin(`tgn${Date.now().toString(36)}`, Date.now() + 3);
+    const res = await post("telegram-link", stranger, { ...login, consent: true });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "coii:no_profile" });
   });
 
   it("refuses a tampered login", async () => {

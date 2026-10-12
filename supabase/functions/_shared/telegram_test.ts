@@ -1,6 +1,12 @@
 import { assertEquals } from "jsr:@std/assert@1.0.13";
 
-import { checkTelegram, dataCheckString, MAX_AGE_S, telegramHash } from "./telegram.ts";
+import {
+  checkTelegram,
+  dataCheckString,
+  MAX_AGE_S,
+  splitLogin,
+  telegramHash,
+} from "./telegram.ts";
 import type { TelegramPayload } from "./telegram.ts";
 
 const TOKEN = "local-test-bot-token";
@@ -56,4 +62,18 @@ Deno.test("needs a Telegram username", async () => {
     ok: false,
     code: "telegram_no_username",
   });
+});
+
+Deno.test("takes the app's consent flag off before the signature check", async () => {
+  const login = await signed(ASHA);
+  const { payload, consent } = splitLogin({ ...login, consent: true });
+  assertEquals(consent, true);
+  assertEquals(payload, login);
+  assertEquals((await checkTelegram(payload, TOKEN, NOW)).ok, true);
+});
+
+Deno.test("only an exact true is consent", () => {
+  assertEquals(splitLogin({ ...ASHA, hash: "x", consent: "true" }).consent, false);
+  assertEquals(splitLogin({ ...ASHA, hash: "x" }).consent, false);
+  assertEquals(splitLogin(null), { payload: {} as never, consent: false });
 });
