@@ -9,7 +9,16 @@ import type { TrendRow } from "@/match/trends";
 export type Panel = "none" | "profile" | "booth" | "people" | "meet" | "adda";
 
 /** Centred cards above everything else; the venue keeps moving behind them. */
-export type Overlay = "none" | "about" | "you" | "board" | "share" | "drop" | "invite" | "trends";
+export type Overlay =
+  | "none"
+  | "about"
+  | "you"
+  | "board"
+  | "share"
+  | "drop"
+  | "invite"
+  | "trends"
+  | "privacy";
 
 export interface Toast {
   readonly id: number;
@@ -85,9 +94,38 @@ export interface Arrival {
   readonly at: number;
 }
 
+/**
+ * Demo mode: a generated crowd, everything kept in this browser. Backend mode: the shared
+ * database (docs/prd/database.md §15).
+ */
+export type AppMode = "demo" | "backend";
+
+/** Someone's wave points from the database: all-time and this Meet day. */
+export interface Score {
+  readonly p: number;
+  readonly d: number;
+}
+
+/** Backend mode: your signed-in account. */
+export interface AccountView {
+  /** Google is linked, so the bean survives signing out and can be restored elsewhere. */
+  readonly google: boolean;
+  /** Your bean is hidden after reports: you can still see and edit it, but nobody else can. */
+  readonly hidden: boolean;
+}
+
 export interface AppState {
+  readonly mode: AppMode;
   /** Everyone currently in the venue: demo crowd, live arrivals and you. */
   readonly people: readonly Person[];
+  /** Backend mode: wave points from the database, by person id. Null in demo mode. */
+  readonly scores: ReadonlyMap<string, Score> | null;
+  /** Backend mode: your session, or null when you have none (demo mode: always null). */
+  readonly account: AccountView | null;
+  /** Backend mode: Cloudflare Turnstile site key for the join form. */
+  readonly turnstileSiteKey: string | null;
+  /** A profile from demo mode in this browser, offered once to prefill the join form. */
+  readonly joinPrefill: Person | null;
   readonly selectedId: string | null;
   readonly boothTopic: TopicId | null;
   readonly panel: Panel;

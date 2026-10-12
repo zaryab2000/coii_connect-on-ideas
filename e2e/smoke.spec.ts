@@ -1,47 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
-interface DebugHook {
-  engine: {
-    stats(): { beans: number; fps: number };
-    pause(): void;
-    focusBooth(topic: string): void;
-    resume(): void;
-    screenPositionOf(id: string): { x: number; y: number } | null;
-    screenPositionOfAdda(id: string): { x: number; y: number } | null;
-    personAtScreen(x: number, y: number): string | null;
-  };
-  controller: {
-    store: {
-      get(): {
-        people: { id: string; isDemo: boolean; x: string | null }[];
-        selectedId: string | null;
-        you: { id: string; avatar: { hair: number } } | null;
-        tribe: boolean;
-        meet: { hand: { personId: string }[]; waved: string[] } | null;
-        adda: {
-          addas: { id: string; name: string; members: { personId: string; status: string }[] }[];
-          joined: { ownerId: string }[];
-        } | null;
-      };
-    };
-    actions: {
-      join(input: unknown): { id: string };
-      locate(id: string): void;
-      openPanel(panel: string): void;
-      createAdda(look: { style: string; color: string }, name?: string): string | null;
-      fit(): void;
-      focusAdda(id: string): void;
-    };
-  };
-}
-
-declare global {
-  interface Window {
-    __coii?: DebugHook;
-  }
-}
-
 function collectErrors(page: Page): string[] {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -132,9 +91,9 @@ test("up close, a few one-liners pop up at a time and tapping one opens that per
 test("joining puts you in the venue and you are still there after a reload", async ({ page }) => {
   await page.goto("/?still");
   await waitForCrowd(page);
-  const id = await page.evaluate(
-    () =>
-      window.__coii?.controller.actions.join({
+  const id = await page.evaluate(async () => {
+    const outcome = await window.__coii?.controller.actions.join(
+      {
         name: "Test Person",
         telegram: "test_person",
         x: null,
@@ -142,8 +101,11 @@ test("joining puts you in the venue and you are still there after a reload", asy
         intent: [],
         oneLiners: ["testing coii"],
         avatar: { skin: 2, hair: 0, hairColor: 0, accessory: 0 },
-      }).id,
-  );
+      },
+      null,
+    );
+    return outcome?.ok ? outcome.person.id : null;
+  });
   expect(id).toBeTruthy();
   await page.reload();
   await page.waitForFunction(() => (window.__coii?.engine.stats().beans ?? 0) >= 1501, undefined, {
@@ -228,15 +190,18 @@ test("tapping your own bean opens your profile overlay, not a side profile", asy
 
 async function joinQuickly(page: Page): Promise<void> {
   await page.evaluate(() =>
-    window.__coii?.controller.actions.join({
-      name: "Meet Tester",
-      telegram: "meet_tester",
-      x: null,
-      topics: ["privacy", "ai"],
-      intent: ["building"],
-      oneLiners: ["testing the daily picks"],
-      avatar: { skin: 1, hair: 2, hairColor: 0, accessory: 0 },
-    }),
+    window.__coii?.controller.actions.join(
+      {
+        name: "Meet Tester",
+        telegram: "meet_tester",
+        x: null,
+        topics: ["privacy", "ai"],
+        intent: ["building"],
+        oneLiners: ["testing the daily picks"],
+        avatar: { skin: 1, hair: 2, hairColor: 0, accessory: 0 },
+      },
+      null,
+    ),
   );
 }
 
@@ -279,11 +244,16 @@ test("Meet: reveal today's 3, wave at one and light up My tribe", async ({ page 
   await expect(slot.getByRole("button", { name: "See how to reach them" })).toBeVisible();
   await expect(page.getByText("49 waves left today")).toBeVisible();
 
-  await page.keyboard.press("Escape");
-  const tribe = page.getByRole("button", { name: /My tribe/ });
-  await tribe.click();
-  await expect(tribe).toHaveAttribute("aria-pressed", "true");
-  expect(await page.evaluate(() => window.__coii?.controller.store.get().tribe)).toBe(true);
+  // Skipping the other two finishes today's picks; "Light up My tribe" then lights the map.
+  const skips = page.locator(".meet-slot").getByRole("button", { name: "Skip" });
+  await skips.first().click();
+  await expect(skips).toHaveCount(1);
+  await skips.first().click();
+  await expect(skips).toHaveCount(0);
+  await page.getByRole("button", { name: "Light up My tribe" }).click();
+  await expect
+    .poll(() => page.evaluate(() => window.__coii?.controller.store.get().tribe))
+    .toBe(true);
   expect(errors).toEqual([]);
 });
 
@@ -476,9 +446,9 @@ test("adda: drag someone onto your tent, wave + add, and they fall in", async ({
   await page.goto("/?still");
   await waitForCrowd(page);
   await joinQuickly(page);
-  const addaId = await page.evaluate(() => {
+  const addaId = await page.evaluate(async () => {
     const actions = window.__coii?.controller.actions;
-    const id = actions?.createAdda({ style: "chhatri", color: "leaf" }, "ZK crew") ?? "";
+    const id = (await actions?.createAdda({ style: "chhatri", color: "leaf" }, "ZK crew")) ?? "";
     actions?.focusAdda(id);
     return id;
   });
@@ -567,7 +537,9 @@ test("the trending chip opens a live narrative race of all ten booths", async ({
   // The booth signs carry the race too: flames and joins today.
   await expect(page.locator(".booth-heat:not([hidden])").first()).toBeVisible();
   const hudActions = page.locator(".hud__chips-row");
-  await expect(hudActions.getByRole("button")).toHaveCount(2);
+  // Board, race, and the "Demo crowd" label (made-up people are always labelled).
+  await expect(hudActions.getByRole("button")).toHaveCount(3);
+  await expect(hudActions.getByRole("button", { name: /Demo crowd/ })).toBeVisible();
   const raceButton = hudActions.getByRole("button", { name: /^Narrative race/ });
   await expect(raceButton).toHaveText("Narrative race");
   await raceButton.click();
@@ -612,4 +584,27 @@ test("once joined, the race shows your booth's place and invites people to it", 
   await expect(invite.getByLabel("Join link")).toHaveValue(
     "https://coii.decipherclub.com/join/privacy",
   );
+});
+
+test("/privacy opens the privacy notice; the join form and About link to it", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto("/privacy?still");
+  const notice = page.getByRole("dialog", { name: "Privacy" });
+  await expect(notice).toBeVisible();
+  await expect(notice.getByText("zartaj.afsar@gmail.com").first()).toBeVisible();
+  await expect(notice.getByText(/unofficial community project/)).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe("/");
+  await page.keyboard.press("Escape");
+  await expect(notice).toBeHidden();
+
+  await page.goto("/join?still");
+  const form = page.getByRole("dialog", { name: "Join coii" });
+  await expect(
+    form.getByText(
+      "Your bean, name, topics and one-liners are public. Your handles show only to people who wave at you.",
+    ),
+  ).toBeVisible();
+  await form.getByRole("button", { name: "How coii uses your data" }).click();
+  await expect(page.getByRole("dialog", { name: "Privacy" })).toBeVisible();
+  expect(errors).toEqual([]);
 });

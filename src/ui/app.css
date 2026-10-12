@@ -352,3 +352,14 @@
 .app[data-motion="reduced"] .map-layer {
   transition: none;
 }
+
+/* Shown by index.html until the app renders (backend mode waits for the venue first). */
+.boot-status {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  color: var(--ink);
+}

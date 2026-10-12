@@ -31,6 +31,13 @@ export function readJoinLink(pathname: string, search: string): { topic: TopicId
   return { topic: asTopic(params.get("join")) };
 }
 
+/** The privacy notice's own address: `https://coii.decipherclub.com/privacy`. */
+export const PRIVACY_PATH = "/privacy";
+
+export function isPrivacyLink(pathname: string): boolean {
+  return pathname.replace(/\/+$/, "").toLowerCase() === PRIVACY_PATH;
+}
+
 /** The path a shared narrative race link opens: the race, over the live venue. */
 export const TRENDS_PATH = "/trends";
 

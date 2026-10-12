@@ -1,30 +1,36 @@
 import { createAdda } from "@/app/adda";
 import type { AddaActions, AddaController } from "@/app/adda";
+import type { JoinInput, JoinOutcome } from "@/app/joinTypes";
 import { createMeet, realClock } from "@/app/meet";
 import type { MeetActions, MeetClock, MeetController } from "@/app/meet";
 import { createPoints, loadPoints } from "@/app/points";
 import type { PointsController } from "@/app/points";
 import { createStore } from "@/app/store";
-import type { AppState, Overlay, Panel, Store, Toast } from "@/app/store";
+import type { AppMode, AppState, Overlay, Panel, Store, Toast } from "@/app/store";
 import { createTrends } from "@/app/trends";
 import type { TrendsController } from "@/app/trends";
 import { clearYou, saveYou } from "@/data/localUser";
+import type { ReportReason } from "@/data/report";
 import type { PeopleSource } from "@/data/source";
 import { topicById } from "@/data/topics";
-import type { Avatar, IconId, IntentId, Person, TopicId } from "@/data/types";
+import type { IconId, Person, TopicId } from "@/data/types";
 import type { EngineApi } from "@/engine/types";
 
-export interface JoinInput {
-  readonly name: string;
-  readonly telegram: string | null;
-  readonly x: string | null;
-  readonly topics: readonly TopicId[];
-  readonly intent: readonly IntentId[];
-  readonly oneLiners: readonly string[];
-  readonly avatar: Avatar;
+/** Your account in backend mode: safety tools and Google. Demo mode never shows these. */
+export interface AccountActions {
+  /** Reports someone to the moderators; three reports hide a bean. Resolves false on failure. */
+  report(personId: string, reason: ReportReason): Promise<boolean>;
+  /** Blocks someone: no waves, chais or addas between you, ever. Resolves false on failure. */
+  block(personId: string): Promise<boolean>;
+  /** "Save my bean": links Google so the bean survives this browser (redirects to Google). */
+  saveBean(): Promise<void>;
+  /** "Already joined? Sign in with Google" on another device (redirects to Google). */
+  signInWithGoogle(): Promise<void>;
+  /** Signs out but keeps the bean; only offered when Google is linked. */
+  signOut(): Promise<void>;
 }
 
-export interface Actions extends MeetActions, AddaActions {
+export interface Actions extends MeetActions, AddaActions, AccountActions {
   selectPerson(id: string | null): void;
   locate(id: string): void;
   openBooth(topic: TopicId): void;
@@ -40,8 +46,13 @@ export interface Actions extends MeetActions, AddaActions {
   toggleHighlight(topic: TopicId): void;
   clearHighlight(): void;
   fit(): void;
-  join(input: JoinInput): Person;
-  leave(): void;
+  /**
+   * Puts your bean on the map, or saves your edits. Backend mode needs a Turnstile token the
+   * first time (no session yet); demo mode ignores it.
+   */
+  join(input: JoinInput, captchaToken: string | null): Promise<JoinOutcome>;
+  /** Takes your bean off coii for good. Resolves false if it didn't work (you stay). */
+  leave(): Promise<boolean>;
   pushToast(text: string, icon: IconId | null, tone: Toast["tone"]): void;
   dismissToast(id: number): void;
 }
@@ -68,8 +79,12 @@ export interface ControllerOptions {
   readonly clock?: MeetClock;
 }
 
-function topicNames(person: Person): string {
-  return person.topics.map((t) => topicById(t).short).join(" + ");
+export type AppStore = Store<AppState>;
+
+/** "Rahul just walked in · DeFi + Privacy". */
+export function arrivalText(person: Person): string {
+  const topics = person.topics.map((t) => topicById(t).short).join(" + ");
+  return `${person.name.split(" ")[0] ?? person.name} just walked in · ${topics}`;
 }
 
 function newId(): string {
@@ -95,7 +110,44 @@ function personFromJoin(input: JoinInput): Person {
   };
 }
 
-type AppStore = Store<AppState>;
+export interface InitialState {
+  readonly mode: AppMode;
+  readonly people: readonly Person[];
+  readonly you: Person | null;
+  readonly reducedMotion: boolean;
+}
+
+/** App state before anything happened; both modes start here. */
+export function initialState(init: InitialState): AppState {
+  return {
+    mode: init.mode,
+    people: init.you ? [...init.people, init.you] : [...init.people],
+    scores: null,
+    account: null,
+    turnstileSiteKey: null,
+    joinPrefill: null,
+    selectedId: null,
+    boothTopic: null,
+    panel: "none",
+    overlay: "none",
+    highlight: [],
+    framed: false,
+    joinTopic: null,
+    you: init.you,
+    toasts: [],
+    meet: null,
+    adda: null,
+    addaDrop: null,
+    shareAddaId: null,
+    inviteTopic: null,
+    lastArrival: null,
+    race: { rows: [], hot: null },
+    tribe: false,
+    points: { extra: new Map(), lastBump: null },
+    reducedMotion: init.reducedMotion,
+    ready: false,
+  };
+}
 
 /** Clears the map selection, e.g. when the profile gives way to another panel. */
 function deselect(engine: EngineApi, store: AppStore): void {
@@ -104,11 +156,11 @@ function deselect(engine: EngineApi, store: AppStore): void {
   store.set({ selectedId: null });
 }
 
-/** Takes you off the map and out of storage; returns who was removed. */
-function removeYou(engine: EngineApi, store: AppStore): Person | null {
+/** Takes you off the map (and, in demo mode, out of storage); returns who was removed. */
+export function removeYou(engine: EngineApi, store: AppStore): Person | null {
   const you = store.get().you;
   if (!you) return null;
-  clearYou();
+  if (store.get().mode === "demo") clearYou();
   engine.remove(you.id);
   store.set((s) => ({
     you: null,
@@ -119,9 +171,9 @@ function removeYou(engine: EngineApi, store: AppStore): Person | null {
   return you;
 }
 
-type ToastActions = Pick<Actions, "pushToast" | "dismissToast">;
+export type ToastActions = Pick<Actions, "pushToast" | "dismissToast">;
 
-function toastActions(store: AppStore): ToastActions {
+export function toastActions(store: AppStore): ToastActions {
   let toastId = 0;
   return {
     pushToast(text, icon, tone) {
@@ -156,7 +208,7 @@ function showYouOnMap(engine: EngineApi, store: AppStore, id: string): void {
   engine.locate(id);
 }
 
-type PanelActions = Pick<
+export type PanelActions = Pick<
   Actions,
   | "selectPerson"
   | "locate"
@@ -169,7 +221,7 @@ type PanelActions = Pick<
   | "openInvite"
 >;
 
-function panelActions(engine: EngineApi, store: AppStore): PanelActions {
+export function panelActions(engine: EngineApi, store: AppStore): PanelActions {
   const openPanel = (panel: Panel): void => {
     if (panel !== "profile") deselect(engine, store);
     store.set({ panel });
@@ -210,9 +262,9 @@ function panelActions(engine: EngineApi, store: AppStore): PanelActions {
   };
 }
 
-type MapActions = Pick<Actions, "toggleHighlight" | "clearHighlight" | "fit">;
+export type MapActions = Pick<Actions, "toggleHighlight" | "clearHighlight" | "fit">;
 
-function mapActions(engine: EngineApi, store: AppStore): MapActions {
+export function mapActions(engine: EngineApi, store: AppStore): MapActions {
   return {
     toggleHighlight(topic) {
       const current = store.get().highlight;
@@ -233,7 +285,22 @@ function mapActions(engine: EngineApi, store: AppStore): MapActions {
   };
 }
 
-/** The game loops that follow you in and out. */
+/** You just walked in (or back in): every panel closes and your bean comes in from the gate. */
+export function walkIn(engine: EngineApi, store: AppStore, person: Person): void {
+  store.set((s) => ({
+    you: person,
+    people: [...s.people.filter((p) => p.id !== person.id), person],
+    panel: "none",
+    overlay: "none",
+    selectedId: null,
+    framed: false,
+    joinTopic: null,
+  }));
+  engine.select(null);
+  engine.spawn(person, true);
+}
+
+/** The demo game loops that follow you in and out. */
 interface Loops {
   readonly meet: MeetController;
   readonly adda: AddaController;
@@ -252,17 +319,7 @@ function youActions(
       removeYou(engine, store);
       const person = personFromJoin(input);
       const saved = saveYou(person);
-      store.set((s) => ({
-        you: person,
-        people: [...s.people, person],
-        panel: "none",
-        overlay: "none",
-        selectedId: null,
-        framed: false,
-        joinTopic: null,
-      }));
-      engine.select(null);
-      engine.spawn(person, true);
+      walkIn(engine, store, person);
       trends.arrived(person);
       meet.forget();
       meet.sync();
@@ -276,22 +333,23 @@ function youActions(
         "party_popper",
         "success",
       );
-      return person;
+      return Promise.resolve({ ok: true, person });
     },
     leave() {
-      if (!removeYou(engine, store)) return;
+      if (!removeYou(engine, store)) return Promise.resolve(false);
       store.set({ overlay: "none", joinTopic: null });
       meet.forget();
       adda.forget();
       trends.sync();
       points.refreshCrowns();
       toasts.pushToast("You left coii. Come back anytime.", "waving_hand", "info");
+      return Promise.resolve(true);
     },
   };
 }
 
 /** Mirrors taps on the map (beans, empty floor, booth signs) into app state. */
-function followEngine(engine: EngineApi, store: AppStore): void {
+export function followEngine(engine: EngineApi, store: AppStore): void {
   engine.on("ready", () => store.set({ ready: true }));
   engine.on("select", (id) => {
     if (isYourId(store, id)) openYou(engine, store);
@@ -310,7 +368,7 @@ function followEngine(engine: EngineApi, store: AppStore): void {
 function meetActionsOf(meet: MeetController): MeetActions {
   return {
     revealCard: meet.revealCard,
-    wave: meet.wave,
+    wave: (personId) => Promise.resolve(meet.wave(personId)),
     skip: meet.skip,
     dismissChai: meet.dismissChai,
     markMessaged: meet.markMessaged,
@@ -322,11 +380,11 @@ function meetActionsOf(meet: MeetController): MeetActions {
 
 function addaActionsOf(adda: AddaController): AddaActions {
   return {
-    createAdda: adda.createAdda,
+    createAdda: (look, name) => Promise.resolve(adda.createAdda(look, name)),
     editAdda: adda.editAdda,
     deleteAdda: adda.deleteAdda,
-    inviteToAdda: adda.inviteToAdda,
-    waveAndAdd: adda.waveAndAdd,
+    inviteToAdda: (personId, addaId) => Promise.resolve(adda.inviteToAdda(personId, addaId)),
+    waveAndAdd: (personId, addaId) => Promise.resolve(adda.waveAndAdd(personId, addaId)),
     removeFromAdda: adda.removeFromAdda,
     acceptAddaInvite: adda.acceptAddaInvite,
     declineAddaInvite: adda.declineAddaInvite,
@@ -339,8 +397,21 @@ function addaActionsOf(adda: AddaController): AddaActions {
   };
 }
 
+/** Demo mode has no accounts: the UI never offers these, and they do nothing. */
+const demoAccount: AccountActions = {
+  report: () => Promise.resolve(false),
+  block: () => Promise.resolve(false),
+  saveBean: () => Promise.resolve(),
+  signInWithGoogle: () => Promise.resolve(),
+  signOut: () => Promise.resolve(),
+};
+
 /** Taps, drags and drops on adda tents. */
-function followAddaTents(engine: EngineApi, store: AppStore, adda: AddaController): void {
+export function followAddaTents(
+  engine: EngineApi,
+  store: AppStore,
+  adda: Pick<AddaController, "moveAdda" | "beanDropped">,
+): void {
   engine.on("addaTap", () => {
     deselect(engine, store);
     store.set({ panel: "adda", framed: false });
@@ -349,30 +420,24 @@ function followAddaTents(engine: EngineApi, store: AppStore, adda: AddaControlle
   engine.on("beanDropped", adda.beanDropped);
 }
 
-/** Owns app state and keeps the engine in sync with it. UI components only call `actions`. */
+/** Someone opened a shared join link: the join form, or your profile if you're already in. */
+export function openJoinLink(store: AppStore, actions: Actions, topic: TopicId | null): void {
+  if (!store.get().you) {
+    actions.startJoin(topic);
+    return;
+  }
+  actions.openOverlay("you");
+  actions.pushToast("You're already on coii. Here's your bean.", "waving_hand", "info");
+}
+
+/**
+ * Demo mode: owns app state, keeps the engine in sync with it and runs the game loops in this
+ * browser. UI components only call `actions`.
+ */
 export function createController(engine: EngineApi, options: ControllerOptions): AppController {
   const store = createStore<AppState>({
-    people: options.you ? [...options.people, options.you] : [...options.people],
-    selectedId: null,
-    boothTopic: null,
-    panel: "none",
-    overlay: "none",
-    highlight: [],
-    framed: false,
-    joinTopic: null,
-    you: options.you,
-    toasts: [],
-    meet: null,
-    adda: null,
-    addaDrop: null,
-    shareAddaId: null,
-    inviteTopic: null,
-    lastArrival: null,
-    race: { rows: [], hot: null },
-    tribe: false,
+    ...initialState({ mode: "demo", ...options }),
     points: loadPoints(),
-    reducedMotion: options.reducedMotion,
-    ready: false,
   });
   const toasts = toastActions(store);
   const clock = options.clock ?? realClock;
@@ -393,6 +458,7 @@ export function createController(engine: EngineApi, options: ControllerOptions):
     ...toasts,
     ...meetActionsOf(meet),
     ...addaActionsOf(adda),
+    ...demoAccount,
   };
   followEngine(engine, store);
   followAddaTents(engine, store, adda);
@@ -409,21 +475,10 @@ export function createController(engine: EngineApi, options: ControllerOptions):
         store.set((s) => ({ people: [...s.people, person] }));
         engine.spawn(person, true);
         trends.arrived(person);
-        actions.pushToast(
-          `${person.name.split(" ")[0] ?? person.name} just walked in · ${topicNames(person)}`,
-          "waving_hand",
-          "arrival",
-        );
+        actions.pushToast(arrivalText(person), "waving_hand", "arrival");
       });
     },
     startDemoWaves: points.startDemoWaves,
-    openJoinLink(topic) {
-      if (!store.get().you) {
-        actions.startJoin(topic);
-        return;
-      }
-      actions.openOverlay("you");
-      actions.pushToast("You're already on coii. Here's your bean.", "waving_hand", "info");
-    },
+    openJoinLink: (topic) => openJoinLink(store, actions, topic),
   };
 }

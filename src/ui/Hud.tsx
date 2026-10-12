@@ -1,5 +1,6 @@
 import "@/ui/hud.css";
-import type { Ref } from "react";
+import { useId, useState } from "react";
+import type { MouseEvent, Ref } from "react";
 
 import { useActions, useApp } from "@/app/context";
 import { pointsReader } from "@/app/points";
@@ -30,6 +31,41 @@ function LivePill() {
   );
 }
 
+/** Places the explainer bubble under its chip just before the popover opens. */
+function placePopover(e: MouseEvent<HTMLButtonElement>, popoverId: string): void {
+  const pop = document.getElementById(popoverId);
+  if (!pop) return;
+  const rect = e.currentTarget.getBoundingClientRect();
+  pop.style.top = `${Math.round(rect.bottom + 10)}px`;
+  pop.style.left = `${Math.round(Math.max(12, rect.left))}px`;
+}
+
+/** Labels made-up people: always in demo mode, and in backend mode while seed beans remain. */
+function DemoChip() {
+  const popoverId = useId();
+  const shown = useApp((s) => s.mode === "demo" || s.people.some((p) => p.isDemo));
+  if (!shown) return null;
+  return (
+    <>
+      <button
+        type="button"
+        className="demo-chip"
+        popoverTarget={popoverId}
+        onClick={(e) => placePopover(e, popoverId)}
+      >
+        Demo crowd
+        <Glyph name="info" size={16} />
+      </button>
+      <div id={popoverId} popover="auto" className="demo-pop">
+        <p>
+          <strong>Demo crowd.</strong> These names and handles are made up. Real people show up here
+          once sign-ups open.
+        </p>
+      </div>
+    </>
+  );
+}
+
 /** What the board pill says: your rank and points, or who leads before you join. */
 function boardSummary(state: AppState): { text: string; label: string } {
   const read = pointsReader(state);
@@ -44,8 +80,8 @@ function boardSummary(state: AppState): { text: string; label: string } {
   }
   let leader = state.people[0];
   for (const person of state.people) if (leader && read(person) > read(leader)) leader = person;
-  if (!leader) return { text: "Board", label: "Wave points board" };
-  const points = read(leader);
+  const points = leader ? read(leader) : 0;
+  if (!leader || points === 0) return { text: "Board", label: "Wave points board" };
   return {
     text: `${firstName(leader.name)} ${points}`,
     label: `Wave points board. ${leader.name} leads with ${points} points.`,
@@ -90,6 +126,47 @@ function TrendingChip() {
   );
 }
 
+/** Fewer people than this (besides you) and the venue reads as "just opening". */
+const EARLY_MAX = 10;
+
+/**
+ * Backend mode on a near-empty venue (launch day, after the demo purge): a friendly note
+ * instead of an empty-looking map, nudging people to join or bring friends.
+ */
+function EarlyVenue() {
+  const actions = useActions();
+  const you = useApp((s) => s.you);
+  const early = useApp(
+    (s) => s.mode === "backend" && s.people.filter((p) => !p.isYou).length < EARLY_MAX,
+  );
+  const [dismissed, setDismissed] = useState(false);
+  if (!early || dismissed) return null;
+  return (
+    <div className="early-venue" role="status">
+      <Icon id="circus_tent" size={28} />
+      <p className="early-venue__text">
+        <strong>The venue's just opening.</strong>{" "}
+        {you ? "Invite a few friends so the booths fill up." : "Be one of the first beans here."}
+      </p>
+      <button
+        type="button"
+        className="btn btn--primary early-venue__go"
+        onClick={() => (you ? actions.openOverlay("invite") : actions.startJoin(null))}
+      >
+        {you ? "Invite friends" : "Join coii"}
+      </button>
+      <button
+        type="button"
+        className="nav-btn nav-btn--close early-venue__close"
+        aria-label="Hide this note"
+        onClick={() => setDismissed(true)}
+      >
+        <Glyph name="close" size={16} />
+      </button>
+    </div>
+  );
+}
+
 /** Heads-up display over the map: wordmark, live count, map controls and two primary actions. */
 export function Hud({ ref }: { readonly ref: Ref<HTMLDivElement> }) {
   const actions = useActions();
@@ -120,7 +197,10 @@ export function Hud({ ref }: { readonly ref: Ref<HTMLDivElement> }) {
       <div className="hud__chips-row">
         <BoardPill />
         <TrendingChip />
+        <DemoChip />
       </div>
+      <EarlyVenue />
+      <EarlyVenue />
     </div>
   );
 }

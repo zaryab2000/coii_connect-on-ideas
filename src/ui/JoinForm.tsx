@@ -1,7 +1,9 @@
 import { useId, useState } from "react";
 import type { CSSProperties, FormEvent, ReactNode } from "react";
 
-import { useActions } from "@/app/context";
+import { useActions, useApp } from "@/app/context";
+import type { JoinInput } from "@/app/joinTypes";
+import { CONSENT, UNOFFICIAL } from "@/content/privacy";
 import { INTENTS, INTENTS_MAX } from "@/data/intents";
 import { ONE_LINER_MAX, ONE_LINERS_MAX } from "@/data/oneLinerRules";
 import { TOPICS } from "@/data/topics";
@@ -24,6 +26,7 @@ import {
 } from "@/ui/joinDraft";
 import type { JoinDraft, JoinErrors, JoinField } from "@/ui/joinDraft";
 import { topicVars } from "@/ui/PanelChrome";
+import { Turnstile } from "@/ui/Turnstile";
 
 interface QuestionProps {
   readonly title: string;
@@ -309,6 +312,25 @@ function TelegramSoon() {
   );
 }
 
+/** Backend mode: someone who joined on another device gets their bean back with Google. */
+function GoogleSignIn() {
+  const actions = useActions();
+  return (
+    <div className="q-card q-card--tg">
+      <button
+        type="button"
+        className="btn btn--secondary"
+        onClick={() => void actions.signInWithGoogle()}
+      >
+        Already joined? Sign in with Google
+      </button>
+      <p className="q-or">
+        <span>or join below</span>
+      </p>
+    </div>
+  );
+}
+
 function NameQuestion({ ids, draft, errors, update, touch }: FieldsProps) {
   const long = draft.name.length > NAME_MAX - 10;
   return (
@@ -395,7 +417,12 @@ function LineInput({ id, index, value, error, onChange, onRemove }: LineInputPro
   );
 }
 
-function OneLinersQuestion({ ids, draft, update }: Pick<FieldsProps, "ids" | "draft" | "update">) {
+function OneLinersQuestion({
+  ids,
+  draft,
+  update,
+  serverError,
+}: Pick<FieldsProps, "ids" | "draft" | "update"> & { readonly serverError: string | undefined }) {
   const lines = draft.oneLiners;
   const errors = lineErrors(lines);
   const written = lines.filter((line) => line.trim().length > 0).length;
@@ -404,6 +431,8 @@ function OneLinersQuestion({ ids, draft, update }: Pick<FieldsProps, "ids" | "dr
       title="Your catchy one-liners"
       hint={`Optional, up to ${ONE_LINERS_MAX}. They pop up over your bean on the map, so make people curious enough to wave.`}
       counter={`${written}/${ONE_LINERS_MAX}`}
+      error={serverError}
+      errorId={`${ids.oneLiners}-error`}
       group
     >
       <div className="line-fields">
@@ -437,6 +466,8 @@ function OneLinersQuestion({ ids, draft, update }: Pick<FieldsProps, "ids" | "dr
 }
 
 function ConsentCard({ ids, draft, errors, update }: Omit<FieldsProps, "touch">) {
+  // The only consent step (joining always sends consent: true), so the copy sits right here.
+  const actions = useActions();
   return (
     <div className="q-card" data-invalid={errors.consent ? true : undefined}>
       <label className="consent">
@@ -452,10 +483,17 @@ function ConsentCard({ ids, draft, errors, update }: Omit<FieldsProps, "touch">)
           <Glyph name="check" size={18} />
         </span>
         <span>
-          Show my name, topics and one-liners on this map, and my handles to people who wave at me
+          {CONSENT.label}
           <RequiredMark />
         </span>
       </label>
+      <button
+        type="button"
+        className="privacy-link consent__more"
+        onClick={() => actions.openOverlay("privacy")}
+      >
+        {CONSENT.link}
+      </button>
       {errors.consent ? (
         <p className="q-card__error" id={`${ids.consent}-error`}>
           {errors.consent}
@@ -480,68 +518,200 @@ interface JoinFormProps {
   readonly onCancel: (() => void) | null;
 }
 
+/** A demo-mode profile found in this browser starts the backend join form (consent asked again). */
+function initialDraft(
+  you: Person | null,
+  prefill: Person | null,
+  topic: TopicId | null,
+): JoinDraft {
+  if (you || !prefill) return draftFrom(you, topic, randomAvatar());
+  return { ...draftFrom(prefill, topic, randomAvatar()), consent: false };
+}
+
+/** What the server said was wrong: on a field, or about the whole form. */
+interface ServerProblem {
+  readonly field: JoinField | null;
+  readonly text: string;
+}
+
+/** Backend mode's first join needs Cloudflare's check; editing later doesn't. */
+function useCheck(): { readonly siteKey: string | null; readonly needed: boolean } {
+  const mode = useApp((s) => s.mode);
+  const account = useApp((s) => s.account);
+  const siteKey = useApp((s) => s.turnstileSiteKey);
+  return { siteKey, needed: mode === "backend" && account === null };
+}
+
+interface Submission {
+  readonly pending: boolean;
+  readonly problem: ServerProblem | null;
+  readonly clearProblem: () => void;
+  /** Bumps after a failed attempt, so the check widget starts over with a fresh token. */
+  readonly round: number;
+  readonly setToken: (token: string | null) => void;
+  readonly submit: (input: JoinInput, focus: (field: JoinField) => void) => Promise<void>;
+}
+
+/** Sends a valid form: the check token first time round, then the server's answer. */
+function useSubmission(onDone: () => void): Submission {
+  const actions = useActions();
+  const check = useCheck();
+  const [pending, setPending] = useState(false);
+  const [problem, setProblem] = useState<ServerProblem | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [round, setRound] = useState(0);
+  const submit = async (input: JoinInput, focus: (field: JoinField) => void): Promise<void> => {
+    if (pending) return;
+    if (check.needed && !token) {
+      setProblem({ field: null, text: "Finish the quick robot check above the button first." });
+      return;
+    }
+    setPending(true);
+    const outcome = await actions.join(input, check.needed ? token : null);
+    setPending(false);
+    if (outcome.ok) return onDone();
+    setProblem(outcome.problem);
+    if (outcome.problem.field) focus(outcome.problem.field);
+    // A check token works once; get a fresh one in case this attempt used it up.
+    if (check.needed) {
+      setToken(null);
+      setRound((r) => r + 1);
+    }
+  };
+  return { pending, problem, clearProblem: () => setProblem(null), round, setToken, submit };
+}
+
 /** The join form. Submitting walks your bean in from the gate (or back in, when editing). */
 export function JoinForm({ you, presetTopic, onDone, onCancel }: JoinFormProps) {
-  const actions = useActions();
   const ids = useJoinIds();
-  const [draft, setDraft] = useState<JoinDraft>(() => draftFrom(you, presetTopic, randomAvatar()));
+  const mode = useApp((s) => s.mode);
+  const prefill = useApp((s) => s.joinPrefill);
+  const sending = useSubmission(onDone);
+  const { problem } = sending;
+  const [draft, setDraft] = useState<JoinDraft>(() => initialDraft(you, prefill, presetTopic));
   const [touched, setTouched] = useState<ReadonlySet<JoinField>>(new Set());
   const [submitted, setSubmitted] = useState(false);
   const result = validateJoin(draft);
-  const errors = visibleErrors(result.ok ? {} : result.errors, touched, submitted);
-  const update = (patch: Partial<JoinDraft>): void => setDraft((d) => ({ ...d, ...patch }));
+  const errors = withServer(
+    visibleErrors(result.ok ? {} : result.errors, touched, submitted),
+    problem,
+  );
+  const update = (patch: Partial<JoinDraft>): void => {
+    setDraft((d) => ({ ...d, ...patch }));
+    sending.clearProblem();
+  };
   const touch = (field: JoinField): void => setTouched((t) => new Set(t).add(field));
   const fields = { ids, draft, errors, update };
+  const focus = (field: JoinField): void =>
+    document.getElementById(focusTarget(field, ids, draft))?.focus();
 
   const onSubmit = (e: FormEvent): void => {
     e.preventDefault();
     setSubmitted(true);
-    if (!result.ok) {
-      const first = JOIN_FIELDS.find((field) => result.errors[field]);
-      if (first) document.getElementById(focusTarget(first, ids, draft))?.focus();
+    if (result.ok) {
+      void sending.submit(result.input, focus);
       return;
     }
-    actions.join(result.input);
-    onDone();
+    const first = JOIN_FIELDS.find((field) => result.errors[field]);
+    if (first) focus(first);
   };
 
   return (
     <form className="join-form" noValidate onSubmit={onSubmit}>
       <div className="join-form__questions">
-        {you ? null : <TelegramSoon />}
+        {you ? null : <FormStart backend={mode === "backend"} />}
         <NameQuestion {...fields} touch={touch} />
         <HandlesQuestion {...fields} touch={touch} />
         <TopicsQuestion {...fields} />
         <IntentQuestion draft={draft} update={update} />
-        <OneLinersQuestion ids={ids} draft={draft} update={update} />
+        <OneLinersQuestion
+          ids={ids}
+          draft={draft}
+          update={update}
+          serverError={problem?.field === "oneLiners" ? problem.text : undefined}
+        />
       </div>
       <CharacterStudio draft={draft} update={update} />
       <div className="join-form__finish">
         <ConsentCard {...fields} />
-        <JoinSubmit editing={you !== null} onCancel={onCancel} />
+        <Check sending={sending} />
+        <JoinSubmit
+          editing={you !== null}
+          pending={sending.pending}
+          problem={formProblem(problem)}
+          demo={mode === "demo"}
+          onCancel={onCancel}
+        />
       </div>
     </form>
   );
 }
 
-function JoinSubmit({
-  editing,
-  onCancel,
-}: {
+/** The Turnstile widget, when this join needs it. */
+function Check({ sending }: { readonly sending: Submission }) {
+  const check = useCheck();
+  if (!check.needed) return null;
+  if (!check.siteKey) {
+    // A build without the Turnstile site key can't pass the check, so say so up front.
+    return (
+      <p className="q-card__error" role="alert">
+        Joining is unavailable right now. Please try again a little later.
+      </p>
+    );
+  }
+  return <Turnstile key={sending.round} siteKey={check.siteKey} onToken={sending.setToken} />;
+}
+
+function formProblem(problem: ServerProblem | null): string | null {
+  return problem && problem.field === null ? problem.text : null;
+}
+
+/** Above a new join: Google to restore a bean (backend mode), or the Telegram teaser (demo). */
+function FormStart({ backend }: { readonly backend: boolean }) {
+  return backend ? <GoogleSignIn /> : <TelegramSoon />;
+}
+
+/** Field errors from the form, plus the server's (it has the final say on names and handles). */
+function withServer(errors: JoinErrors, problem: ServerProblem | null): JoinErrors {
+  if (!problem?.field || problem.field === "oneLiners") return errors;
+  return { ...errors, [problem.field]: problem.text };
+}
+
+interface JoinSubmitProps {
   readonly editing: boolean;
+  readonly pending: boolean;
+  /** A problem with the whole form (no single field), from the server. */
+  readonly problem: string | null;
+  readonly demo: boolean;
   readonly onCancel: (() => void) | null;
-}) {
+}
+
+function JoinSubmit({ editing, pending, problem, demo, onCancel }: JoinSubmitProps) {
   return (
     <div className="join-form__submit">
-      <button type="submit" className="btn btn--primary btn--big">
-        {editing ? "Save and walk back in" : "Walk into coii"}
+      {problem ? (
+        <p className="q-card__error" role="alert">
+          {problem}
+        </p>
+      ) : null}
+      <button
+        type="submit"
+        className="btn btn--primary btn--big"
+        aria-disabled={pending || undefined}
+      >
+        {pending ? "Saving…" : editing ? "Save and walk back in" : "Walk into coii"}
       </button>
       {onCancel ? (
         <button type="button" className="btn btn--quiet" onClick={onCancel}>
           Cancel
         </button>
       ) : null}
-      <p className="join-form__note">Saved in this browser only for now. You can leave anytime.</p>
+      {demo ? (
+        <p className="join-form__note">
+          Saved in this browser only for now. You can leave anytime.
+        </p>
+      ) : null}
+      <p className="unofficial">{UNOFFICIAL}</p>
     </div>
   );
 }

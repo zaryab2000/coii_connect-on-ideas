@@ -1,6 +1,6 @@
 import { assertEquals } from "jsr:@std/assert@1.0.13";
 
-import { checkTelegram, dataCheckString, telegramHash } from "./telegram.ts";
+import { checkTelegram, dataCheckString, MAX_AGE_S, telegramHash } from "./telegram.ts";
 import type { TelegramPayload } from "./telegram.ts";
 
 const TOKEN = "local-test-bot-token";
@@ -40,10 +40,13 @@ Deno.test("refuses a payload signed with another bot's token", async () => {
   assertEquals((await checkTelegram(payload, TOKEN, NOW)).ok, false);
 });
 
-Deno.test("refuses logins older than a day or from the future", async () => {
-  const stale = await signed({ ...ASHA, auth_date: NOW - 86_401 });
+Deno.test("refuses logins older than 10 minutes or from the future", async () => {
+  const stale = await signed({ ...ASHA, auth_date: NOW - 601 });
+  const lastMoment = await signed({ ...ASHA, auth_date: NOW - 600 });
   const future = await signed({ ...ASHA, auth_date: NOW + 301 });
+  assertEquals(MAX_AGE_S, 600);
   assertEquals(await checkTelegram(stale, TOKEN, NOW), { ok: false, code: "telegram_expired" });
+  assertEquals((await checkTelegram(lastMoment, TOKEN, NOW)).ok, true);
   assertEquals(await checkTelegram(future, TOKEN, NOW), { ok: false, code: "telegram_expired" });
 });
 

@@ -19,20 +19,25 @@
     "skipLibCheck": true,
     "noEmit": true,
     "resolveJsonModule": true,
+    "allowJs": true,
+    "checkJs": true,
     "useDefineForClassFields": true,
     "allowImportingTsExtensions": true,
     "paths": {
       "@/*": ["./src/*"],
       "@functions/*": ["./supabase/functions/*"],
-      "@scripts/*": ["./scripts/*"]
+      "@scripts/*": ["./scripts/*"],
+      "@api/*": ["./api/*"]
     }
   },
   "include": [
     "src",
+    "api",
     "e2e",
     "tests",
     "vite.config.ts",
     "vitest.db.config.ts",
-    "playwright.config.ts"
+    "playwright.config.ts",
+    "playwright.backend.config.ts"
   ]
 }

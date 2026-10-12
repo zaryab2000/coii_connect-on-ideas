@@ -37,8 +37,8 @@
   },
   "overrides": [
     {
-      // Database tests edit one profile fixture by fixture; running them in parallel would race.
-      "files": ["tests/db/**"],
+      // Database and backend e2e tests act in order on shared rows; in parallel they would race.
+      "files": ["tests/db/**", "e2e/backend/**"],
       "rules": { "eslint/no-await-in-loop": "off", "eslint/max-lines-per-function": "off" }
     },
     {

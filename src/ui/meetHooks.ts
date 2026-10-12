@@ -24,12 +24,12 @@ export function useReducedMotion(): boolean {
 }
 
 /** Waves at someone and tells you how it went (daily limit, your very first wave…). */
-export function useWave(): (person: Person) => WaveResult {
+export function useWave(): (person: Person) => Promise<WaveResult> {
   const actions = useActions();
   const firstWave = useApp((s) => (s.meet?.waved.length ?? 0) === 0);
   return useCallback(
-    (person: Person) => {
-      const result = actions.wave(person.id);
+    async (person: Person) => {
+      const result = await actions.wave(person.id);
       const toast = waveToast(result, person.name, firstWave);
       if (toast) actions.pushToast(toast.text, toast.icon, toast.tone);
       return result;

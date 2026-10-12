@@ -1,0 +1,74 @@
+# Nightly encrypted backup of the live database (docs/prd/database.md §16), plus a manual run.
+# Schema and data of `private`, `public` and `auth`, compressed and encrypted with age to the
+# owner's public key, kept as an artifact for 14 days. The repo is public: only the encrypted
+# file is ever uploaded, and nothing about the data is printed. The daily connection also keeps
+# the free project from pausing.
+#
+# Needs (owner, once):
+#   - secret SUPABASE_DB_URL: the session pooler connection string (runners have no IPv6)
+#   - repo variable AGE_RECIPIENT: the `age1…` public key; the job is skipped until it is set
+name: db-backup
+
+on:
+  schedule:
+    - cron: "30 21 * * *" # 21:30 UTC = 03:00 IST
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: dump, encrypt, upload
+    if: vars.AGE_RECIPIENT != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
+        with:
+          version: 2.119.0
+
+      - name: Install age
+        run: |
+          sudo apt-get update --quiet
+          sudo apt-get install --yes --no-install-recommends age
+
+      - name: Dump the database
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_DB_URL}" ]; then
+            echo "::error::The SUPABASE_DB_URL secret is not set (session pooler connection string)."
+            exit 1
+          fi
+          umask 077
+          mkdir -p "${RUNNER_TEMP}/dump"
+          supabase db dump --db-url "${SUPABASE_DB_URL}" --schema private,public,auth \
+            --file "${RUNNER_TEMP}/dump/schema.sql" > /dev/null
+          supabase db dump --db-url "${SUPABASE_DB_URL}" --schema private,public,auth \
+            --data-only --use-copy --file "${RUNNER_TEMP}/dump/data.sql" > /dev/null
+
+      - name: Compress and encrypt
+        env:
+          AGE_RECIPIENT: ${{ vars.AGE_RECIPIENT }}
+        run: |
+          set -euo pipefail
+          umask 077
+          stamp="$(date -u +%Y-%m-%dT%H%MZ)"
+          mkdir -p "${RUNNER_TEMP}/out"
+          tar -C "${RUNNER_TEMP}/dump" -czf - schema.sql data.sql \
+            | age --encrypt --recipient "${AGE_RECIPIENT}" \
+                --output "${RUNNER_TEMP}/out/coii-${stamp}.tar.gz.age"
+          shred --remove "${RUNNER_TEMP}/dump/schema.sql" "${RUNNER_TEMP}/dump/data.sql"
+          ls -l "${RUNNER_TEMP}/out"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coii-db-backup
+          path: ${{ runner.temp }}/out/*.tar.gz.age
+          retention-days: 14
+          if-no-files-found: error

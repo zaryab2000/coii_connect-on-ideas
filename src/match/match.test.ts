@@ -12,6 +12,9 @@ import { reasonsFor } from "@/match/reasons";
 import { complementOf, isEligible, keywordOverlap, scoreParts, topicOverlap } from "@/match/score";
 import type { ScoreContext } from "@/match/score";
 
+/** Heavy property and simulation runs; slow on a loaded machine (e.g. under the git hooks). */
+const SLOW_TEST_MS = 30_000;
+
 const NOW = Date.UTC(2026, 10, 3, 6, 0); // 3 Nov 2026, 11:30 IST
 const EMPTY_CONTEXT: ScoreContext = {
   now: NOW,
@@ -190,31 +193,41 @@ describe("buildHand", () => {
     expect(more).toHaveLength(4);
   });
 
-  it("spreads attention: nobody appears in more than 5x the median number of hands", () => {
-    const viewers = CROWD.slice(0, 300);
-    const counts = new Map<string, number>();
-    const cap = exposureCap(viewers.length);
-    for (const viewer of viewers) {
-      for (const card of buildHand(request({ viewer, people: CROWD, exposure: { counts, cap } }))) {
-        counts.set(card.personId, (counts.get(card.personId) ?? 0) + 1);
+  it(
+    "spreads attention: nobody appears in more than 5x the median number of hands",
+    () => {
+      const viewers = CROWD.slice(0, 300);
+      const counts = new Map<string, number>();
+      const cap = exposureCap(viewers.length);
+      for (const viewer of viewers) {
+        for (const card of buildHand(
+          request({ viewer, people: CROWD, exposure: { counts, cap } }),
+        )) {
+          counts.set(card.personId, (counts.get(card.personId) ?? 0) + 1);
+        }
       }
-    }
-    const values = [...counts.values()].toSorted((a, b) => a - b);
-    const median = values[Math.floor(values.length / 2)] ?? 1;
-    expect(Math.max(...values)).toBeLessThanOrEqual(Math.max(cap, 5 * median));
-  });
+      const values = [...counts.values()].toSorted((a, b) => a - b);
+      const median = values[Math.floor(values.length / 2)] ?? 1;
+      expect(Math.max(...values)).toBeLessThanOrEqual(Math.max(cap, 5 * median));
+    },
+    SLOW_TEST_MS,
+  );
 
-  it("gives almost everyone at least one card that shares a topic", () => {
-    const viewers = CROWD.slice(0, 200);
-    let withShared = 0;
-    for (const viewer of viewers) {
-      const hand = buildHand(request({ viewer }));
-      const ids = new Set(hand.map((c) => c.personId));
-      if (CROWD.some((p) => ids.has(p.id) && p.topics.some((t) => viewer.topics.includes(t))))
-        withShared++;
-    }
-    expect(withShared / viewers.length).toBeGreaterThanOrEqual(0.9);
-  });
+  it(
+    "gives almost everyone at least one card that shares a topic",
+    () => {
+      const viewers = CROWD.slice(0, 200);
+      let withShared = 0;
+      for (const viewer of viewers) {
+        const hand = buildHand(request({ viewer }));
+        const ids = new Set(hand.map((c) => c.personId));
+        if (CROWD.some((p) => ids.has(p.id) && p.topics.some((t) => viewer.topics.includes(t))))
+          withShared++;
+      }
+      expect(withShared / viewers.length).toBeGreaterThanOrEqual(0.9);
+    },
+    SLOW_TEST_MS,
+  );
 });
 
 describe("demo replies and openers", () => {

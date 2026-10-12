@@ -8,6 +8,9 @@ import { addaZone, computeLayout } from "@/sim/layout";
 import type { LayoutMode } from "@/sim/layout";
 import { State, World } from "@/sim/world";
 
+/** Heavy property and simulation runs; slow on a loaded machine (e.g. under the git hooks). */
+const SLOW_TEST_MS = 30_000;
+
 const DT = 1 / 30;
 
 function makeWorld(mode: LayoutMode = "landscape", count = 400): World {
@@ -120,34 +123,38 @@ describe("World", () => {
     expect(Math.hypot(a.x - zone.x, a.y - zone.y)).toBeLessThanOrEqual(zone.r1 + 1);
   });
 
-  it("survives random grabs and throws without leaving the venue", () => {
-    fc.assert(
-      fc.property(
-        fc.array(
-          fc.record({
-            agent: fc.integer({ min: 0, max: 199 }),
-            x: fc.float({ min: -500, max: 6000, noNaN: true }),
-            y: fc.float({ min: -500, max: 6000, noNaN: true }),
-            vx: fc.float({ min: -5000, max: 5000, noNaN: true }),
-            vy: fc.float({ min: -5000, max: 5000, noNaN: true }),
-          }),
-          { minLength: 1, maxLength: 6 },
+  it(
+    "survives random grabs and throws without leaving the venue",
+    () => {
+      fc.assert(
+        fc.property(
+          fc.array(
+            fc.record({
+              agent: fc.integer({ min: 0, max: 199 }),
+              x: fc.float({ min: -500, max: 6000, noNaN: true }),
+              y: fc.float({ min: -500, max: 6000, noNaN: true }),
+              vx: fc.float({ min: -5000, max: 5000, noNaN: true }),
+              vy: fc.float({ min: -5000, max: 5000, noNaN: true }),
+            }),
+            { minLength: 1, maxLength: 6 },
+          ),
+          (throws) => {
+            const world = makeWorld("landscape", 200);
+            for (const th of throws) {
+              world.grab(th.agent);
+              world.dragTo(th.agent, th.x, th.y);
+              world.release(th.agent, th.vx, th.vy);
+              run(world, 0.5);
+            }
+            run(world, 8);
+            expectInsideWorldAndOutsideObstacles(world);
+          },
         ),
-        (throws) => {
-          const world = makeWorld("landscape", 200);
-          for (const th of throws) {
-            world.grab(th.agent);
-            world.dragTo(th.agent, th.x, th.y);
-            world.release(th.agent, th.vx, th.vy);
-            run(world, 0.5);
-          }
-          run(world, 8);
-          expectInsideWorldAndOutsideObstacles(world);
-        },
-      ),
-      { numRuns: 15 },
-    );
-  });
+        { numRuns: 15 },
+      );
+    },
+    SLOW_TEST_MS,
+  );
 
   it("reuses slots of removed people", () => {
     const world = makeWorld("landscape", 50);

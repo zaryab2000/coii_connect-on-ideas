@@ -3,7 +3,7 @@
 -- (docs/prd/iteration_v2_feature.md).
 begin;
 \ir _helpers.inc
-select plan(40);
+select plan(44);
 
 create temp table cast_ as
 select tests.join('Asha Rao', '{privacy}', 'asha_builds', null) as asha,
@@ -127,6 +127,34 @@ select public.delete_adda((select id from addas_ where name = 'zk'));
 select is((select count(*)::int from private.adda_members
            where adda_id = (select id from addas_ where name = 'zk')), 0,
   'deleting an adda lets its people go');
+
+-- ---- unmatch ends adda ties both ways -----------------------------------------------------------
+create temp table pair_ as
+select tests.join('Kiran Shah', '{ai}', 'kiran_builds', null) as kiran,
+       tests.join('Lea Roy', '{ai}', 'lea_builds', null) as lea;
+create temp table pair_addas (owner text primary key, id uuid);
+select tests.wave((select kiran from pair_), (select lea from pair_));
+select tests.wave((select lea from pair_), (select kiran from pair_));
+select tests.act((select kiran from pair_));
+insert into pair_addas values ('kiran', public.create_adda('Kiran crew', 'tambu', 'leaf'));
+select public.invite_to_adda((select id from pair_addas where owner = 'kiran'), (select lea from pair_));
+select tests.act((select lea from pair_));
+insert into pair_addas values ('lea', public.create_adda('Lea crew', 'tambu', 'rani'));
+select public.invite_to_adda((select id from pair_addas where owner = 'lea'), (select kiran from pair_));
+select public.respond_to_adda_invite((select id from pair_addas where owner = 'kiran'), true);
+select is((select count(*)::int from private.adda_members
+           where adda_id in (select id from pair_addas)), 2,
+  'Lea is in Kiran''s adda and Kiran is invited to Lea''s');
+
+select public.unmatch((select kiran from pair_));
+select is((select count(*)::int from private.adda_members
+           where adda_id in (select id from pair_addas)), 0,
+  'unmatch removes the adda ties both ways');
+select is(public.get_adda_state() -> 'joined', '[]'::jsonb,
+  'Lea is no longer in Kiran''s adda');
+select tests.act((select kiran from pair_));
+select is((public.get_adda_state() -> 'invites'), '[]'::jsonb,
+  'Kiran no longer has Lea''s invite');
 
 select ok(tests.points_consistent(), 'wave_points and daily_points still match a full recount');
 

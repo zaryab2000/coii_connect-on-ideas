@@ -1,3 +1,7 @@
+// A strict Content-Security-Policy (vercel.json) forbids eval; this swaps Pixi's generated
+// shader, uniform and particle code for eval-free versions. Must load before Pixi renders.
+// oxlint-disable-next-line import/no-unassigned-import -- side-effect module by design
+import "pixi.js/unsafe-eval";
 import { CoiiEngine } from "@/engine/engine";
 
 /**

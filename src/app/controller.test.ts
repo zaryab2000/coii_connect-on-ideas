@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { createController } from "@/app/controller";
-import type { JoinInput } from "@/app/controller";
+import type { Actions } from "@/app/controller";
+import type { JoinInput } from "@/app/joinTypes";
 import type { PeopleSource } from "@/data/source";
 import type { Person, TopicId } from "@/data/types";
 import { FakeEngine } from "@/engine/fake";
@@ -37,6 +38,13 @@ const JOIN: JoinInput = {
   oneLiners: [],
   avatar: { skin: 1, hair: 2, hairColor: 3, accessory: 0 },
 };
+
+/** Joins through the actions and returns your new bean. */
+async function joinAs(actions: Actions, input: JoinInput = JOIN): Promise<Person> {
+  const outcome = await actions.join(input, null);
+  if (!outcome.ok) throw new Error(`join failed: ${outcome.problem.text}`);
+  return outcome.person;
+}
 
 function setup(you: Person | null = null) {
   const engine = new FakeEngine();
@@ -149,18 +157,18 @@ describe("controller overlays", () => {
     expect(store.get()).toMatchObject({ overlay: "none", panel: "profile" });
   });
 
-  it("tapping your own bean opens your profile overlay instead of a profile panel", () => {
+  it("tapping your own bean opens your profile overlay instead of a profile panel", async () => {
     const { store, actions, engine } = setup();
-    const you = actions.join(JOIN);
+    const you = await joinAs(actions);
     engine.emitSelect("a");
     engine.emitSelect(you.id);
     expect(store.get()).toMatchObject({ overlay: "you", panel: "none", selectedId: null });
     expect(engine.calls.at(-1)).toEqual({ method: "select", args: [null] });
   });
 
-  it("picking yourself from a list opens your overlay; Show me on map flies there", () => {
+  it("picking yourself from a list opens your overlay; Show me on map flies there", async () => {
     const { store, actions, engine } = setup();
-    const you = actions.join(JOIN);
+    const you = await joinAs(actions);
     actions.selectPerson(you.id);
     expect(store.get()).toMatchObject({ overlay: "you", panel: "none" });
     actions.locate(you.id);
@@ -202,10 +210,10 @@ describe("controller map controls", () => {
 });
 
 describe("controller join and leave", () => {
-  it("join closes the overlay, spawns your bean at the gate and celebrates", () => {
+  it("join closes the overlay, spawns your bean at the gate and celebrates", async () => {
     const { store, actions, engine } = setup();
     actions.startJoin(null);
-    const you = actions.join(JOIN);
+    const you = await joinAs(actions);
     const state = store.get();
     expect(state.overlay).toBe("none");
     expect(you).toMatchObject({ name: "Zara Khan", isYou: true, isDemo: false });
@@ -217,21 +225,21 @@ describe("controller join and leave", () => {
     expect(state.toasts.at(-1)).toMatchObject({ icon: "party_popper", tone: "success" });
   });
 
-  it("joining again replaces your previous bean", () => {
+  it("joining again replaces your previous bean", async () => {
     const { store, actions, engine } = setup();
-    const first = actions.join(JOIN);
-    const second = actions.join({ ...JOIN, name: "Zara K" });
+    const first = await joinAs(actions);
+    const second = await joinAs(actions, { ...JOIN, name: "Zara K" });
     expect(store.get().people.filter((p) => p.isYou)).toEqual([second]);
     expect(engine.present.has(first.id)).toBe(false);
     expect(store.get().toasts.map((t) => t.tone)).toEqual(["success", "success"]);
   });
 
-  it("leave removes you, closes your profile overlay and says goodbye", () => {
+  it("leave removes you, closes your profile overlay and says goodbye", async () => {
     const { store, actions, engine } = setup();
-    const you = actions.join(JOIN);
+    const you = await joinAs(actions);
     actions.locate(you.id);
     actions.openOverlay("you");
-    actions.leave();
+    await actions.leave();
     const state = store.get();
     expect(state.you).toBeNull();
     expect(state.people.some((p) => p.id === you.id)).toBe(false);
@@ -240,9 +248,9 @@ describe("controller join and leave", () => {
     expect(state.toasts.at(-1)).toMatchObject({ tone: "info", icon: "waving_hand" });
   });
 
-  it("leave does nothing when you have not joined", () => {
+  it("leave does nothing when you have not joined", async () => {
     const { store, actions, methods } = setup();
-    actions.leave();
+    await actions.leave();
     expect(store.get().toasts).toEqual([]);
     expect(methods()).not.toContain("remove");
   });

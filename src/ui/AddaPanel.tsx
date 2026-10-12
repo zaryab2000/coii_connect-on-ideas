@@ -104,7 +104,7 @@ function InviteRow({ invite }: { readonly invite: AddaInvite }) {
       <div className="adda-invite__who">
         <Avatar person={owner} />
         <p>
-          <strong>{owner.name}</strong> wants you in <strong>{invite.name}</strong>. Say yes and
+          <strong>{owner.name}</strong> invited you to <strong>{invite.name}</strong>. Say yes and
           you're both meeting at Devcon (chai's on).
         </p>
       </div>
