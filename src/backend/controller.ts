@@ -186,8 +186,14 @@ class BackendApp {
     this.start.venue.start({ onUpdate: this.venueUpdated, onError: this.venueFailed });
     this.trends.sync();
     if (this.store.get().you) this.enter();
-    if (this.start.telegramLogin) void this.verifyTelegram(this.start.telegramLogin);
-    else if (this.start.claimToken) this.openClaimLink(this.start.claimToken);
+    const { telegramLogin, claimToken } = this.start;
+    // Both can arrive together (a claim link opened, then the Telegram widget's redirect): verify
+    // first, then show the claim link, which says "you already have a bean" if that claimed it.
+    if (telegramLogin) {
+      void this.verifyTelegram(telegramLogin).then(() => {
+        if (claimToken) this.openClaimLink(claimToken);
+      });
+    } else if (claimToken) this.openClaimLink(claimToken);
     this.start.supabase.auth.onAuthStateChange((event, session) => {
       this.session = session;
       // Signed out elsewhere (another tab, an expired refresh token): drop your bean here too.
@@ -436,7 +442,7 @@ class BackendApp {
       if (failure.code === "claim_used") this.claimLinkIs("claimed");
       else if (failure.code === "claim_expired") this.claimLinkIs("expired");
       else if (failure.code === "claim_invalid") this.claimLinkIs("invalid");
-      if (failure.code === "already_joined") return CLAIM.alreadyHaveBean("your other bean");
+      if (failure.code === "already_joined") return CLAIM.alreadyHaveSomeBean;
       return failure.copy.text;
     }
   };

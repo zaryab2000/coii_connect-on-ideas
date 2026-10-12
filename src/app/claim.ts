@@ -67,36 +67,51 @@ function strings(value: unknown): string[] {
 
 const STATUSES: readonly ClaimStatus[] = ["ready", "claimed", "expired", "invalid"];
 
+function rawOf(value: unknown): Raw {
+  return typeof value === "object" && value !== null ? (value as Raw) : {};
+}
+
+function textOf(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+function avatarOf(value: unknown): Avatar {
+  const look = Array.isArray(value) ? value.map(Number) : [];
+  return {
+    skin: look[0] ?? 0,
+    hair: look[1] ?? 0,
+    hairColor: look[2] ?? 0,
+    accessory: look[3] ?? 0,
+  };
+}
+
 /** Reads a `claim_preview()` result; anything unexpected reads as an invalid link. */
 export function claimPreviewFrom(value: unknown): ClaimPreview {
-  const raw: Raw = typeof value === "object" && value !== null ? (value as Raw) : {};
-  const status = STATUSES.find((s) => s === raw["status"]) ?? "invalid";
-  const look = Array.isArray(raw["avatar"]) ? raw["avatar"].map(Number) : [];
+  const raw = rawOf(value);
   const topics = strings(raw["topics"]).filter(isTopicId) as TopicId[];
-  const personId = typeof raw["person_id"] === "string" ? raw["person_id"] : null;
-  const name = typeof raw["name"] === "string" ? raw["name"] : "";
+  const personId = textOf(raw["person_id"]);
+  const name = textOf(raw["name"]) ?? "";
+  // A preview without a bean to show can only be explained as a link that doesn't work.
+  const showable = personId !== null && name !== "" && topics.length > 0;
+  const status = (showable && STATUSES.find((s) => s === raw["status"])) || "invalid";
   return {
-    // A preview without a bean to show can only be explained as a link that doesn't work.
-    status:
-      status !== "invalid" && (!personId || !name || topics.length === 0) ? "invalid" : status,
+    status,
     personId,
     name,
     topics,
     intent: strings(raw["intents"]).filter(isIntentId) as IntentId[],
     oneLiners: strings(raw["one_liners"]),
-    avatar: {
-      skin: look[0] ?? 0,
-      hair: look[1] ?? 0,
-      hairColor: look[2] ?? 0,
-      accessory: look[3] ?? 0,
-    },
+    avatar: avatarOf(raw["avatar"]),
   };
+}
+
+function normName(s: string): string {
+  return s.normalize("NFC").trim().replace(/\s+/g, " ").toLowerCase();
 }
 
 /** Names compared the way people type them: case and extra spaces don't matter. */
 export function sameName(a: string, b: string): boolean {
-  const norm = (s: string): string => s.normalize("NFC").trim().replace(/\s+/g, " ").toLowerCase();
-  return norm(a) !== "" && norm(a) === norm(b);
+  return normName(a) !== "" && normName(a) === normName(b);
 }
 
 /** The unclaimed invited bean whose name is exactly this one (soft hint while joining), or null. */
@@ -121,20 +136,24 @@ export type ClaimView =
 /** The Telegram claim's consent tick, kept across the round trip to Telegram and back. */
 export const TELEGRAM_CLAIM_KEY = "coii:telegram-claim:v1";
 
-export function rememberTelegramClaim(storage: Storage | null): void {
+export function rememberTelegramClaim(storage: Storage | null, now = Date.now()): void {
   try {
-    storage?.setItem(TELEGRAM_CLAIM_KEY, "consent");
+    // The time it was ticked, so a round trip abandoned and resumed much later doesn't count.
+    storage?.setItem(TELEGRAM_CLAIM_KEY, String(now));
   } catch {
     // Storage blocked: the round trip comes back without consent and says so.
   }
 }
 
-/** Whether this tab ticked consent before going to Telegram; reading it forgets it. */
-export function takeTelegramClaim(storage: Storage | null): boolean {
+/** As long as a Telegram login itself stays valid (telegram-link's maximum age). */
+const TELEGRAM_CLAIM_MS = 10 * 60 * 1000;
+
+/** Whether this tab ticked consent before going to Telegram, recently; reading it forgets it. */
+export function takeTelegramClaim(storage: Storage | null, now = Date.now()): boolean {
   try {
-    const consent = storage?.getItem(TELEGRAM_CLAIM_KEY) === "consent";
+    const at = Number(storage?.getItem(TELEGRAM_CLAIM_KEY) ?? Number.NaN);
     storage?.removeItem(TELEGRAM_CLAIM_KEY);
-    return consent;
+    return Number.isFinite(at) && now - at >= 0 && now - at <= TELEGRAM_CLAIM_MS;
   } catch {
     return false;
   }

@@ -38,8 +38,12 @@ function shortHandle(prefix: string): string {
   return `${prefix}${Date.now().toString(36).slice(-7)}${invites}`;
 }
 
+/** A SQL text literal, or null. */
+function text(v: string | undefined): string {
+  return v === undefined ? "null" : `'${v}'`;
+}
+
 function invite(name: string, handles: { telegram?: string; x?: string }): Invited {
-  const text = (v: string | undefined): string => (v === undefined ? "null" : `'${v}'`);
   const row = sql(
     `select person_id || ' ' || claim_url from private.invite_bean(
        '${name}', array['privacy','core'], array['building'], array['building private rails'],
@@ -238,8 +242,13 @@ test("an invited bean can't be waved at and stays off the board", async ({ brows
   // You have a bean, so "This is me" isn't offered.
   await expect(profile.getByRole("button", { name: "This is me" })).toHaveCount(0);
 
-  await member.page.evaluate((id) => window.__coii?.controller.actions.wave(id), lone.id);
-  await expect(member.page.getByText("Lone hasn't claimed their bean yet.").first()).toBeVisible();
+  // Even a wave sent past the UI (no button is shown) comes back "unclaimed" and writes nothing.
+  // The toast for it belongs to the Wave button's hook, so it isn't asserted here.
+  const result = await member.page.evaluate(
+    (id) => window.__coii?.controller.actions.wave(id),
+    lone.id,
+  );
+  expect(result).toBe("unclaimed");
   expect(sqlNumber(`select count(*) from private.waves where to_id = '${lone.id}'`)).toBe(0);
 
   await member.page.keyboard.press("Escape");

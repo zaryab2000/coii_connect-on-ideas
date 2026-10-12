@@ -16,6 +16,7 @@ import type { AppController } from "@/app/controller";
 import { isPrivacyLink, readJoinLink, readTrendsLink, withoutShareLink } from "@/app/joinLink";
 import { backendConfig } from "@/backend/config";
 import type { BackendConfig } from "@/backend/config";
+import { CLAIM } from "@/content/claim";
 import { generateDemo } from "@/data/generateDemo";
 import { loadYou } from "@/data/localUser";
 import { demoSource } from "@/data/source";
@@ -88,5 +89,8 @@ if (config) {
       if (status) status.textContent = "coii couldn't start. Reload the page to try again.";
     });
 } else {
-  render(startDemo());
+  const controller = startDemo();
+  // The token was already taken out of the address; say why nothing happens instead of nothing.
+  if (claimToken) controller.actions.pushToast(CLAIM.demoLink, "waving_hand", "info");
+  render(controller);
 }

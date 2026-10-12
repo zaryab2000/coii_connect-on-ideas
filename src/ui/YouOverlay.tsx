@@ -208,19 +208,28 @@ interface YouBodyProps {
   readonly presetTopic: TopicId | null;
 }
 
+/** The join form, or the edit form (with "save my bean" first) once you're in. */
+function YouForm({ you, setEditing, presetTopic }: Omit<YouBodyProps, "editing">) {
+  return (
+    <>
+      {you ? <SaveBean /> : null}
+      <JoinForm
+        key={you?.id ?? "new"}
+        you={you}
+        presetTopic={presetTopic}
+        onDone={() => setEditing(false)}
+        onCancel={you ? () => setEditing(false) : null}
+      />
+    </>
+  );
+}
+
 function YouBody({ you, editing, setEditing, presetTopic }: YouBodyProps) {
   const showForm = you === null || editing;
   return (
     <div className="overlay__scroll join__scroll" key={showForm ? "form" : "summary"}>
-      {showForm && you ? <SaveBean /> : null}
       {showForm ? (
-        <JoinForm
-          key={you?.id ?? "new"}
-          you={you}
-          presetTopic={presetTopic}
-          onDone={() => setEditing(false)}
-          onCancel={you ? () => setEditing(false) : null}
-        />
+        <YouForm you={you} setEditing={setEditing} presetTopic={presetTopic} />
       ) : (
         <YouSummary you={you} onEdit={() => setEditing(true)} />
       )}

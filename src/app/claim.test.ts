@@ -64,7 +64,7 @@ describe("claim links in the address", () => {
   });
 
   it("takes the token out of the address before anything else can see it", () => {
-    const replaceState = vi.fn();
+    const replaceState = vi.fn<History["replaceState"]>();
     vi.stubGlobal("location", { pathname: `/claim/${TOKEN}`, search: "?still", hash: "" });
     vi.stubGlobal("history", { replaceState });
     expect(takeClaimToken()).toBe(TOKEN);
@@ -72,7 +72,7 @@ describe("claim links in the address", () => {
   });
 
   it("passes garbage on, so the claim screen can say the link doesn't work", () => {
-    const replaceState = vi.fn();
+    const replaceState = vi.fn<History["replaceState"]>();
     vi.stubGlobal("location", { pathname: "/claim/oops", search: "", hash: "" });
     vi.stubGlobal("history", { replaceState });
     expect(takeClaimToken()).toBe("oops");
@@ -80,7 +80,7 @@ describe("claim links in the address", () => {
   });
 
   it("leaves every other address alone", () => {
-    const replaceState = vi.fn();
+    const replaceState = vi.fn<History["replaceState"]>();
     vi.stubGlobal("location", { pathname: "/join", search: "", hash: "" });
     vi.stubGlobal("history", { replaceState });
     expect(takeClaimToken()).toBeNull();
@@ -151,6 +151,9 @@ describe("the Telegram claim round trip", () => {
     expect(takeTelegramClaim(storage)).toBe(true);
     expect(takeTelegramClaim(storage)).toBe(false);
     expect(takeTelegramClaim(null)).toBe(false);
+    // Ticked, then abandoned: coming back from Telegram much later doesn't count as consent.
+    rememberTelegramClaim(storage, 1_000);
+    expect(takeTelegramClaim(storage, 1_000 + 11 * 60 * 1000)).toBe(false);
   });
 });
 

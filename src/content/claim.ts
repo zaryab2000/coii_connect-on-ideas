@@ -19,6 +19,11 @@ export const CLAIM = {
   /** This browser already has a bean (claim_bean would say coii:already_joined). */
   alreadyHaveBean: (yours: string): string =>
     `You already have a bean here (${yours}). To claim this one, leave coii on this device first, or open the link in another browser.`,
+  /** The server knows this session has a bean, but this tab hasn't loaded it (so no name). */
+  alreadyHaveSomeBean:
+    "You already have a bean on coii. To claim this one, leave coii on this device first, or open the link in another browser.",
+  /** Demo mode (no database): a claim link can't do anything here. */
+  demoLink: "Claim links work on the live coii site. This is the demo map.",
   done: "Your bean is yours now!",
   googleNudge: "Save my bean with Google",
 

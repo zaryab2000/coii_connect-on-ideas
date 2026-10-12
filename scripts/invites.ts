@@ -215,7 +215,7 @@ export function planInvites(csv: string): InvitePlan {
     else good.push({ line, row: checked });
   });
   const unique = dropRepeats(good);
-  return { rows: unique.rows, bad: [...bad, ...unique.bad].sort((a, b) => a.line - b.line) };
+  return { rows: unique.rows, bad: [...bad, ...unique.bad].toSorted((a, b) => a.line - b.line) };
 }
 
 /** Dollar-quote tag around the JSON, so quotes in names and one-liners need no escaping. */
