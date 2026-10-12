@@ -62,6 +62,7 @@ export const PRIVACY = {
       paragraphs: [
         "Anyone who opens coii sees your bean, name, topics, what you're here for, your one-liners, your badges and your wave points.",
         "Nobody else sees your handles, who you waved at, who waved at you (until you both have), who you blocked, or any report.",
+        "If someone invites you to their adda, you'll see who it's from. People in the same adda can see each other.",
       ],
     },
     {
@@ -84,7 +85,8 @@ export const PRIVACY = {
       heading: "How long we keep it",
       paragraphs: [
         "Waves, chais, daily picks, skips and addas are deleted on 6 December 2026, a month after Devcon 8.",
-        "Your bean stays until you leave. Encrypted backups are kept for 14 days, so anything you delete is gone from them within two weeks.",
+        "Your bean stays until you leave, and so do the people you blocked and any reports. Those aren't deleted on 6 December.",
+        "Encrypted backups are kept for 14 days, so anything you delete is gone from them within two weeks.",
       ],
     },
     {

@@ -37,21 +37,21 @@ In dev builds `window.__coii` exposes `{ engine, controller }` for scripting.
 
 ## Scripts
 
-| Command                 | What it does                                                                                    |
-| ----------------------- | ----------------------------------------------------------------------------------------------- |
-| `pnpm check`            | Format check, lint (zero warnings), type check, unit tests                                      |
-| `pnpm test`             | Unit and property tests (vitest + fast-check)                                                   |
-| `pnpm test:e2e`         | Browser smoke tests on desktop and phone viewports, demo mode (uses system Chrome)              |
-| `pnpm test:e2e:backend` | The app in backend mode against the local stack: join, wave, chai, report, leave, adda          |
-| `pnpm dev:local`        | Dev server in backend mode against the local stack, Edge Functions included                     |
-| `pnpm test:load`        | Load test on the local stack only: 5,000 beans, 150,000 waves, 1,000 users (`-- --fast-commit`) |
-| `pnpm test:csp`         | Production build under the real CSP (local stack); fails on any CSP violation                   |
-| `pnpm build`            | Type check + production build into `dist/`                                                      |
-| `pnpm test:db`          | Database integration tests and Edge Functions over HTTP (local stack)                           |
-| `pnpm test:functions`   | Deno unit tests for the Edge Functions                                                          |
-| `pnpm db:seed`          | Writes `supabase/seed.sql`: 1,500 demo beans and ~15,000 waves                                  |
-| `pnpm sync:shared`      | Copies the matching code the Edge Functions reuse into `supabase/functions/_shared`             |
-| `pnpm db:types`         | Regenerates `src/backend/database.types.ts` from the local stack (`:check` compares)            |
+| Command                 | What it does                                                                                               |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `pnpm check`            | Format check, lint (zero warnings), type check, unit tests                                                 |
+| `pnpm test`             | Unit and property tests (vitest + fast-check)                                                              |
+| `pnpm test:e2e`         | Browser smoke tests on desktop and phone viewports, demo mode (uses system Chrome)                         |
+| `pnpm test:e2e:backend` | The app in backend mode against the local stack: join, wave, chai, report, leave, adda (nightly on GitHub) |
+| `pnpm dev:local`        | Dev server in backend mode against the local stack, Edge Functions included                                |
+| `pnpm test:load`        | Load test on the local stack only: 5,000 beans, 150,000 waves, 1,000 users (`-- --fast-commit`)            |
+| `pnpm test:csp`         | Production build under the real CSP (local stack); fails on any CSP violation                              |
+| `pnpm build`            | Type check + production build into `dist/`                                                                 |
+| `pnpm test:db`          | Database integration tests and Edge Functions over HTTP (local stack)                                      |
+| `pnpm test:functions`   | Deno unit tests for the Edge Functions                                                                     |
+| `pnpm db:seed`          | Writes `supabase/seed.sql`: 1,500 demo beans and ~15,000 waves                                             |
+| `pnpm sync:shared`      | Copies the matching code the Edge Functions reuse into `supabase/functions/_shared`                        |
+| `pnpm db:types`         | Regenerates `src/backend/database.types.ts` from the local stack (`:check` compares)                       |
 
 Git hooks run through [prek](https://github.com/j178/prek): `prek install` once, then every commit
 runs the same checks as `pnpm check`.
