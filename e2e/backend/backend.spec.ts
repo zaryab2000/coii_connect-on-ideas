@@ -218,7 +218,7 @@ test("AC8: three reports hide a bean from every map within 60 s", async ({ brows
       where id in (${reporters.map((r) => `'${r.id}'`).join(",")})`,
   );
   await refresh(observer.page);
-  await waitForPresence(observer.page, target.id, true, 5000);
+  await waitForPresence(observer.page, target.id, true);
   for (const reporter of reporters) {
     await refresh(reporter.page);
     await openProfile(reporter.page, target.id);
@@ -246,7 +246,7 @@ test("AC9: leaving deletes every row and the bean leaves other maps within 60 s"
   const leaver = await join(browser, "Leo Fernandes");
   await leaver.page.evaluate((id) => window.__coii?.controller.actions.wave(id), friend.id);
   await refresh(observer.page);
-  await waitForPresence(observer.page, leaver.id, true, 5000);
+  await waitForPresence(observer.page, leaver.id, true);
   expect(Number(personRow(friend.id, "wave_points"))).toBe(1);
 
   // A join link opens your own profile once you're in.
