@@ -295,9 +295,13 @@ test("adda: invite someone you waved at; joining makes a chai", async ({ browser
   await guest.page.getByRole("button", { name: "Adda, 1 invite for you" }).click();
   await guest.page.getByRole("button", { name: "Join Priya's adda" }).click();
   await expect(guest.page.getByText(/You're in Priya's adda/).first()).toBeVisible();
-  await expect(host.page.getByText(/Arjun joined Priya's adda/).first()).toBeVisible({
-    timeout: 8000,
-  });
+  // The chai card that opens now has its own toasts, so the map's copy can sit hidden behind it.
+  await expect(
+    host.page
+      .getByText(/Arjun joined Priya's adda/)
+      .filter({ visible: true })
+      .first(),
+  ).toBeVisible({ timeout: 8000 });
   expect(
     sql(
       `select m.status from private.adda_members m join private.addas a on a.id = m.adda_id
