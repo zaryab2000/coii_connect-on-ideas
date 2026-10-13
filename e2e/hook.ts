@@ -18,6 +18,7 @@ interface DebugHook {
           name: string;
           isDemo: boolean;
           isNpc?: boolean;
+          isInvited?: boolean;
           telegram: string | null;
           x: string | null;
         }[];

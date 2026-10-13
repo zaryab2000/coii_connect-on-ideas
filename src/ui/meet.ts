@@ -1,6 +1,7 @@
 import { WAVES_PER_DAY } from "@/app/meet";
 import type { WaveResult } from "@/app/meet";
 import type { MeetView, Toast } from "@/app/store";
+import { CLAIM } from "@/content/claim";
 import type { IconId } from "@/data/types";
 import type { ChaiStatus } from "@/match/storage";
 
@@ -97,31 +98,29 @@ export interface ToastSpec {
   readonly tone: Toast["tone"];
 }
 
+/** Toasts for waves that didn't go through. */
+function missedWaveToast(result: WaveResult, first: string): ToastSpec | null {
+  if (result === "quota") return { text: QUOTA_TEXT, icon: "hot_beverage", tone: "info" };
+  if (result === "unclaimed")
+    return { text: CLAIM.unclaimed(first), icon: "waving_hand", tone: "info" };
+  if (result !== "unavailable") return null;
+  return {
+    text: `Couldn't wave at ${first}. They may have left the venue.`,
+    icon: "waving_hand",
+    tone: "info",
+  };
+}
+
 /** What to tell you after a wave, if anything. A chai shows its own moment instead. */
 export function waveToast(result: WaveResult, name: string, firstWave: boolean): ToastSpec | null {
   const first = firstName(name);
-  switch (result) {
-    case "quota":
-      return { text: QUOTA_TEXT, icon: "hot_beverage", tone: "info" };
-    case "unavailable":
-      return {
-        text: `Couldn't wave at ${first}. They may have left the venue.`,
-        icon: "waving_hand",
-        tone: "info",
-      };
-    case "waved":
-      return firstWave
-        ? {
-            text: `Wave sent! +1 wave point for ${first}, and their contact is unlocked.`,
-            icon: "waving_hand",
-            tone: "success",
-          }
-        : null;
-    case "chai":
-    case "already":
-    case "failed":
-      return null;
-  }
+  if (result !== "waved") return missedWaveToast(result, first);
+  if (!firstWave) return null;
+  return {
+    text: `Wave sent! +1 wave point for ${first}, and their contact is unlocked.`,
+    icon: "waving_hand",
+    tone: "success",
+  };
 }
 
 export function firstName(name: string): string {

@@ -2,7 +2,7 @@
 -- exactly the intended functions are callable by each role.
 begin;
 \ir _helpers.inc
-select plan(9);
+select plan(10);
 
 select is(
   (select count(*)::int from pg_tables where schemaname = 'private' and not rowsecurity),
@@ -47,24 +47,33 @@ $$;
 
 select is(
   tests.callable('anon'),
-  array['get_venue', 'get_venue_changes'],
-  'anon can call exactly the venue functions'
+  array['claim_preview', 'get_venue', 'get_venue_changes'],
+  'anon can call exactly the venue functions and the claim-link preview'
 );
 
 select is(
   tests.callable('authenticated'),
-  array['block', 'create_adda', 'delete_adda', 'dismiss_chai', 'get_adda_state', 'get_contacts',
+  array['block', 'claim_bean', 'claim_preview', 'create_adda', 'delete_adda', 'dismiss_chai', 'get_adda_state', 'get_contacts',
         'get_me', 'get_meet_state', 'get_venue', 'get_venue_changes', 'invite_to_adda',
         'leave_adda', 'move_adda', 'remove_from_adda', 'report', 'respond_to_adda_invite',
         'reveal_card', 'set_chai_status', 'skip', 'unmatch', 'update_adda', 'upsert_profile',
         'wave'],
-  'authenticated can call exactly the §8.1 list plus the adda functions'
+  'authenticated can call exactly the §8.1 list plus the adda and claim functions'
 );
 
 select is(
   tests.callable('service_role'),
   array['hand_inputs', 'link_telegram', 'save_hand'],
   'service_role can call exactly the three internal functions'
+);
+
+select is(
+  (select count(*)::int
+     from pg_proc p join pg_namespace n on n.oid = p.pronamespace,
+          unnest(array['anon', 'authenticated', 'service_role']) as r(role)
+    where n.nspname = 'private' and has_function_privilege(r.role, p.oid, 'execute')),
+  0,
+  'no API role can call anything in private (invite_bean and the other admin tools included)'
 );
 
 select is(

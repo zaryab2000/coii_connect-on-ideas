@@ -23,7 +23,9 @@ const LIST_TO = 20;
 type Period = "all" | "today";
 
 function rowsFor(state: AppState, topic: TopicId | null, period: Period): BoardRow[] {
-  const people = topic ? state.people.filter((p) => p.topics.includes(topic)) : state.people;
+  // Invited beans nobody has claimed can't get waves, so they aren't ranked.
+  const ranked = state.people.filter((p) => !p.isInvited);
+  const people = topic ? ranked.filter((p) => p.topics.includes(topic)) : ranked;
   return leaderboard(people, period === "today" ? todayPointsReader(state) : pointsReader(state));
 }
 

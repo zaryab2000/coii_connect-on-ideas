@@ -1,0 +1,141 @@
+/* Claim your bean: the claim screen, the panel in the join form, and an invited bean's card. */
+
+.overlay--claim {
+  --overlay-w: 560px;
+}
+
+.claim {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px 24px;
+}
+
+.claim__intro {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.claim__state {
+  margin: 0;
+  padding: 14px 16px 12px;
+  border: var(--line);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  box-shadow: var(--pop-sm);
+  line-height: 1.45;
+}
+
+.claim__state .btn {
+  margin-top: 12px;
+}
+
+.claim__form,
+.claim__ways,
+.claim__option {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.claim__option {
+  margin: 0;
+  padding: 12px 14px;
+  border: var(--line-thin);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  line-height: 1.45;
+}
+
+.claim-bean {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 14px 12px;
+  border: var(--line);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  box-shadow: var(--pop-sm);
+  text-align: center;
+}
+
+.claim-bean__name {
+  margin: 8px 0 6px;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+}
+
+.claim-bean .topic-chips,
+.claim-bean .intent-chips {
+  justify-content: center;
+}
+
+.claim-bean .intent-chips {
+  margin-top: 8px;
+}
+
+.claim-bean .one-liners {
+  align-self: stretch;
+  text-align: left;
+}
+
+/* In the join form: the panel replaces the error line above the submit button. */
+.claim-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px 16px;
+  border: var(--line);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  box-shadow: var(--pop-sm);
+}
+
+.claim-panel__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+}
+
+/* Soft hint while joining: a bean may be waiting for the name you typed. */
+.claim-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border: var(--line-thin);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+}
+
+.claim-hint__text {
+  flex: 1 1 200px;
+}
+
+/* An invited bean's profile card. */
+.badge--invited {
+  border-style: dashed;
+  color: var(--ink-soft);
+}
+
+.claim-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: var(--line);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+}
+
+.claim-card p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.tag--unclaimed {
+  border-style: dashed;
+  color: var(--ink-soft);
+}

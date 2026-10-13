@@ -25,6 +25,7 @@
     "db:types": "node scripts/db-types.mjs",
     "db:types:check": "node scripts/db-types.mjs --check",
     "db:seed": "deno run --allow-read --allow-write=supabase/seed.sql --config scripts/deno.json scripts/seed.ts",
+    "invite:sql": "deno run --allow-read=docs-internal --allow-write=docs-internal --config scripts/deno.json scripts/invite-sql.ts",
     "check": "pnpm fmt:check && pnpm lint && pnpm typecheck && pnpm test"
   },
   "dependencies": {

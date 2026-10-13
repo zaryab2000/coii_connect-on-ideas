@@ -78,12 +78,14 @@ function authErrorText(code: string): string {
 
 /**
  * Starts backend mode: loads the venue (cache plus delta, or the snapshot) and your session
- * before the map mounts, so the booths are sized for the people actually there.
+ * before the map mounts, so the booths are sized for the people actually there. A claim link's
+ * token arrives already taken out of the address (see main.tsx).
  */
 export async function bootBackend(
   config: BackendConfig,
   engine: EngineApi,
   reducedMotion: boolean,
+  claimToken: string | null = null,
 ): Promise<AppController> {
   const authError = takeAuthError();
   const telegramLogin = takeTelegramLogin();
@@ -117,6 +119,7 @@ export async function bootBackend(
     turnstileSiteKey: config.turnstileSiteKey,
     reducedMotion,
     telegramLogin,
+    claimToken,
   });
   const { pushToast } = controller.actions;
   for (const error of [loaded.error, meError]) {

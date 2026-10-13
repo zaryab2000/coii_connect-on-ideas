@@ -9,6 +9,7 @@ import type { EngineApi } from "@/engine/types";
 import { AboutOverlay } from "@/ui/AboutOverlay";
 import { BoardOverlay } from "@/ui/BoardOverlay";
 import { ChaiOverlay } from "@/ui/ChaiCard";
+import { ClaimOverlay } from "@/ui/ClaimOverlay";
 import { DropAddaOverlay } from "@/ui/DropAddaOverlay";
 import { useHeightVar, useMediaQuery, usePresence } from "@/ui/hooks";
 import { Hud } from "@/ui/Hud";
@@ -156,6 +157,7 @@ const OVERLAYS: Readonly<Record<OverlayKind, ComponentType<OverlayProps>>> = {
   invite: InviteOverlay,
   trends: TrendsOverlay,
   privacy: PrivacyOverlay,
+  claim: ClaimOverlay,
 };
 
 function OverlayFor({ kind, ...rest }: OverlayProps & { readonly kind: OverlayKind }) {

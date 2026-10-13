@@ -96,6 +96,11 @@ export interface Person {
   readonly telegramVerified: boolean;
   readonly ticketVerified: boolean;
   readonly isDemo: boolean;
+  /**
+   * Backend mode: the coii team added this person before launch and nobody has claimed the bean
+   * yet. Its handles are never sent; nobody can wave at it until it's claimed.
+   */
+  readonly isInvited?: boolean;
   /** A background NPC bean (grey, roams, not a person): never in any list, count or feature. */
   readonly isNpc?: boolean;
   readonly isYou: boolean;

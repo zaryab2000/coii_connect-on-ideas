@@ -8,6 +8,7 @@ import { rpc } from "@/backend/api";
 import type { Supabase } from "@/backend/client";
 import { toBackendError } from "@/backend/errors";
 import type { BackendMeet } from "@/backend/meet";
+import { CLAIM } from "@/content/claim";
 import { ADDAS_MAX, cleanAddaName, defaultAddaName } from "@/data/adda";
 import type { AddaLook, AddaSpot, PlotMode } from "@/data/adda";
 import type { IconId, Person } from "@/data/types";
@@ -208,6 +209,7 @@ export class BackendAdda implements AddaActions {
     if (!this.deps.meet.hasWaved(personId)) {
       const waved = await this.deps.meet.wave(personId);
       if (waved === "quota" || waved === "unavailable" || waved === "failed") return waved;
+      if (waved === "unclaimed") return "unavailable";
     }
     const result = await this.inviteToAdda(personId, addaId);
     if (result === "invited") this.deps.engine.dropIn(addaId, personId);
@@ -227,6 +229,11 @@ export class BackendAdda implements AddaActions {
     const adda = this.state?.addas.find((a) => a.id === addaId);
     const person = this.personById(personId);
     if (!me || !adda || !person || person.id === me.id) return;
+    // Nobody owns an invited bean yet, so it can't be waved at or added (no drop target).
+    if (person.isInvited) {
+      this.deps.pushToast(CLAIM.unclaimed(firstName(person)), "circus_tent", "info");
+      return;
+    }
     if (adda.members.some((m) => m.personId === personId)) {
       this.deps.pushToast(
         `${firstName(person)} is already in ${adda.name}.`,

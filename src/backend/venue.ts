@@ -75,7 +75,9 @@ export interface VenueUpdate {
 const FLAG_TELEGRAM = 1;
 const FLAG_TICKET = 2;
 const FLAG_DEMO = 4;
-/** Bit 8 is reserved for claim-your-bean's invited beans. */
+/** An invited bean nobody has claimed yet (docs-internal/prd/claim-your-bean.md §6.1). */
+const FLAG_INVITED = 8;
+/** A background NPC bean (docs-internal/prd/npc-beans.md). */
 const FLAG_NPC = 16;
 
 type Raw = Record<string, unknown>;
@@ -99,13 +101,15 @@ function count(value: unknown): number {
 /** The `f` bit mask (§8.2) as the person's flags; `isNpc` only when set. */
 function flagsOf(
   bits: number,
-): Pick<Person, "telegramVerified" | "ticketVerified" | "isDemo" | "isNpc"> {
-  const badges = {
+): Pick<Person, "telegramVerified" | "ticketVerified" | "isDemo" | "isNpc" | "isInvited"> {
+  // Rare flags are only set when true, so most people don't carry them.
+  return {
     telegramVerified: (bits & FLAG_TELEGRAM) !== 0,
     ticketVerified: (bits & FLAG_TICKET) !== 0,
     isDemo: (bits & FLAG_DEMO) !== 0,
+    ...((bits & FLAG_INVITED) !== 0 && { isInvited: true }),
+    ...((bits & FLAG_NPC) !== 0 && { isNpc: true }),
   };
-  return (bits & FLAG_NPC) !== 0 ? { ...badges, isNpc: true } : badges;
 }
 
 /** One row of the columns as a `Person`, or null when the row is malformed. */
@@ -288,6 +292,7 @@ function flags(p: Person): number {
     (p.telegramVerified ? FLAG_TELEGRAM : 0) |
     (p.ticketVerified ? FLAG_TICKET : 0) |
     (p.isDemo ? FLAG_DEMO : 0) |
+    (p.isInvited ? FLAG_INVITED : 0) |
     (p.isNpc ? FLAG_NPC : 0)
   );
 }

@@ -81,6 +81,35 @@ describe("venue columns", () => {
     });
   });
 
+  it("decodes bit 8 as an invited bean nobody has claimed", () => {
+    const [invited, claimed] = decodeColumns(
+      columns([
+        { id: "i", flags: 8 },
+        { id: "c", flags: 1 },
+      ]),
+    );
+    expect(invited?.person).toMatchObject({ isInvited: true, isDemo: false });
+    expect(invited?.person.isNpc).toBeUndefined();
+    expect(claimed?.person).toMatchObject({ telegramVerified: true });
+    expect(claimed?.person.isInvited).toBeUndefined();
+  });
+
+  it("keeps the invited flag through the cache format", () => {
+    const state = snapshot([
+      { id: "i", flags: 8 },
+      { id: "d", flags: 4 },
+    ]);
+    expect(encodeState(state).f).toEqual([8, 4]);
+    expect(parseSnapshot(encodeState(state))).toEqual(state);
+  });
+
+  it("sees a claim (the flag going away) as an edit, so the map respawns the bean", () => {
+    const before = snapshot([{ id: "k", flags: 8 }]);
+    const update = applyChanges(before, changes([{ id: "k", flags: 0 }]));
+    expect(update.updated.map((p) => p.id)).toEqual(["k"]);
+    expect(update.state.entries.get("k")?.person.isInvited).toBeUndefined();
+  });
+
   it("marks NPCs (flag bit 16), and nobody else", () => {
     const [npc, person] = decodeColumns(
       columns([

@@ -1,9 +1,8 @@
 import "@/ui/join.css";
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useState } from "react";
 
 import { useActions, useApp } from "@/app/context";
 import { pointsReader } from "@/app/points";
-import { widgetAttributes } from "@/backend/telegram";
 import { SIGN_OUT } from "@/content/privacy";
 import { topicById } from "@/data/topics";
 import type { Person, TopicId } from "@/data/types";
@@ -21,6 +20,7 @@ import {
   TopicChips,
   topicVars,
 } from "@/ui/PanelChrome";
+import { TelegramWidget } from "@/ui/TelegramWidget";
 
 function YouCard({ you }: { readonly you: Person }) {
   const handles = [you.telegram ? `@${you.telegram}` : null, you.x ? `X @${you.x}` : null]
@@ -75,24 +75,6 @@ function SaveBean() {
       </button>
     </div>
   );
-}
-
-/** Telegram's own Login Widget (script + iframe); it sends you back to /telegram when done. */
-function TelegramWidget() {
-  const box = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const host = box.current;
-    if (!host) return undefined;
-    const script = document.createElement("script");
-    script.async = true;
-    script.src = "https://telegram.org/js/telegram-widget.js?22";
-    for (const [name, value] of Object.entries(widgetAttributes(location.origin))) {
-      script.setAttribute(name, value);
-    }
-    host.append(script);
-    return () => host.replaceChildren();
-  }, []);
-  return <div ref={box} className="telegram-widget" />;
 }
 
 /**
@@ -226,18 +208,28 @@ interface YouBodyProps {
   readonly presetTopic: TopicId | null;
 }
 
+/** The join form, or the edit form (with "save my bean" first) once you're in. */
+function YouForm({ you, setEditing, presetTopic }: Omit<YouBodyProps, "editing">) {
+  return (
+    <>
+      {you ? <SaveBean /> : null}
+      <JoinForm
+        key={you?.id ?? "new"}
+        you={you}
+        presetTopic={presetTopic}
+        onDone={() => setEditing(false)}
+        onCancel={you ? () => setEditing(false) : null}
+      />
+    </>
+  );
+}
+
 function YouBody({ you, editing, setEditing, presetTopic }: YouBodyProps) {
   const showForm = you === null || editing;
   return (
     <div className="overlay__scroll join__scroll" key={showForm ? "form" : "summary"}>
       {showForm ? (
-        <JoinForm
-          key={you?.id ?? "new"}
-          you={you}
-          presetTopic={presetTopic}
-          onDone={() => setEditing(false)}
-          onCancel={you ? () => setEditing(false) : null}
-        />
+        <YouForm you={you} setEditing={setEditing} presetTopic={presetTopic} />
       ) : (
         <YouSummary you={you} onEdit={() => setEditing(true)} />
       )}
@@ -258,7 +250,9 @@ export function YouOverlay({
 }) {
   const you = useApp((s) => s.you);
   const joinTopic = useApp((s) => s.joinTopic);
-  const [editing, setEditing] = useState(joinTopic !== null);
+  // Right after claiming a bean it opens on the form, so you can check everything over.
+  const editYou = useApp((s) => s.editYou);
+  const [editing, setEditing] = useState(joinTopic !== null || editYou);
   const titleId = useId();
   const { title, blurb } = joinCopy(you, editing);
 

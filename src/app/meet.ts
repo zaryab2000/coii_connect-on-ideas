@@ -19,7 +19,15 @@ const SKIP_DAYS = 7;
 const DAY_MS = 86_400_000;
 
 /** How a wave went. `failed`: the server couldn't be reached and you were already told why. */
-export type WaveResult = "waved" | "chai" | "already" | "quota" | "unavailable" | "failed";
+/** `unclaimed`: an invited bean nobody owns yet (backend mode); nothing was sent. */
+export type WaveResult =
+  | "waved"
+  | "chai"
+  | "already"
+  | "quota"
+  | "unavailable"
+  | "unclaimed"
+  | "failed";
 
 /** Time, randomness and timers, injectable so the Meet loop is testable. */
 export interface MeetClock {
