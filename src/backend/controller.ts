@@ -495,14 +495,15 @@ class BackendApp {
       const me = meFrom(await invoke(this.start.supabase, "telegram-link", body));
       if (!me) throw new Error("telegram-link returned no profile");
       if (claiming) this.claimed(me);
-      else this.verified(me);
+      else await this.verified(me);
     } catch (error) {
       this.toasts.pushToast(telegramFailure(error, claiming), null, "info");
     }
   }
 
   /** Your Telegram username is now your verified handle. */
-  private verified(me: Me): void {
+  private async verified(me: Me): Promise<void> {
+    await this.meet.refreshContacts();
     this.store.set({ you: me.person });
     this.project();
     this.toasts.pushToast(

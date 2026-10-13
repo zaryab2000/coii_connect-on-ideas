@@ -5,6 +5,7 @@ import type { ComponentType, RefObject } from "react";
 import { useActions, useApp } from "@/app/context";
 import { MapHost } from "@/app/MapHost";
 import type { Overlay, Panel } from "@/app/store";
+import { browserSessionStore, takeTelegramReturn } from "@/app/telegramReturn";
 import type { EngineApi } from "@/engine/types";
 import { AboutOverlay } from "@/ui/AboutOverlay";
 import { BoardOverlay } from "@/ui/BoardOverlay";
@@ -194,6 +195,19 @@ export function App({ engine }: { readonly engine: EngineApi }) {
   }, []);
   const [viewingChai, setViewingChai] = useState<string | null>(null);
   const closeChai = useCallback(() => setViewingChai(null), []);
+  const actions = useActions();
+  const telegramVerified = useApp((s) => s.you?.telegramVerified === true);
+  useEffect(() => {
+    if (!telegramVerified) return;
+    const resume = takeTelegramReturn(browserSessionStore());
+    if (!resume) return;
+    const timer = window.setTimeout(() => {
+      actions.closeOverlay();
+      if (resume.surface === "chai") setViewingChai(resume.personId);
+      else actions.selectPerson(resume.personId);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [actions, telegramVerified]);
 
   return (
     <OpenChaiContext.Provider value={setViewingChai}>

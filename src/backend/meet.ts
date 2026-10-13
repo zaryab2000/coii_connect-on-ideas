@@ -152,6 +152,26 @@ export class BackendMeet implements MeetActions {
     if (missing.length > 0) this.deps.onContacts(this.contacts);
   }
 
+  /** Re-reads every unlocked contact after this viewer verifies Telegram. */
+  readonly refreshContacts = async (): Promise<void> => {
+    if (!this.state) await this.sync();
+    const waved = this.state?.waved ?? [];
+    const fresh = new Map<string, Contact>();
+    try {
+      for (let start = 0; start < waved.length; start += CONTACTS_BATCH) {
+        const ids = waved.slice(start, start + CONTACTS_BATCH);
+        // oxlint-disable-next-line eslint/no-await-in-loop
+        const found = parseContacts(await rpc(this.deps.supabase, "get_contacts", { ids }));
+        for (const [id, contact] of found) fresh.set(id, contact);
+      }
+      this.contacts.clear();
+      for (const [id, contact] of fresh) this.contacts.set(id, contact);
+      this.deps.onContacts(this.contacts);
+    } catch (error) {
+      this.fail(error);
+    }
+  };
+
   private personById(id: string): Person | undefined {
     return this.deps.store.get().people.find((p) => p.id === id);
   }

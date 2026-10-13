@@ -15,7 +15,7 @@ export const JOIN_CREDIT = "Built with Love, by Decipher Club ❤️";
 /** Next to the join form's checkbox: the only consent step, so it says everything that matters. */
 export const CONSENT = {
   label:
-    "Your bean, name, topics and one-liners are public. Your handles show only to people who wave at you.",
+    "Your bean, name, topics and one-liners are public. X shows to people who wave at you. Telegram shows only to people who wave and verify their own Telegram.",
   link: "How coii uses your data",
 };
 
@@ -43,7 +43,7 @@ export interface PrivacySection {
 
 export const PRIVACY = {
   title: "Privacy",
-  updated: "Last updated 12 October 2026",
+  updated: "Last updated 13 October 2026",
   intro:
     "coii is a live map of who's into what at Devcon 8 in Mumbai. This page says what we keep about you, who can see it, and how to make it all go away. " +
     UNOFFICIAL,
@@ -72,7 +72,7 @@ export const PRIVACY = {
     {
       heading: "When your handles are shown",
       paragraphs: [
-        "Only after someone waves at you. A wave is how a person asks to reach you, and it gives you a wave point. They learn your handles; you learn it was them only if you wave back.",
+        "After someone waves at you, they can see your X handle. They can see your Telegram username only after they also verify their own Telegram account. A wave gives you a wave point, and you learn who sent it only if you wave back.",
       ],
     },
     {

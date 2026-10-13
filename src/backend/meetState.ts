@@ -102,6 +102,11 @@ export function meetViewOf(state: MeetState): MeetView {
 export interface Contact {
   readonly telegram: string | null;
   readonly x: string | null;
+  /**
+   * They have a Telegram username, held back until your own Telegram is verified (Telegram is a
+   * private DM; X is a public profile). Migration 20261013120000.
+   */
+  readonly telegramLocked: boolean;
 }
 
 function handleOf(value: unknown): string | null {
@@ -111,8 +116,12 @@ function handleOf(value: unknown): string | null {
 /** Reads the `contacts` part of a `wave()` result, or a row of `get_contacts()`. */
 export function contactOf(value: unknown): Contact | null {
   const c = raw(value);
-  const contact = { telegram: handleOf(c["telegram"]), x: handleOf(c["x"]) };
-  return contact.telegram || contact.x ? contact : null;
+  const contact = {
+    telegram: handleOf(c["telegram"]),
+    x: handleOf(c["x"]),
+    telegramLocked: c["telegram_locked"] === true,
+  };
+  return contact.telegram || contact.x || contact.telegramLocked ? contact : null;
 }
 
 /** `get_contacts()` rows by person id. */

@@ -82,17 +82,44 @@ test("AC2 + AC3: joining makes one account and one bean that survive a reload an
   expect([...asha.errors, ...observer.errors]).toEqual([]);
 });
 
-test("AC4 + AC5: a wave unlocks handles and pings the target anonymously; waving back is one chai", async ({
+test("AC4 + AC5: a wave unlocks X, gates Telegram, pings anonymously and makes one chai", async ({
   browser,
 }) => {
   const ravi = await join(browser, "Ravi Kumar");
   const meera = await join(browser, "Meera Iyer");
+  const meeraX = `meera_${Date.now().toString(36)}`;
+  sql(`update private.contacts set x = '${meeraX}' where person_id = '${meera.id}'`);
   await refresh(ravi.page);
 
   await openProfile(ravi.page, meera.id);
   const profile = ravi.page.locator(".profile");
   await expect(profile.getByText("Wave to see their handles")).toBeVisible();
   await profile.getByRole("button", { name: "Wave to connect" }).click();
+  await expect(profile.getByText(`X @${meeraX}`)).toBeVisible();
+  await expect(profile.getByRole("link", { name: "X profile" })).toHaveAttribute(
+    "href",
+    `https://x.com/${meeraX}`,
+  );
+  await expect(
+    profile.getByRole("button", { name: "Verify your Telegram to message them" }),
+  ).toBeVisible();
+
+  // The gate opens the existing verify step. A successful Telegram round trip restores this
+  // exact profile and refreshes the previously locked handle.
+  await profile.getByRole("button", { name: "Verify your Telegram to message them" }).click();
+  await expect(
+    ravi.page.getByRole("dialog", { name: "You're in" }).getByText(/Tap the Telegram button/),
+  ).toBeVisible();
+  const now = Math.floor(Date.now() / 1000);
+  const raviTelegram = `ravi_verified_${Date.now().toString(36)}`;
+  const login = await telegramLogin({
+    id: String(Date.now()),
+    first_name: "Ravi",
+    username: raviTelegram,
+    auth_date: String(now),
+  });
+  await ravi.page.goto(`/telegram?${login}`);
+  await expect(profile).toBeVisible();
   await expect(profile.getByText(`@${meera.telegram}`)).toBeVisible();
   await expect(profile.getByRole("link", { name: "Message on Telegram" })).toHaveAttribute(
     "href",
@@ -124,6 +151,11 @@ test("AC4 + AC5: a wave unlocks handles and pings the target anonymously; waving
       timeout: 8000,
     });
   }
+  await expect(
+    meera.page
+      .getByRole("dialog", { name: /Chai's on/ })
+      .getByRole("button", { name: "Verify your Telegram to message them" }),
+  ).toBeVisible();
   expect(
     sqlNumber(
       `select count(*) from private.chais where a_id = least('${ravi.id}'::uuid, '${meera.id}'::uuid)
@@ -131,6 +163,39 @@ test("AC4 + AC5: a wave unlocks handles and pings the target anonymously; waving
     ),
   ).toBe(1);
   expect([...ravi.errors, ...meera.errors]).toEqual([]);
+});
+
+test("several unseen chais open as one combined celebration", async ({ browser }) => {
+  const aarav = await join(browser, "Aarav Shah");
+  const bina = await join(browser, "Bina Patel");
+  const chetan = await join(browser, "Chetan Rao");
+  const dev = await join(browser, "Dev Mehta");
+  await refresh(aarav.page);
+
+  for (const target of [bina, chetan, dev]) {
+    await aarav.page.evaluate((id) => window.__coii?.controller.actions.wave(id), target.id);
+  }
+  for (const member of [bina, chetan, dev]) {
+    await member.page.evaluate((id) => window.__coii?.controller.actions.wave(id), aarav.id);
+  }
+  await aarav.page.waitForFunction(
+    () => window.__coii?.controller.store.get().meet?.chais.length === 3,
+    undefined,
+    { timeout: 10_000 },
+  );
+
+  const card = aarav.page.getByRole("dialog", { name: /Chai's on/ });
+  await expect(card).toBeVisible();
+  await expect(card.getByText("Chai's on with Bina, Chetan & Dev!")).toBeVisible();
+  await expect(card.getByRole("button", { name: "See my chais" })).toBeVisible();
+  await expect(aarav.page.locator("dialog.chai[open]")).toHaveCount(1);
+
+  await card.getByRole("button", { name: "Open chai with Bina" }).click();
+  await expect(card.getByText("You & Bina both waved 👋")).toBeVisible();
+  await expect(
+    card.getByRole("button", { name: "Verify your Telegram to message them" }),
+  ).toBeVisible();
+  expect([...aarav.errors, ...bina.errors, ...chetan.errors, ...dev.errors]).toEqual([]);
 });
 
 test("AC6: the 51st wave in a Meet day is refused", async ({ browser }) => {
@@ -166,19 +231,21 @@ test("AC7: unmatch and block take back both waves and both points", async ({ bro
   }
   expect([pointsOf(a.id), pointsOf(b.id), pointsOf(c.id)]).toEqual([2, 1, 1]);
 
-  const handleOf = (id: string) =>
-    a.page.evaluate(
-      (pid) =>
-        window.__coii?.controller.store.get().people.find((p) => p.id === pid)?.telegram ?? null,
-      id,
-    );
+  const contactOf = (id: string) =>
+    a.page.evaluate((pid) => {
+      const person = window.__coii?.controller.store.get().people.find((p) => p.id === pid);
+      return {
+        telegram: person?.telegram ?? null,
+        telegramLocked: person?.telegramLocked ?? false,
+      };
+    }, id);
   await refresh(a.page);
   await closeChaiCards(a.page);
-  await expect.poll(() => handleOf(b.id)).toBe(b.telegram);
+  await expect.poll(() => contactOf(b.id)).toEqual({ telegram: null, telegramLocked: true });
 
-  // Unmatch from the chai card: the handles lock again at once.
+  // Unmatch drops the unlocked-contact record at once, including the Telegram lock marker.
   await a.page.evaluate((id) => window.__coii?.controller.actions.unmatch(id), b.id);
-  await expect.poll(() => handleOf(b.id)).toBeNull();
+  await expect.poll(() => contactOf(b.id)).toEqual({ telegram: null, telegramLocked: false });
   await expect
     .poll(() =>
       sqlNumber(

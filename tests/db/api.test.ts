@@ -62,7 +62,7 @@ describe("joining, waving and chais", () => {
     );
     expect(first).toEqual({
       result: "waved",
-      contacts: { telegram: ravi.me.telegram, x: ravi.me.x },
+      contacts: { telegram: null, x: ravi.me.x, telegram_locked: true },
       waves_left: 49,
     });
 

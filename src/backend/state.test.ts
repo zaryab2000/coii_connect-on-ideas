@@ -93,12 +93,18 @@ describe("server state", () => {
     });
   });
 
-  it("reads contacts, dropping rows without a handle", () => {
+  it("reads contacts, dropping rows without a handle; a locked Telegram still counts", () => {
     const found = parseContacts([
-      { id: "a", telegram: "asha_builds", x: null },
-      { id: "b", telegram: null, x: null },
+      { id: "a", telegram: "asha_builds", x: null, telegram_locked: false },
+      { id: "b", telegram: null, x: null, telegram_locked: false },
+      { id: "c", telegram: null, x: null, telegram_locked: true },
+      { id: "d", telegram: "old_server", x: null },
     ]);
-    expect([...found]).toEqual([["a", { telegram: "asha_builds", x: null }]]);
+    expect([...found]).toEqual([
+      ["a", { telegram: "asha_builds", x: null, telegramLocked: false }],
+      ["c", { telegram: null, x: null, telegramLocked: true }],
+      ["d", { telegram: "old_server", x: null, telegramLocked: false }],
+    ]);
   });
 
   it("reads adda state; a declined invite never shows as declined", () => {
