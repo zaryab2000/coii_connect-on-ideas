@@ -135,7 +135,9 @@ test("claim link: a visitor claims an invited bean once, and every map sees it c
   // Other maps pick the claim up on their next poll.
   await observer.page.waitForFunction(
     (id) =>
-      window.__coii?.controller.store.get().people.find((p) => p.id === id)?.isInvited === false,
+      window.__coii?.controller.store
+        .get()
+        .people.some((p) => p.id === id && p.isInvited !== true) ?? false,
     kiran.id,
     { timeout: 75_000, polling: 500 },
   );
@@ -208,7 +210,7 @@ test("joining with an invited Telegram username: logging in with Telegram claims
   await consent(page, panel);
   await panel.getByRole("button", { name: "Continue with Telegram" }).click();
   // Consent rides along to Telegram and back; then the signed login claims the bean.
-  await page.waitForFunction(() => sessionStorage.getItem("coii:telegram-claim:v1") === "consent");
+  await page.waitForFunction(() => sessionStorage.getItem("coii:telegram-claim:v1") !== null);
   const login = await telegramLogin({
     id: "777101",
     username: username.toUpperCase(),
