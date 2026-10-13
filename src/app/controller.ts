@@ -72,6 +72,8 @@ export interface Actions extends MeetActions, AddaActions, AccountActions {
   leave(): Promise<boolean>;
   pushToast(text: string, icon: IconId | null, tone: Toast["tone"]): void;
   dismissToast(id: number): void;
+  /** Closes the Decipher Club welcome card for good. */
+  dismissWelcome(): void;
 }
 
 export interface AppController {
@@ -159,6 +161,7 @@ export function initialState(init: InitialState): AppState {
     shareAddaId: null,
     claim: null,
     editYou: false,
+    decipherWelcome: false,
     inviteTopic: null,
     lastArrival: null,
     race: { rows: [], hot: null },
@@ -187,11 +190,12 @@ export function removeYou(engine: EngineApi, store: AppStore): Person | null {
     people: s.people.filter((p) => p.id !== you.id),
     selectedId: s.selectedId === you.id ? null : s.selectedId,
     panel: s.selectedId === you.id ? "none" : s.panel,
+    decipherWelcome: false,
   }));
   return you;
 }
 
-export type ToastActions = Pick<Actions, "pushToast" | "dismissToast">;
+export type ToastActions = Pick<Actions, "pushToast" | "dismissToast" | "dismissWelcome">;
 
 export function toastActions(store: AppStore): ToastActions {
   let toastId = 0;
@@ -203,6 +207,9 @@ export function toastActions(store: AppStore): ToastActions {
     },
     dismissToast(id) {
       store.set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+    },
+    dismissWelcome() {
+      store.set({ decipherWelcome: false });
     },
   };
 }

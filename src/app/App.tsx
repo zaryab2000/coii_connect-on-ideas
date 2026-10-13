@@ -10,6 +10,7 @@ import { AboutOverlay } from "@/ui/AboutOverlay";
 import { BoardOverlay } from "@/ui/BoardOverlay";
 import { ChaiOverlay } from "@/ui/ChaiCard";
 import { ClaimOverlay } from "@/ui/ClaimOverlay";
+import { DecipherWelcome } from "@/ui/DecipherWelcome";
 import { DropAddaOverlay } from "@/ui/DropAddaOverlay";
 import { useHeightVar, useMediaQuery, usePresence } from "@/ui/hooks";
 import { Hud } from "@/ui/Hud";
@@ -215,6 +216,7 @@ export function App({ engine }: { readonly engine: EngineApi }) {
           )}
           <Hud ref={hudRef} />
           <Toasts />
+          <DecipherWelcome />
         </main>
         <PanelArea
           tabBar={tabBarRef}

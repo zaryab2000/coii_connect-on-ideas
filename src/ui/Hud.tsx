@@ -5,19 +5,33 @@ import type { MouseEvent, Ref } from "react";
 import { useActions, useApp } from "@/app/context";
 import { pointsReader } from "@/app/points";
 import type { AppState } from "@/app/store";
+import { DECIPHER, decipherUrl } from "@/content/decipher";
 import { rankOf } from "@/match/points";
 import { Glyph, Icon } from "@/ui/Icon";
 import { firstName } from "@/ui/meet";
 
 const numberFormat = new Intl.NumberFormat("en-IN");
 
+/** The coii sticker, with the "by Decipher Club" credit on it (its website, utm_medium=hud). */
 function Wordmark() {
   return (
-    <h1 className="wordmark">
-      <span className="wordmark__name">coii</span>
-      <span className="wordmark__sub">connect on ideas & interests</span>
-      <span className="wordmark__tag">Devcon 8</span>
-    </h1>
+    <div className="wordmark">
+      <h1 className="wordmark__title">
+        <span className="wordmark__name">coii</span>
+        <span className="wordmark__sub">connect on ideas & interests</span>
+        <span className="wordmark__tag">Devcon 8</span>
+      </h1>
+      <a
+        className="wordmark__by"
+        aria-label={`${DECIPHER.credit}${DECIPHER.creditEnd}`}
+        href={decipherUrl("hud")}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {DECIPHER.credit}
+        <span className="wordmark__by-end">{DECIPHER.creditEnd}</span>
+      </a>
+    </div>
   );
 }
 

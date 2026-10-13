@@ -1,0 +1,90 @@
+/* The Decipher Club welcome card: a sticker in the toast corner, stacked just above the toasts. */
+
+.decipher-welcome {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + var(--sheet-h) + 80px);
+  z-index: 49;
+  display: grid;
+  gap: 4px;
+  max-width: 400px;
+  margin-inline: auto;
+  padding: 14px 16px 14px;
+  border: var(--line);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--pop);
+  transition:
+    transform 300ms var(--ease-out),
+    opacity 300ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+}
+
+.app[data-layout="desktop"] .decipher-welcome {
+  left: 18px;
+  right: auto;
+  bottom: 84px;
+  width: 360px;
+  margin: 0;
+}
+
+.app[data-motion="reduced"] .decipher-welcome {
+  transition: opacity 200ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    transform: none;
+  }
+}
+
+/* Beats .nav-btn's `position: relative`, which loads later. */
+.decipher-welcome .decipher-welcome__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.decipher-welcome__heading {
+  margin: 0;
+  padding-right: 44px;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.decipher-welcome__line {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.decipher-welcome__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.decipher-welcome__links .btn {
+  flex: 1 1 auto;
+}
+
+/* About's footer: the pitch and the two buttons, under "Built for Devcon 8". */
+.about__decipher {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.about__decipher p {
+  margin: 0;
+}

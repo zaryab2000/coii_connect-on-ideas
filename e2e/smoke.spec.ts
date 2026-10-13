@@ -610,3 +610,78 @@ test("/privacy opens the privacy notice; the join form and About link to it", as
   await expect(page.getByRole("dialog", { name: "Privacy" })).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+// ---- Decipher Club plugs (docs-internal/prd/decipher-club-plugs.md) ----------------------------
+
+const PITCH = "Built by Decipher Club: a research-driven publication by builders for builders.";
+
+test("About's footer says who built coii, with Subscribe and Telegram links", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto("/?still");
+  await waitForCrowd(page);
+  await page.getByRole("button", { name: "About" }).click();
+  const about = page.getByRole("dialog", { name: "coii" });
+  await expect(about.getByText(PITCH)).toBeVisible();
+  const subscribe = about.getByRole("link", { name: "Subscribe" });
+  await expect(subscribe).toHaveAttribute(
+    "href",
+    "https://www.decipherclub.com/?utm_source=coii&utm_medium=about",
+  );
+  await expect(subscribe).toHaveAttribute("target", "_blank");
+  await expect(subscribe).toHaveAttribute("rel", "noopener noreferrer");
+  await expect(about.getByRole("link", { name: "Join our Telegram" })).toHaveAttribute(
+    "href",
+    "https://t.me/+mtMGHzBxC7BjOGY1",
+  );
+  expect(errors).toEqual([]);
+});
+
+/** Every HUD control's box, keyed by its text, to compare with and without the credit. */
+async function hudControlBoxes(page: Page): Promise<Record<string, DOMRect>> {
+  return page.evaluate(() => {
+    const boxes: Record<string, DOMRect> = {};
+    const controls = document.querySelectorAll<HTMLElement>(".hud button, .hud .live-pill");
+    for (const [i, el] of [...controls].entries()) {
+      if (el.offsetParent) boxes[`${i}:${el.textContent ?? ""}`] = el.getBoundingClientRect();
+    }
+    return JSON.parse(JSON.stringify(boxes)) as Record<string, DOMRect>;
+  });
+}
+
+test("the HUD credits Decipher Club without moving or covering any control", async ({
+  page,
+}, testInfo) => {
+  if (testInfo.project.name === "phone") await page.setViewportSize({ width: 375, height: 740 });
+  await page.goto("/?still");
+  await waitForCrowd(page);
+  const credit = page.locator(".hud").getByRole("link", { name: /by Decipher/ });
+  await expect(credit).toBeVisible();
+  await expect(credit).toHaveAttribute(
+    "href",
+    "https://www.decipherclub.com/?utm_source=coii&utm_medium=hud",
+  );
+  const box = await credit.boundingBox();
+  const withCredit = await hudControlBoxes(page);
+  expect(Object.keys(withCredit).length).toBeGreaterThan(2);
+  const covered = Object.entries(withCredit).filter(
+    ([, control]) =>
+      box !== null &&
+      box.x < control.x + control.width &&
+      control.x < box.x + box.width &&
+      box.y < control.y + control.height &&
+      control.y < box.y + box.height,
+  );
+  expect(covered.map(([name]) => name)).toEqual([]);
+  // On a 375 px phone nothing may move for it (wide screens have room to spare).
+  if (testInfo.project.name !== "phone") return;
+  await page.addStyleTag({ content: ".wordmark__by { display: none !important; }" });
+  expect(await hudControlBoxes(page)).toEqual(withCredit);
+});
+
+test("demo mode never shows the Decipher Club welcome card", async ({ page }) => {
+  await page.goto("/?still");
+  await waitForCrowd(page);
+  await joinQuickly(page);
+  await page.waitForTimeout(5000);
+  await expect(page.locator(".decipher-welcome")).toHaveCount(0);
+});

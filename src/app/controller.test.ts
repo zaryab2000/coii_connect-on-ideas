@@ -248,6 +248,18 @@ describe("controller join and leave", () => {
     expect(state.toasts.at(-1)).toMatchObject({ tone: "info", icon: "waving_hand" });
   });
 
+  it("demo mode never offers the Decipher Club welcome card; leaving drops a pending one", async () => {
+    const { store, actions } = setup();
+    await joinAs(actions);
+    expect(store.get().decipherWelcome).toBe(false);
+    store.set({ decipherWelcome: true });
+    await actions.leave();
+    expect(store.get().decipherWelcome).toBe(false);
+    store.set({ decipherWelcome: true });
+    actions.dismissWelcome();
+    expect(store.get().decipherWelcome).toBe(false);
+  });
+
   it("leave does nothing when you have not joined", async () => {
     const { store, actions, methods } = setup();
     await actions.leave();

@@ -38,6 +38,49 @@
   rotate: -2deg;
 }
 
+.wordmark__title {
+  display: grid;
+  justify-items: start;
+  margin: 0;
+  font: inherit;
+}
+
+/*
+ * "by Decipher Club": on phones a small label across the sticker's bottom edge, the way the
+ * Devcon 8 tag sits on its top edge. It's out of the layout, so no HUD control moves for it.
+ */
+.wordmark__by {
+  position: absolute;
+  top: calc(100% - 9px);
+  left: 10px;
+  padding: 1px 7px 0;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+  text-decoration: none;
+  white-space: nowrap;
+  pointer-events: auto;
+}
+
+.wordmark__by:hover,
+.wordmark__by:focus-visible {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+/* Phones keep the credit to "by Decipher", so it ends before the live count. */
+@media (max-width: 767px) {
+  .wordmark__by-end {
+    display: none;
+  }
+}
+
 /* The tagline only fits beside the map on wider screens; the About overlay spells it out. */
 .wordmark__sub {
   display: none;
@@ -211,6 +254,23 @@
 
   .wordmark__sub {
     display: block;
+  }
+
+  /* Wide screens have room: the credit sits after the tagline, on its line. */
+  .wordmark {
+    grid-template-columns: auto auto;
+    column-gap: 8px;
+  }
+
+  .wordmark__by {
+    position: static;
+    align-self: end;
+    margin: 0 0 3px;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: 0.72rem;
+    line-height: 1.2;
   }
 
   .hud__about {

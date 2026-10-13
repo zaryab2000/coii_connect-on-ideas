@@ -149,6 +149,31 @@ test("claim link: a visitor claims an invited bean once, and every map sees it c
   expect([...errors, ...observer.errors, ...late.errors]).toEqual([]);
 });
 
+test("after a claim, the Decipher Club welcome card waits until Edit profile closes", async ({
+  browser,
+}) => {
+  const meera = invite("Meera Welcome", { telegram: shortHandle("meeraw") });
+  const { page, errors } = await visitor(browser);
+  const screen = await openLink(page, meera.token);
+  await consent(page, screen);
+  await screen.getByRole("button", { name: "Claim my bean" }).click();
+  await youAre(page, meera.id);
+  const card = page.getByRole("complementary", { name: "Built by Decipher Club" });
+  const edit = page.getByRole("dialog", { name: "Edit your bean" });
+  await expect(edit).toBeVisible();
+  // Never on top of Edit profile, however long it stays open.
+  await page.waitForTimeout(6000);
+  await expect(card).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(edit).toBeHidden();
+  await expect(card).toBeVisible({ timeout: 10_000 });
+  await expect(card.getByRole("link", { name: "Subscribe" })).toHaveAttribute(
+    "href",
+    "https://www.decipherclub.com/?utm_source=coii&utm_medium=welcome",
+  );
+  expect(errors).toEqual([]);
+});
+
 test("claim link: broken, expired and already-have-a-bean links say why", async ({ browser }) => {
   const { page, errors } = await visitor(browser);
   const broken = await openLink(page, "garbage");

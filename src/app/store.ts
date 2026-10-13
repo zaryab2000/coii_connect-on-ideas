@@ -164,6 +164,11 @@ export interface AppState {
   readonly claim: ClaimView | null;
   /** Open your profile on the edit form (right after claiming a bean, to check it over). */
   readonly editYou: boolean;
+  /**
+   * Backend mode: the Decipher Club welcome card, due once after your first join or a claim. It
+   * waits until no overlay is open.
+   */
+  readonly decipherWelcome: boolean;
   /** "My tribe" map mode: everyone sharing your topics glows, the rest dim. */
   readonly tribe: boolean;
   readonly points: PointsState;
