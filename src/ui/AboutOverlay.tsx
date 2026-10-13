@@ -1,10 +1,13 @@
 import "@/ui/about.css";
+import "@/ui/decipher.css";
 import { useId } from "react";
 
 import { useActions, useApp } from "@/app/context";
+import { DECIPHER } from "@/content/decipher";
 import { UNOFFICIAL } from "@/content/privacy";
 import type { Avatar, IconId, TopicId } from "@/data/types";
 import { BeanAvatar } from "@/ui/BeanAvatar";
+import { DecipherLinks } from "@/ui/DecipherLinks";
 import { Glyph, Icon } from "@/ui/Icon";
 import { CloseButton, Overlay } from "@/ui/Overlay";
 
@@ -165,6 +168,12 @@ function Footer({ onClose }: { readonly onClose: () => void }) {
         >
           Invite friends
         </button>
+      </div>
+      <div className="about__decipher">
+        <p>{DECIPHER.pitch}</p>
+        <div className="about__ctas">
+          <DecipherLinks spot="about" primary={false} />
+        </div>
       </div>
       <p className="about__love">
         <strong>With love, from Decipher Club</strong>

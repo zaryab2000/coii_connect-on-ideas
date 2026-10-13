@@ -314,6 +314,52 @@ test("adda: invite someone you waved at; joining makes a chai", async ({ browser
   expect([...host.errors, ...guest.errors]).toEqual([]);
 });
 
+test("Decipher Club: a welcome card once after joining, never after a reload or an edit", async ({
+  browser,
+}) => {
+  const member = await join(browser, "Welcome Tester");
+  const { page } = member;
+  const card = page.getByRole("complementary", { name: "Built by Decipher Club" });
+  // It waits for the "You're in!" toast and the walk-in to go first.
+  await expect(card).toBeVisible({ timeout: 10_000 });
+  await expect(
+    card.getByText("A research-driven publication by builders for builders."),
+  ).toBeVisible();
+  await expect(card.getByRole("link", { name: "Subscribe" })).toHaveAttribute(
+    "href",
+    "https://www.decipherclub.com/?utm_source=coii&utm_medium=welcome",
+  );
+  await expect(card.getByRole("link", { name: "Join our Telegram" })).toHaveAttribute(
+    "href",
+    "https://t.me/+mtMGHzBxC7BjOGY1",
+  );
+  await card.getByRole("button", { name: "Dismiss" }).click();
+  await expect(card).toBeHidden();
+
+  // Never again in this browser: not after a reload, not after editing your bean.
+  await refresh(page);
+  await page.evaluate(() => {
+    const you = window.__coii?.controller.store.get().you;
+    if (!you) throw new Error("no bean after the reload");
+    // Your own bean as the form would send it back, with one line changed.
+    return window.__coii?.controller.actions.join(
+      { ...you, oneLiners: ["edited after the welcome card"] },
+      null,
+    );
+  });
+  await expect(page.getByText("Saved! Your bean walks back in.").first()).toBeVisible();
+  await page.waitForTimeout(6000);
+  await expect(card).toHaveCount(0);
+
+  // Escape dismisses it too (another browser, so it's due again there).
+  const other = await join(browser, "Escape Tester");
+  const otherCard = other.page.getByRole("complementary", { name: "Built by Decipher Club" });
+  await expect(otherCard).toBeVisible({ timeout: 10_000 });
+  await other.page.keyboard.press("Escape");
+  await expect(otherCard).toBeHidden();
+  expect([...member.errors, ...other.errors]).toEqual([]);
+});
+
 test("P8: Verify with Telegram checks the signed login and adds the ✓", async ({ browser }) => {
   const asha = await join(browser, "Asha Telegram");
   const now = Math.floor(Date.now() / 1000);

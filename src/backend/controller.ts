@@ -14,6 +14,7 @@ import {
   walkIn,
 } from "@/app/controller";
 import type { Actions, AppController, ToastActions } from "@/app/controller";
+import { takeWelcome } from "@/app/decipher";
 import type { InvitedRef, JoinInput, JoinOutcome } from "@/app/joinTypes";
 import { realClock } from "@/app/meet";
 import { pointsReader } from "@/app/points";
@@ -85,6 +86,14 @@ function telegramFailure(error: unknown, claiming: boolean): string {
 function sessionStore(): Storage | null {
   try {
     return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+function localStore(): Storage | null {
+  try {
+    return window.localStorage;
   } catch {
     return null;
   }
@@ -359,7 +368,10 @@ class BackendApp {
         "party_popper",
         "success",
       );
-      if (!before) this.enter();
+      if (!before) {
+        this.enter();
+        this.offerWelcome();
+      }
       void this.start.venue.pollNow();
       return { ok: true, person: me.person };
     } catch (error) {
@@ -389,7 +401,14 @@ class BackendApp {
     this.enter();
     // Check everything over, then save it with Google (the "you" overlay nudges once you save).
     this.store.set({ overlay: "you", editYou: true });
+    // Waits for that overlay to close, so it never covers Edit profile.
+    this.offerWelcome();
     void this.start.venue.pollNow();
+  }
+
+  /** The Decipher Club welcome card, once per browser (never after an edit or a reload). */
+  private offerWelcome(): void {
+    if (takeWelcome(localStore())) this.store.set({ decipherWelcome: true });
   }
 
   // ---- claim your bean ------------------------------------------------------------------------------
