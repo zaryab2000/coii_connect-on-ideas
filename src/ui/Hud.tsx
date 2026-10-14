@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 import type { MouseEvent, Ref } from "react";
 
 import { useActions, useApp } from "@/app/context";
+import { IDEAS } from "@/app/ideas";
 import { pointsReader } from "@/app/points";
 import type { AppState } from "@/app/store";
 import { DECIPHER, decipherUrl } from "@/content/decipher";
@@ -40,7 +41,8 @@ function LivePill() {
   return (
     <p className="live-pill" aria-live="off">
       <span className="live-pill__dot" aria-hidden="true" />
-      <strong className="live-pill__count">{numberFormat.format(count)}</strong> here
+      <strong className="live-pill__count">{numberFormat.format(count)}</strong>
+      <span className="live-pill__here"> here</span>
     </p>
   );
 }
@@ -189,6 +191,15 @@ export function Hud({ ref }: { readonly ref: Ref<HTMLDivElement> }) {
       <div className="hud__top">
         <Wordmark />
         <LivePill />
+        <button
+          type="button"
+          className="icon-btn hud__ideas"
+          aria-haspopup="dialog"
+          onClick={() => actions.openOverlay("ideas")}
+        >
+          <Icon id="light_bulb" size={20} />
+          <span className="hud__ideas-label">{IDEAS.hud}</span>
+        </button>
         <button
           type="button"
           className="icon-btn hud__about"

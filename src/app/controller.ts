@@ -1,5 +1,7 @@
 import { createAdda } from "@/app/adda";
 import type { AddaActions, AddaController } from "@/app/adda";
+import { IDEAS } from "@/app/ideas";
+import type { IdeaKind, IdeaOutcome } from "@/app/ideas";
 import type { InvitedRef, JoinInput, JoinOutcome } from "@/app/joinTypes";
 import { createMeet, realClock } from "@/app/meet";
 import type { MeetActions, MeetClock, MeetController } from "@/app/meet";
@@ -45,6 +47,8 @@ export interface AccountActions {
    * across the round trip to Telegram. Resolves to null when the Telegram button can show.
    */
   prepareTelegramClaim(captchaToken: string | null): Promise<string | null>;
+  /** "Got an idea for coii?": sends an idea, stored with your bean. Never throws. */
+  sendIdea(kind: IdeaKind, body: string): Promise<IdeaOutcome>;
 }
 
 export interface Actions extends MeetActions, AddaActions, AccountActions {
@@ -443,6 +447,8 @@ const demoAccount: AccountActions = {
   openClaimLink: () => undefined,
   claimBean: () => Promise.resolve(null),
   prepareTelegramClaim: () => Promise.resolve(null),
+  // No database here: say so instead of pretending, and never touch the network.
+  sendIdea: () => Promise.resolve({ ok: false, text: IDEAS.demo }),
 };
 
 /** Taps, drags and drops on adda tents. */

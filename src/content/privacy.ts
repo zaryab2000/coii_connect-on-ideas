@@ -43,7 +43,7 @@ export interface PrivacySection {
 
 export const PRIVACY = {
   title: "Privacy",
-  updated: "Last updated 12 October 2026",
+  updated: "Last updated 14 October 2026",
   intro:
     "coii is a live map of who's into what at Devcon 8 in Mumbai. This page says what we keep about you, who can see it, and how to make it all go away. " +
     UNOFFICIAL,
@@ -53,6 +53,7 @@ export const PRIVACY = {
       bullets: [
         "Your bean: name, topics, what you're at Devcon for, up to three one-liners and how your bean looks.",
         "Your Telegram username and/or X handle.",
+        "Ideas you send with 'Got an idea for coii?', with your bean, so we can reply. If you leave coii, we keep the idea but not who sent it.",
         "The waves you send and get, your chais and whether you've messaged or met, today's picks, people you skipped or blocked.",
         "Your addas and who's in them.",
         "Reports you make, and reports about your bean.",

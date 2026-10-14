@@ -14,6 +14,7 @@ import { DecipherWelcome } from "@/ui/DecipherWelcome";
 import { DropAddaOverlay } from "@/ui/DropAddaOverlay";
 import { useHeightVar, useMediaQuery, usePresence } from "@/ui/hooks";
 import { Hud } from "@/ui/Hud";
+import { IdeasOverlay } from "@/ui/IdeasOverlay";
 import { InviteOverlay } from "@/ui/InviteOverlay";
 import { OpenChaiContext } from "@/ui/meetHooks";
 import { OVERLAY_EXIT_MS } from "@/ui/Overlay";
@@ -159,6 +160,7 @@ const OVERLAYS: Readonly<Record<OverlayKind, ComponentType<OverlayProps>>> = {
   trends: TrendsOverlay,
   privacy: PrivacyOverlay,
   claim: ClaimOverlay,
+  ideas: IdeasOverlay,
 };
 
 function OverlayFor({ kind, ...rest }: OverlayProps & { readonly kind: OverlayKind }) {

@@ -83,6 +83,9 @@ const COPY: Readonly<Record<string, ErrorCopy>> = {
   invalid_style: { field: null, text: "Pick a tent style and a colour." },
   invalid_color: { field: null, text: "Pick a tent style and a colour." },
   invalid_place: { field: null, text: "That spot doesn't work for a tent." },
+  // Feature requests (docs-internal/prd/feature-requests.md §4).
+  too_many_requests: { field: null, text: "You've sent 3 ideas today. Send more tomorrow!" },
+  invalid_request: { field: null, text: "Write 10–300 characters." },
   server_error: { field: null, text: SERVER },
   origin_not_allowed: { field: null, text: SERVER },
   method_not_allowed: { field: null, text: SERVER },
