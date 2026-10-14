@@ -41,6 +41,7 @@ export type Database = {
       };
       set_chai_status: { Args: { person: string; status: string }; Returns: Json };
       skip: { Args: { person: string }; Returns: undefined };
+      submit_feature_request: { Args: { body: string; kind: string }; Returns: string };
       unmatch: { Args: { person: string }; Returns: undefined };
       update_adda: {
         Args: { adda: string; color: string; name: string; style: string };
