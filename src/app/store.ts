@@ -20,7 +20,8 @@ export type Overlay =
   | "invite"
   | "trends"
   | "privacy"
-  | "claim";
+  | "claim"
+  | "ideas";
 
 export interface Toast {
   readonly id: number;

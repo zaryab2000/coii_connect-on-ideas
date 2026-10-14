@@ -3,6 +3,7 @@ import "@/ui/decipher.css";
 import { useId } from "react";
 
 import { useActions, useApp } from "@/app/context";
+import { IDEAS } from "@/app/ideas";
 import { DECIPHER } from "@/content/decipher";
 import { UNOFFICIAL } from "@/content/privacy";
 import type { Avatar, IconId, TopicId } from "@/data/types";
@@ -175,6 +176,16 @@ function Footer({ onClose }: { readonly onClose: () => void }) {
           <DecipherLinks spot="about" primary={false} />
         </div>
       </div>
+      <p className="about__idea">
+        {IDEAS.aboutLead}{" "}
+        <button
+          type="button"
+          className="about__idea-link"
+          onClick={() => actions.openOverlay("ideas")}
+        >
+          {IDEAS.aboutLink}
+        </button>
+      </p>
       <p className="about__love">
         <strong>With love, from Decipher Club</strong>
         <Icon id="red_heart" size={20} />

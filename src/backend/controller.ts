@@ -15,6 +15,8 @@ import {
 } from "@/app/controller";
 import type { Actions, AppController, ToastActions } from "@/app/controller";
 import { takeWelcome } from "@/app/decipher";
+import { cleanIdea } from "@/app/ideas";
+import type { IdeaKind, IdeaOutcome } from "@/app/ideas";
 import type { InvitedRef, JoinInput, JoinOutcome } from "@/app/joinTypes";
 import { realClock } from "@/app/meet";
 import { pointsReader } from "@/app/points";
@@ -548,6 +550,16 @@ class BackendApp {
     return true;
   };
 
+  /** "Got an idea for coii?": stored with your bean for the owner (feature-requests PRD §5). */
+  readonly sendIdea = async (kind: IdeaKind, body: string): Promise<IdeaOutcome> => {
+    try {
+      await rpc(this.start.supabase, "submit_feature_request", { kind, body: cleanIdea(body) });
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, text: toBackendError(error).copy.text };
+    }
+  };
+
   readonly signOut = async (): Promise<void> => {
     try {
       await signOut(this.start.supabase);
@@ -613,6 +625,7 @@ export function createBackendController(engine: EngineApi, start: BackendStart):
     openClaimLink: app.openClaimLink,
     claimBean: app.claimBean,
     prepareTelegramClaim: app.prepareTelegramClaim,
+    sendIdea: app.sendIdea,
   };
   followEngine(engine, store);
   followAddaTents(engine, store, adda);

@@ -58,7 +58,8 @@ interface OverlayProps {
     | "invite"
     | "trends"
     | "privacy"
-    | "claim";
+    | "claim"
+    | "ideas";
   readonly labelledBy: string;
   readonly leaving: boolean;
   readonly onClose: () => void;

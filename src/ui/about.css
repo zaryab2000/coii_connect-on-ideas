@@ -192,6 +192,23 @@
   line-height: 1.45;
 }
 
+.about__idea {
+  margin: 4px 0 0;
+  font-weight: 600;
+}
+
+.about__idea-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
 .about__love {
   display: inline-flex;
   align-items: center;
