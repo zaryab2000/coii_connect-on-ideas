@@ -275,6 +275,75 @@
   gap: 10px;
 }
 
+.chai__contact-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.chai__card--batch::before {
+  height: 132px;
+}
+
+.chai__batch-who {
+  margin: 72px 0 4px;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.chai__batch-hint {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+}
+
+.chai__faces {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin: 16px 0 18px;
+}
+
+.chai__face {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  min-width: 92px;
+  padding: 8px 8px 6px;
+  border: var(--line-thin);
+  border-radius: var(--radius-md);
+  background: var(--cream);
+  box-shadow: var(--pop-sm);
+  font-family: var(--font-display);
+  font-size: 0.94rem;
+  transition:
+    transform 120ms var(--ease-out),
+    box-shadow 120ms var(--ease-out);
+}
+
+.chai__face .rangoli-disc {
+  width: 76px;
+  height: 76px;
+}
+
+.chai__face:active {
+  transform: translate(1px, 1px);
+  box-shadow: var(--pop-pressed);
+}
+
+.chai__see-all {
+  width: 100%;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .chai__face:hover {
+    background: var(--marigold-soft);
+    transform: translateY(-2px);
+  }
+}
+
 .chai__row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

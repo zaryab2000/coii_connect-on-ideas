@@ -87,6 +87,11 @@ export interface Person {
   readonly name: string;
   readonly telegram: string | null;
   readonly x: string | null;
+  /**
+   * Backend mode: you waved at them and they have a Telegram username, but it only shows once your
+   * own Telegram is verified (so `telegram` is null).
+   */
+  readonly telegramLocked?: boolean;
   readonly topics: readonly TopicId[];
   /** Up to two intents, most important first. */
   readonly intent: readonly IntentId[];

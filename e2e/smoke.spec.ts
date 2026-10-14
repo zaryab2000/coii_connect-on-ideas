@@ -601,7 +601,7 @@ test("/privacy opens the privacy notice; the join form and About link to it", as
   const form = page.getByRole("dialog", { name: "Join coii" });
   await expect(
     form.getByText(
-      "Your bean, name, topics and one-liners are public. Your handles show only to people who wave at you.",
+      "Your bean, name, topics and one-liners are public. X shows to people who wave at you. Telegram shows only to people who wave and verify their own Telegram.",
     ),
   ).toBeVisible();
   await expect(form.getByText("Built with Love, by Decipher Club ❤️")).toBeVisible();

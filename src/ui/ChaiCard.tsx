@@ -15,12 +15,16 @@ import { scoreParts } from "@/match/score";
 import type { ScoreContext } from "@/match/score";
 import type { Chai } from "@/match/storage";
 import { BeanAvatar } from "@/ui/BeanAvatar";
+import { chaiNames, shownChai } from "@/ui/chaiBatch";
+import type { ShownChai } from "@/ui/chaiBatch";
 import { Confetti } from "@/ui/Confetti";
 import { usePresence } from "@/ui/hooks";
 import { Glyph, Icon } from "@/ui/Icon";
 import { firstName } from "@/ui/meet";
 import { useReducedMotion } from "@/ui/meetHooks";
+import { useOpenChai } from "@/ui/meetHooks";
 import { modalCloseHandlers, OVERLAY_EXIT_MS, useModal } from "@/ui/Overlay";
+import { TelegramGateButton } from "@/ui/TelegramGateButton";
 import { Toasts } from "@/ui/Toasts";
 
 const DEMO_CONTACT = "Demo profile — real people coming soon";
@@ -55,19 +59,25 @@ interface ContactProps {
   readonly opener: string;
 }
 
-/** Telegram with the opener as an unsent draft, or their X profile (plus the opener copied). */
-function ContactButton({ them, opener }: ContactProps) {
+/** One real contact link: Telegram with a draft, or X with the opener copied. */
+function ContactButton({
+  them,
+  opener,
+  kind,
+  primary,
+}: ContactProps & { readonly kind: "telegram" | "x"; readonly primary: boolean }) {
   const actions = useActions();
-  const handle = them.telegram ?? them.x;
+  const handle = kind === "telegram" ? them.telegram : them.x;
   if (!handle) return null;
-  const telegram = them.telegram !== null;
+  const telegram = kind === "telegram";
   const label = telegram ? "Message on Telegram" : "X profile";
   const icon = <Icon id={telegram ? "speech_balloon" : "waving_hand"} size={22} />;
+  const className = `btn ${primary ? "btn--primary" : "btn--secondary"}`;
   if (them.isDemo) {
     return (
       <button
         type="button"
-        className="btn btn--primary"
+        className={className}
         onClick={() => actions.pushToast(DEMO_CONTACT, "sparkles", "info")}
       >
         {icon}
@@ -84,7 +94,7 @@ function ContactButton({ them, opener }: ContactProps) {
   };
   return (
     <a
-      className="btn btn--primary"
+      className={className}
       href={telegram ? telegramLink(handle, opener) : xProfileLink(handle)}
       target="_blank"
       rel="noopener noreferrer"
@@ -93,6 +103,29 @@ function ContactButton({ them, opener }: ContactProps) {
       {icon}
       {label}
     </a>
+  );
+}
+
+/** Telegram is private until this viewer verifies; X stays available after the wave. */
+function ContactButtons({
+  them,
+  opener,
+  onVerify,
+}: ContactProps & { readonly onVerify: () => void }) {
+  const telegram = them.telegram !== null;
+  const locked = them.telegramLocked === true;
+  const x = them.x !== null;
+  if (!telegram && !locked && !x) return null;
+  return (
+    <div className="chai__contact-actions">
+      {telegram ? <ContactButton them={them} opener={opener} kind="telegram" primary /> : null}
+      {locked ? (
+        <TelegramGateButton personId={them.id} surface="chai" onBeforeOpen={onVerify} />
+      ) : null}
+      {x ? (
+        <ContactButton them={them} opener={opener} kind="x" primary={!telegram && !locked} />
+      ) : null}
+    </div>
   );
 }
 
@@ -127,7 +160,7 @@ function ChaiActions({
   const met = chai.status === "met";
   return (
     <div className="chai__actions">
-      <ContactButton them={them} opener={opener} />
+      <ContactButtons them={them} opener={opener} onVerify={onClose} />
       <div className="chai__row">
         <button
           type="button"
@@ -288,15 +321,6 @@ function ChaiDialog({ you, them, chai, leaving, onClose }: DialogProps) {
 }
 
 /** Which chai to show: one you opened from a list, else a fresh "Chai's on!" moment. */
-function useShownChai(viewing: string | null): string | null {
-  return useApp((s) => {
-    const meet = s.meet;
-    if (!meet) return null;
-    const open = viewing !== null && meet.chais.some((c) => c.personId === viewing);
-    return open ? viewing : meet.celebrate;
-  });
-}
-
 function ChaiFor({
   personId,
   leaving,
@@ -313,6 +337,98 @@ function ChaiFor({
   return <ChaiDialog you={you} them={them} chai={chai} leaving={leaving} onClose={onClose} />;
 }
 
+function BatchChaiDialog({
+  personIds,
+  leaving,
+  onClose,
+}: {
+  readonly personIds: readonly string[];
+  readonly leaving: boolean;
+  readonly onClose: () => void;
+}) {
+  const ref = useModal();
+  const titleId = useId();
+  const actions = useActions();
+  const openChai = useOpenChai();
+  const allPeople = useApp((s) => s.people);
+  const people = useMemo(
+    () => personIds.flatMap((id) => allPeople.find((person) => person.id === id) ?? []),
+    [allPeople, personIds],
+  );
+  const reducedMotion = useReducedMotion();
+  const [burst, setBurst] = useState(!reducedMotion);
+  const dismissAll = (): void => {
+    for (const id of personIds) actions.dismissChai(id);
+  };
+  const close = (): void => {
+    dismissAll();
+    onClose();
+  };
+  return (
+    <dialog
+      ref={ref}
+      className="chai"
+      aria-labelledby={titleId}
+      data-leaving={leaving || undefined}
+      inert={leaving}
+      tabIndex={-1}
+      {...modalCloseHandlers(close)}
+    >
+      <div className="chai__card chai__card--batch">
+        <button type="button" className="nav-btn nav-btn--close chai__close" onClick={close}>
+          <Glyph name="close" size={18} />
+          <span className="visually-hidden">Close</span>
+        </button>
+        <h2 id={titleId} className="chai__title">
+          Chai's on!
+        </h2>
+        {burst ? <Confetti count={32} spread={180} onDone={() => setBurst(false)} /> : null}
+        <p className="chai__batch-who">
+          Chai's on with {chaiNames(people.map((person) => firstName(person.name)))}!
+        </p>
+        <p className="chai__batch-hint">Pick a face to open that chai.</p>
+        <div className="chai__faces">
+          {people.map((person) => (
+            <button
+              key={person.id}
+              type="button"
+              className="chai__face"
+              aria-label={`Open chai with ${firstName(person.name)}`}
+              onClick={() => {
+                dismissAll();
+                openChai(person.id);
+              }}
+            >
+              <span className="rangoli-disc">
+                <BeanAvatar
+                  avatar={person.avatar}
+                  topic={person.topics[0] ?? "ai"}
+                  size={70}
+                  face="happy"
+                />
+              </span>
+              <strong>{firstName(person.name)}</strong>
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          className="btn btn--primary chai__see-all"
+          onClick={() => {
+            dismissAll();
+            actions.openPanel("meet");
+            onClose();
+          }}
+        >
+          <Icon id="sparkles" size={20} />
+          See my chais
+        </button>
+      </div>
+      <Toasts />
+    </dialog>
+  );
+}
+
 /**
  * The "Chai's on!" card, mounted once for the whole app. It shows itself when a mutual wave
  * lands (`meet.celebrate`) and when a chai is opened from a list (`viewing`).
@@ -325,14 +441,29 @@ export function ChaiOverlay({
   readonly onClose: () => void;
 }) {
   const actions = useActions();
-  const shown = useShownChai(viewing);
-  const celebrate = useApp((s) => s.meet?.celebrate ?? null);
-  const items = usePresence(shown, OVERLAY_EXIT_MS);
-  const close = (): void => {
-    if (shown !== null && shown === celebrate) actions.dismissChai(shown);
-    onClose();
-  };
-  return items.map(({ key, value, leaving }) => (
-    <ChaiFor key={key} personId={value} leaving={leaving} onClose={close} />
-  ));
+  const chais = useApp((s) => s.meet?.chais ?? null);
+  const people = useApp((s) => s.people);
+  const shown = useMemo<ShownChai | null>(() => {
+    if (!chais) return null;
+    return shownChai(viewing, chais, new Set(people.map((person) => person.id)));
+  }, [chais, people, viewing]);
+  // Switching from the combined card to one person's card replaces the one modal in place.
+  const items = usePresence(shown, OVERLAY_EXIT_MS, () => true);
+  return items.map(({ key, value, leaving }) => {
+    if (value.kind === "batch") {
+      return (
+        <BatchChaiDialog
+          key={key}
+          personIds={value.personIds}
+          leaving={leaving}
+          onClose={onClose}
+        />
+      );
+    }
+    const close = (): void => {
+      if (value.celebration) actions.dismissChai(value.personId);
+      onClose();
+    };
+    return <ChaiFor key={key} personId={value.personId} leaving={leaving} onClose={close} />;
+  });
 }

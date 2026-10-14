@@ -13,6 +13,7 @@ import { contactUnlocked, firstName, pointsText } from "@/ui/meet";
 import { Awning, IntentChips, OneLiners, PanelNav, TopicChips, topicVars } from "@/ui/PanelChrome";
 import type { PanelChrome } from "@/ui/PanelChrome";
 import { SafetyMenu } from "@/ui/SafetyMenu";
+import { TelegramGateButton } from "@/ui/TelegramGateButton";
 import { WaveButton } from "@/ui/WaveButton";
 
 const DEMO_CONTACT = "Demo profile — real people coming soon";
@@ -109,9 +110,17 @@ function OthersActions({ person }: { readonly person: Person }) {
       <AddaButton person={person} />
       {unlocked ? (
         <div className="contact-open">
-          <ContactLink person={person} kind="telegram" primary />
+          {person.telegramLocked ? (
+            <TelegramGateButton personId={person.id} surface="profile" />
+          ) : (
+            <ContactLink person={person} kind="telegram" primary />
+          )}
           <div className="profile__row">
-            <ContactLink person={person} kind="x" primary={!person.telegram} />
+            <ContactLink
+              person={person}
+              kind="x"
+              primary={!person.telegram && !person.telegramLocked}
+            />
             <ShowOnMap id={person.id} />
           </div>
         </div>

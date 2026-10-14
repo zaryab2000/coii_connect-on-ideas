@@ -422,10 +422,12 @@
   font-size: 0.92rem;
 }
 
+/* The picture is square (addaCard.ts CARD_W × CARD_H); shown smaller so the buttons stay in view. */
 .share-card {
   display: block;
-  width: 100%;
-  aspect-ratio: 16 / 9;
+  width: min(100%, 440px);
+  margin-inline: auto;
+  aspect-ratio: 1;
   border: var(--line);
   border-radius: var(--radius-md);
   box-shadow: var(--pop);

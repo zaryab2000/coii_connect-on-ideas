@@ -19,8 +19,8 @@ select tests.join('Asha Rao', '{privacy}', 'asha_builds', 'asha_x') as asha,
 
 select tests.act((select asha from cast_));
 select is((public.wave((select ravi from cast_)) - 'waves_left'),
-  '{"result":"waved","contacts":{"x":null,"telegram":"ravi_builds"}}'::jsonb,
-  'waving returns the target''s handles');
+  '{"result":"waved","contacts":{"x":null,"telegram":null,"telegram_locked":true}}'::jsonb,
+  'waving returns the target''s handles, Telegram only once your own is verified (see 11)');
 select is((select wave_points from private.people where id = (select ravi from cast_)), 1,
   'the target gets one wave point');
 select is((select points from private.daily_points
@@ -31,6 +31,8 @@ select is(tests.wave((select asha from cast_), (select ravi from cast_)), 'alrea
   'waving twice is "already"');
 select is((select wave_points from private.people where id = (select ravi from cast_)), 1,
   'a repeated wave never adds a point');
+-- From here on Asha has verified her Telegram, so she sees Telegram usernames too.
+update private.people set telegram_verified = true where id = (select asha from cast_);
 select is(public.wave((select ravi from cast_)) -> 'contacts' ->> 'telegram', 'ravi_builds',
   '"already" still returns the handles');
 select is(tests.wave((select asha from cast_), (select asha from cast_)), 'unavailable',
@@ -41,7 +43,8 @@ select is(tests.wave((select asha from cast_), gen_random_uuid()), 'unavailable'
 -- ---- contacts unlock only through a wave ----------------------------------------------------------
 select tests.act((select asha from cast_));
 select is(public.get_contacts(array[(select ravi from cast_), (select mei from cast_)]),
-  jsonb_build_array(jsonb_build_object('id', (select ravi from cast_), 'telegram', 'ravi_builds', 'x', null)),
+  jsonb_build_array(jsonb_build_object('id', (select ravi from cast_), 'telegram', 'ravi_builds', 'x', null,
+                                       'telegram_locked', false)),
   'get_contacts returns handles only for people you waved at');
 select is(tests.wave((select mei from cast_), (select ravi from cast_)), 'waved', 'Mei waves at Ravi');
 select tests.act((select mei from cast_));

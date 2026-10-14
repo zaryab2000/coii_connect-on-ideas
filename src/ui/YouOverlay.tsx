@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 
 import { useActions, useApp } from "@/app/context";
 import { pointsReader } from "@/app/points";
+import { browserSessionStore, hasTelegramReturn } from "@/app/telegramReturn";
 import { SIGN_OUT } from "@/content/privacy";
 import { topicById } from "@/data/topics";
 import type { Person, TopicId } from "@/data/types";
@@ -83,7 +84,7 @@ function SaveBean() {
  */
 function TelegramVerify({ you }: { readonly you: Person }) {
   const backend = useApp((s) => s.mode === "backend");
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(() => hasTelegramReturn(browserSessionStore()));
   if (!backend) return null;
   if (you.telegramVerified) {
     return (

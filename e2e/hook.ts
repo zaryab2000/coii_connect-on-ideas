@@ -20,6 +20,7 @@ interface DebugHook {
           isNpc?: boolean;
           isInvited?: boolean;
           telegram: string | null;
+          telegramLocked?: boolean;
           x: string | null;
         }[];
         npcs: { id: string; name: string; isNpc?: boolean }[];
