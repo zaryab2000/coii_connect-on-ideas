@@ -685,3 +685,79 @@ test("demo mode never shows the Decipher Club welcome card", async ({ page }) =>
   await page.waitForTimeout(5000);
   await expect(page.locator(".decipher-welcome")).toHaveCount(0);
 });
+
+test("💡 Ideas: visitors are asked to join; the dev links point at the repo", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto("/?still");
+  await waitForCrowd(page);
+  await page.getByRole("button", { name: /Ideas/ }).click();
+  const panel = page.getByRole("dialog", { name: "Got an idea for coii?" });
+  await expect(panel).toBeVisible();
+  await expect(panel.getByText("Join coii to send a request")).toBeVisible();
+  await expect(panel.getByLabel("Your idea")).toHaveCount(0);
+  const issue = panel.getByRole("link", { name: "Create an issue or PR" });
+  await expect(issue).toHaveAttribute(
+    "href",
+    "https://github.com/zaryab2000/coii_connect-on-ideas/issues/new?template=feature_request.md",
+  );
+  await expect(issue).toHaveAttribute("target", "_blank");
+  await expect(issue).toHaveAttribute("rel", "noopener noreferrer");
+  await expect(panel.getByRole("link", { name: "Open a pull request" })).toHaveAttribute(
+    "href",
+    "https://github.com/zaryab2000/coii_connect-on-ideas/pulls",
+  );
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  // About links to the same panel.
+  await page.getByRole("button", { name: "About" }).click();
+  await page.getByRole("button", { name: "Request a feature" }).click();
+  await expect(panel).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("💡 Ideas: in demo mode a joined person can write one, but nothing leaves the browser", async ({
+  page,
+}) => {
+  const outbound: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.hostname !== "localhost" && !url.hostname.endsWith("fonts.gstatic.com")) {
+      outbound.push(request.url());
+    }
+  });
+  await page.goto("/?still");
+  await waitForCrowd(page);
+  await joinQuickly(page);
+  await page.getByRole("button", { name: /Ideas/ }).click();
+  const panel = page.getByRole("dialog", { name: "Got an idea for coii?" });
+  const send = panel.getByRole("button", { name: "Send to coii-agent" });
+  await expect(panel.getByRole("radio", { name: "Feature" })).toBeChecked();
+  await panel.getByLabel("Your idea").fill("too short");
+  await expect(panel.getByText("9 / 300")).toBeVisible();
+  await expect(send).toBeDisabled();
+  await panel.getByLabel("Your idea").fill("A booth for ZK hardware wallets");
+  await expect(panel.getByText("31 / 300")).toBeVisible();
+  await expect(send).toBeEnabled();
+  await send.click();
+  await expect(panel.getByRole("alert")).toHaveText("Requests work on the live site.");
+  expect(outbound).toEqual([]);
+});
+
+test("💡 Ideas: the HUD keeps every button on a 375px screen", async ({ browser }) => {
+  const context = await browser.newContext({
+    viewport: { width: 375, height: 812 },
+    isMobile: true,
+  });
+  const page = await context.newPage();
+  await page.goto("/?still");
+  await waitForCrowd(page);
+  const names = [/Ideas/, /About/, "Fit the whole venue"];
+  const boxes = await Promise.all(
+    names.map((name) => page.getByRole("button", { name }).first().boundingBox()),
+  );
+  for (const box of boxes) {
+    expect(box).not.toBeNull();
+    expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(375);
+  }
+  await context.close();
+});
