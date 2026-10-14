@@ -14,7 +14,7 @@ test("a joined person sends ideas, stored with their bean; the 4th today hits th
 }) => {
   const mira = await join(browser, "Mira Shah");
   const { page } = mira;
-  await page.getByRole("button", { name: /Ideas/ }).click();
+  await page.getByRole("button", { name: /Got ideas\?/ }).click();
   const panel = page.getByRole("dialog", { name: "Got an idea for coii?" });
   await expect(panel).toBeVisible();
 

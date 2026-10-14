@@ -64,7 +64,7 @@ export const IDEAS = {
   demo: "Requests work on the live site.",
   aboutLead: "Got an idea for coii?",
   aboutLink: "Request a feature",
-  hud: "Ideas",
+  hud: "Got ideas?",
 } as const;
 
 /** What sending an idea came to: sent, or the line to show instead. */

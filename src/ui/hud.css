@@ -125,7 +125,7 @@
   white-space: nowrap;
 }
 
-/* Narrow phones (under 400px) need the room for the 💡 Ideas button: the count speaks for
+/* Narrow phones (under 400px) need the room for the 💡 Got ideas? button: the count speaks for
    itself, "here" stays for screen readers, and the top row closes up a little. */
 @media (max-width: 399px) {
   .live-pill__here {
@@ -187,7 +187,7 @@
   opacity: 0;
 }
 
-/* 💡 Ideas: first of the HUD buttons on the right. Its label shows where About's does (768px up);
+/* 💡 Got ideas?: first of the HUD buttons on the right. Its label shows where About's does (768px up);
    on a phone the icon alone fits next to About and Fit. */
 .hud__ideas {
   margin-left: auto;
