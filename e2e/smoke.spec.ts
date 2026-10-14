@@ -686,11 +686,13 @@ test("demo mode never shows the Decipher Club welcome card", async ({ page }) =>
   await expect(page.locator(".decipher-welcome")).toHaveCount(0);
 });
 
-test("💡 Ideas: visitors are asked to join; the dev links point at the repo", async ({ page }) => {
+test("💡 Got ideas?: visitors are asked to join; the dev links point at the repo", async ({
+  page,
+}) => {
   const errors = collectErrors(page);
   await page.goto("/?still");
   await waitForCrowd(page);
-  await page.getByRole("button", { name: /Ideas/ }).click();
+  await page.getByRole("button", { name: /Got ideas\?/ }).click();
   const panel = page.getByRole("dialog", { name: "Got an idea for coii?" });
   await expect(panel).toBeVisible();
   await expect(panel.getByText("Join coii to send a request")).toBeVisible();
@@ -715,7 +717,7 @@ test("💡 Ideas: visitors are asked to join; the dev links point at the repo", 
   expect(errors).toEqual([]);
 });
 
-test("💡 Ideas: in demo mode a joined person can write one, but nothing leaves the browser", async ({
+test("💡 Got ideas?: in demo mode a joined person can write one, but nothing leaves the browser", async ({
   page,
 }) => {
   const outbound: string[] = [];
@@ -728,7 +730,7 @@ test("💡 Ideas: in demo mode a joined person can write one, but nothing leaves
   await page.goto("/?still");
   await waitForCrowd(page);
   await joinQuickly(page);
-  await page.getByRole("button", { name: /Ideas/ }).click();
+  await page.getByRole("button", { name: /Got ideas\?/ }).click();
   const panel = page.getByRole("dialog", { name: "Got an idea for coii?" });
   const send = panel.getByRole("button", { name: "Send to coii-agent" });
   await expect(panel.getByRole("radio", { name: "Feature" })).toBeChecked();
@@ -743,7 +745,7 @@ test("💡 Ideas: in demo mode a joined person can write one, but nothing leaves
   expect(outbound).toEqual([]);
 });
 
-test("💡 Ideas: the HUD keeps every button on a 375px screen", async ({ browser }) => {
+test("💡 Got ideas?: the HUD keeps every button on a 375px screen", async ({ browser }) => {
   const context = await browser.newContext({
     viewport: { width: 375, height: 812 },
     isMobile: true,
@@ -751,7 +753,7 @@ test("💡 Ideas: the HUD keeps every button on a 375px screen", async ({ browse
   const page = await context.newPage();
   await page.goto("/?still");
   await waitForCrowd(page);
-  const names = [/Ideas/, /About/, "Fit the whole venue"];
+  const names = [/Got ideas\?/, /About/, "Fit the whole venue"];
   const boxes = await Promise.all(
     names.map((name) => page.getByRole("button", { name }).first().boundingBox()),
   );

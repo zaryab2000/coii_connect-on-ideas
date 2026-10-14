@@ -263,7 +263,7 @@ test("an invited bean can't be waved at and stays off the board", async ({ brows
 
   await openProfile(member.page, lone.id);
   const profile = member.page.locator(".profile");
-  await expect(profile.getByText("Not claimed yet")).toBeVisible();
+  await expect(profile.getByText("Not claimed yet")).toHaveCount(0);
   await expect(profile.getByText("Added by the coii team.", { exact: false })).toBeVisible();
   await expect(profile.getByRole("button", { name: "Wave to connect" })).toHaveCount(0);
   // You have a bean, so "This is me" isn't offered.

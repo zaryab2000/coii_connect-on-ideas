@@ -33,7 +33,6 @@ function Badges({ person }: { readonly person: Person }) {
         </li>
       ) : null}
       {person.isDemo ? <li className="badge badge--demo">Demo</li> : null}
-      {person.isInvited ? <li className="badge badge--invited">{CLAIM.badge}</li> : null}
     </ul>
   );
 }

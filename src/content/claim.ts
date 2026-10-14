@@ -55,11 +55,8 @@ export const CLAIM = {
   hintDismiss: "Not me",
 
   /** An invited bean's profile card. */
-  badge: "Not claimed yet",
   cardText: "Added by the coii team. Is this you? Claim your bean.",
   cardButton: "This is me",
-  /** People list tag. */
-  tag: "not claimed",
   /** A wave (or an adda drop) that reached an invited bean. */
   unclaimed: (firstName: string): string => `${firstName} hasn't claimed their bean yet.`,
 } as const;

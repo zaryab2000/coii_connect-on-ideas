@@ -114,12 +114,6 @@
   flex: 1 1 200px;
 }
 
-/* An invited bean's profile card. */
-.badge--invited {
-  border-style: dashed;
-  color: var(--ink-soft);
-}
-
 .claim-card {
   display: flex;
   flex-direction: column;
@@ -133,9 +127,4 @@
 .claim-card p {
   margin: 0;
   line-height: 1.45;
-}
-
-.tag--unclaimed {
-  border-style: dashed;
-  color: var(--ink-soft);
 }

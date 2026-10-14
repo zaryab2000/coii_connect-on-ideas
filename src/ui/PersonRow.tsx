@@ -1,7 +1,6 @@
 import { memo } from "react";
 import type { CSSProperties } from "react";
 
-import { CLAIM } from "@/content/claim";
 import { topicById } from "@/data/topics";
 import type { Person, TopicId } from "@/data/types";
 import { BeanAvatar } from "@/ui/BeanAvatar";
@@ -21,7 +20,9 @@ function topicNames(topics: readonly TopicId[]): string {
 /** One person in a list: tap to fly the map to them and open their card. */
 export const PersonRow = memo(function PersonRow({ person, omitTopic, onPick }: PersonRowProps) {
   const primary = person.topics[0] ?? "ai";
-  const dots = person.topics.filter((t) => t !== omitTopic);
+  // An unclaimed (invited) bean shows no track dots yet: the owner can tell at a glance who
+  // hasn't claimed, without a label on the row.
+  const dots = person.isInvited ? [] : person.topics.filter((t) => t !== omitTopic);
   const who = person.isYou ? `${person.name} (you)` : person.name;
   return (
     <li className="person-row">
@@ -42,7 +43,6 @@ export const PersonRow = memo(function PersonRow({ person, omitTopic, onPick }: 
           <span className="person-row__name">
             <span className="person-row__name-text">{person.name}</span>
             {person.isYou ? <span className="tag tag--you">You</span> : null}
-            {person.isInvited ? <span className="tag tag--unclaimed">{CLAIM.tag}</span> : null}
             {person.telegramVerified ? (
               <span className="person-row__verified" title="Telegram verified">
                 <Glyph name="check" size={12} />
